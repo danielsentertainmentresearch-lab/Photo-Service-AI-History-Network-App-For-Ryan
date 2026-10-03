@@ -123,12 +123,15 @@ void main() {
     child: MaterialApp(home: home),
   );
 
-  Future<void> settle(WidgetTester tester) async {
-    for (var i = 0; i < 3; i++) {
+  /// Pumps until [done] holds (or ~5 s pass). Saves are real database I/O,
+  /// so they need real time, and CI machines can be slow.
+  Future<void> settle(WidgetTester tester, [bool Function()? done]) async {
+    for (var i = 0; i < 50; i++) {
       await tester.runAsync(
         () => Future.delayed(const Duration(milliseconds: 100)),
       );
       await tester.pump();
+      if (i >= 2 && (done == null || done())) break;
     }
     await tester.pumpAndSettle();
   }
@@ -167,7 +170,12 @@ void main() {
     expect(find.text('Remember for next time?'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Save to memory'));
-    await settle(tester);
+    await settle(
+      tester,
+      () =>
+          state.memories.isNotEmpty &&
+          state.eventById('lake')!.suggestions.isEmpty,
+    );
     expect(state.memories.single.content, 'Sam is my brother');
     expect(find.text('Remember for next time?'), findsNothing);
   });
@@ -179,7 +187,10 @@ void main() {
     await tester.pumpWidget(app(const EventDetailScreen(eventId: 'market')));
     expect(find.textContaining('No internet connection'), findsOneWidget);
     await tester.tap(find.text('Retry'));
-    await settle(tester);
+    await settle(
+      tester,
+      () => state.eventById('market')!.error!.contains('API key'),
+    );
     expect(find.textContaining('Add your Anthropic API key'), findsOneWidget);
   });
 
@@ -192,7 +203,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'Title'), 'Dare');
     await tester.tap(find.text('Save'));
-    await settle(tester);
+    await settle(tester, () => state.eventById('lake')!.title == 'Dare');
     expect(state.eventById('lake')!.title, 'Dare');
   });
 
@@ -208,7 +219,7 @@ void main() {
       'The lake is where we camped as kids',
     );
     await tester.tap(find.text('Save'));
-    await settle(tester);
+    await settle(tester, () => state.memories.isNotEmpty);
     expect(state.memories.single.kind, 'place');
     expect(find.text('The lake is where we camped as kids'), findsOneWidget);
   });
@@ -228,7 +239,7 @@ void main() {
       'First day at the new studio',
     );
     await tester.tap(find.text('Save'));
-    await settle(tester);
+    await settle(tester, () => state.allEvents.length == 3);
     expect(state.allEvents, hasLength(3));
     expect(find.text('First day at the new studio'), findsOneWidget);
   });
@@ -247,17 +258,17 @@ void main() {
 
     await tester.enterText(find.byType(TextField).first, 'sk-ant-test-key');
     await tester.tap(find.text('Save key'));
-    await settle(tester);
+    await settle(tester, () => state.hasApiKey);
     expect(state.hasApiKey, isTrue);
     expect(find.text('API key saved'), findsWidgets);
 
     await tester.tap(find.textContaining('Sonnet'));
-    await settle(tester);
+    await settle(tester, () => state.model == 'claude-sonnet-5-5');
     expect(state.model, 'claude-sonnet-5-5');
 
     await tester.scrollUntilVisible(find.text('Sign out'), 200);
     await tester.tap(find.text('Sign out'));
-    await settle(tester);
+    await settle(tester, () => auth.signedOut);
     expect(auth.signedOut, isTrue);
   });
 }
