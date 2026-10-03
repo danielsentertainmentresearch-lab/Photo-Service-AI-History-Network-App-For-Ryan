@@ -138,9 +138,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Text('Timeline graph', style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
-            'After this many newly described events, the AI automatically '
-            'organises your whole timeline into chapters, connections and '
-            'themes. Each rebuild is one extra AI request.',
+            'After this many photos in newly described events, the AI '
+            'automatically reorganises your whole timeline into chapters, '
+            'connections and themes. Your own edits (groups, colours, renamed '
+            'chapters, themes and connections you added) are kept. Each '
+            'rebuild is one extra AI request.',
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 8),
@@ -154,7 +156,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               for (final n in SettingsService.graphEveryOptions)
                 DropdownMenuItem(
                   value: n,
-                  child: Text(n == 0 ? 'Off (manual only)' : 'Every $n events'),
+                  child: Text(n == 0 ? 'Off (manual only)' : 'Every $n photos'),
                 ),
             ],
             onChanged: (v) => v == null ? null : state.setGraphEvery(v),

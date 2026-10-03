@@ -91,14 +91,14 @@ class AppState extends ChangeNotifier {
   GraphData get graph =>
       buildGraph(events: _events, memories: _memories, snapshot: _graph);
 
-  /// Described events still needed before the next automatic timeline
-  /// build, or null when automatic builds are off.
-  int? get eventsUntilNextGraph {
+  int get describedPhotos => describedPhotoCount(_events);
+
+  /// Photos in newly described events still needed before the AI next
+  /// rebuilds the timeline automatically, or null when that's turned off.
+  int? get photosUntilNextGraph {
     if (graphEvery == 0) return null;
-    final since = describedCount - (_graph?.eventCount ?? 0);
-    final firstMin = _graph == null ? 2 : 0;
-    final needed = max(graphEvery - since, firstMin - describedCount);
-    return max(needed, 0);
+    final since = describedPhotos - (_graph?.photoCount ?? 0);
+    return max(graphEvery - since, 0);
   }
 
   LifeEvent? eventById(String id) {
@@ -265,13 +265,14 @@ class AppState extends ChangeNotifier {
     }
     await _reload();
     if (eventById(eventId)?.status == EventStatus.described &&
-        eventsUntilNextGraph == 0) {
+        photosUntilNextGraph == 0 &&
+        describedCount >= 2) {
       await buildGraphNow();
     }
   }
 
   /// Asks the AI to organise all described events into chapters, links and
-  /// themes. Runs automatically every [graphEvery] described events, or on
+  /// themes. Runs automatically every [graphEvery] described photos, or on
   /// demand from the graph screen.
   Future<void> buildGraphNow() async {
     if (_graphBuilding) return;
@@ -295,9 +296,14 @@ class AppState extends ChangeNotifier {
         settings.model,
         settings.effort,
       );
-      final snapshot = await builder.build(_events, _memories);
-      await graphRepo.replace(snapshot);
-      _graph = snapshot;
+      final fresh = await builder.build(_events, _memories);
+      // Keep the user's groups, colours, edited wording and own links/themes.
+      final merged = GraphSnapshot.mergeRebuild(
+        _graph,
+        fresh,
+      ).sanitized(_events.map((e) => e.id).toSet());
+      await graphRepo.replace(merged);
+      _graph = merged;
     } catch (e) {
       _graphError = e is AnthropicException
           ? e.toString()
@@ -380,6 +386,17 @@ class AppState extends ChangeNotifier {
 
   Future<void> setModel(String value) async {
     await settings.setModel(value);
+    notifyListeners();
+  }
+
+  /// Saves the user's hand edits to the timeline graph. The snapshot is
+  /// repaired first (see [GraphSnapshot.sanitized]) so a bad edit can never
+  /// leave data the app can't display.
+  Future<void> saveGraph(GraphSnapshot edited) async {
+    final clean = edited.sanitized(_events.map((e) => e.id).toSet());
+    await graphRepo.replace(clean);
+    _graph = clean;
+    _graphError = null;
     notifyListeners();
   }
 

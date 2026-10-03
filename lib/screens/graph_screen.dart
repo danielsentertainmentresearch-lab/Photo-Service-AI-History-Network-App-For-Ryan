@@ -9,6 +9,7 @@ import '../graph/force_layout.dart';
 import '../models/memory_graph.dart';
 import '../state/app_state.dart';
 import 'event_detail_screen.dart';
+import 'graph_editor_screen.dart';
 
 /// The connected timeline: a graph view of events, people, places, tags,
 /// themes and memories, plus the AI's chapters.
@@ -30,16 +31,24 @@ class GraphScreen extends StatelessWidget {
             ],
           ),
           actions: [
+            if (state.graphBuilding)
+              const Padding(
+                padding: EdgeInsets.all(14),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
             IconButton(
-              tooltip: 'Rebuild with AI',
-              icon: state.graphBuilding
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.auto_awesome),
-              onPressed: state.graphBuilding ? null : state.buildGraphNow,
+              tooltip: 'Edit timeline',
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  fullscreenDialog: true,
+                  builder: (_) => const GraphEditorScreen(),
+                ),
+              ),
             ),
           ],
         ),
@@ -74,16 +83,16 @@ class _StatusBar extends StatelessWidget {
       text = state.graphError!;
     } else {
       final snapshot = state.graphSnapshot;
-      final next = state.eventsUntilNextGraph;
+      final next = state.photosUntilNextGraph;
       final built = snapshot == null
-          ? 'Not organised by the AI yet.'
+          ? 'Not organised yet.'
           : 'Organised ${DateFormat.yMMMd().add_jm().format(snapshot.createdAt)}.';
       final upcoming = next == null
-          ? ' Automatic rebuilds are off.'
+          ? ' Automatic AI rebuilds are off.'
           : next == 0
           ? ''
-          : ' Rebuilds after $next more described '
-                'event${next == 1 ? '' : 's'}.';
+          : ' The AI rebuilds after $next more described '
+                'photo${next == 1 ? '' : 's'}.';
       text = '$built$upcoming';
     }
     return Container(
@@ -108,8 +117,8 @@ Color kindColor(NodeKind kind, ColorScheme scheme) => switch (kind) {
   NodeKind.memory => const Color(0xFF795548),
 };
 
-const humanColor = Color(0xFF2E7D32);
-const aiColor = Color(0xFF7E57C2);
+/// Colour of links between events (found by the AI or added by the user).
+const linkColor = Color(0xFF7E57C2);
 
 String kindLabel(NodeKind kind) => switch (kind) {
   NodeKind.event => 'Event',
@@ -316,6 +325,9 @@ class _GraphViewState extends State<_GraphView>
                       visible: _visible,
                       selected: _selected,
                       scheme: scheme,
+                      labelStyle:
+                          Theme.of(context).textTheme.bodySmall ??
+                          const TextStyle(),
                       radiusOf: radiusOf,
                     ),
                   ),
@@ -336,6 +348,11 @@ class _Legend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = Theme.of(context).textTheme.labelSmall;
+    final coloured =
+        (context.watch<AppState>().graphSnapshot?.chapters ??
+                const <TimelineChapter>[])
+            .where((c) => c.color != null)
+            .toList();
     Widget ring(Color c, String label) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -359,10 +376,13 @@ class _Legend extends StatelessWidget {
           spacing: 16,
           runSpacing: 4,
           children: [
-            ring(humanColor, 'From you'),
-            ring(aiColor, 'From the AI'),
+            for (final c in coloured) ring(Color(c.color!), c.title),
             Text(
-              'Events run left to right in time · purple lines: AI-found links',
+              coloured.isEmpty
+                  ? 'Events run left to right in time · purple lines: links '
+                        'between events · colour chapters in Edit'
+                  : 'Events run left to right in time · purple lines: links '
+                        'between events',
               style: style,
             ),
           ],
@@ -379,6 +399,7 @@ class _GraphPainter extends CustomPainter {
   final Set<NodeKind> visible;
   final String? selected;
   final ColorScheme scheme;
+  final TextStyle labelStyle;
   final double Function(GraphNode) radiusOf;
 
   _GraphPainter({
@@ -388,6 +409,7 @@ class _GraphPainter extends CustomPainter {
     required this.visible,
     required this.selected,
     required this.scheme,
+    required this.labelStyle,
     required this.radiusOf,
   });
 
@@ -413,7 +435,7 @@ class _GraphPainter extends CustomPainter {
         }
         ..color = (switch (e.kind) {
           EdgeKind.chronology => scheme.primary,
-          EdgeKind.aiLink => aiColor,
+          EdgeKind.aiLink => linkColor,
           EdgeKind.theme => const Color(0xFFFF9800),
           _ => scheme.outline,
         }).withValues(alpha: selected == null || highlighted ? 0.7 : 0.15);
@@ -431,21 +453,16 @@ class _GraphPainter extends CustomPainter {
         Paint()
           ..color = kindColor(n.kind, scheme).withValues(alpha: dim ? 0.4 : 1),
       );
-      final ring = switch (n.provenance) {
-        Provenance.human => humanColor,
-        Provenance.ai => aiColor,
-        Provenance.both => null,
-      };
-      final ringPaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3;
-      if (ring != null) {
-        canvas.drawCircle(c, r + 2, ringPaint..color = ring);
-      } else {
-        // Half green, half purple: supplied by both.
-        final rect = Rect.fromCircle(center: c, radius: r + 2);
-        canvas.drawArc(rect, -pi / 2, pi, false, ringPaint..color = humanColor);
-        canvas.drawArc(rect, pi / 2, pi, false, ringPaint..color = aiColor);
+      // Ring in the colour the user picked for this event's chapter.
+      if (n.ringColor != null) {
+        canvas.drawCircle(
+          c,
+          r + 3,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 4
+            ..color = Color(n.ringColor!).withValues(alpha: dim ? 0.4 : 1),
+        );
       }
       if (n.id == selected) {
         canvas.drawCircle(
@@ -464,7 +481,8 @@ class _GraphPainter extends CustomPainter {
       final tp = TextPainter(
         text: TextSpan(
           text: label,
-          style: TextStyle(
+          // Based on the app's text theme so labels use the app font.
+          style: labelStyle.copyWith(
             fontSize: n.kind == NodeKind.event || n.kind == NodeKind.theme
                 ? 12
                 : 10,
@@ -489,7 +507,8 @@ class _GraphPainter extends CustomPainter {
       old.positions != positions ||
       old.visible != visible ||
       old.selected != selected ||
-      old.scheme != scheme;
+      old.scheme != scheme ||
+      old.labelStyle != labelStyle;
 }
 
 class _NodeSheet extends StatelessWidget {
@@ -576,8 +595,9 @@ class _ChaptersView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'Once enough events are described, the AI groups them into '
-                'chapters, links related moments and finds recurring themes.',
+                'Once enough photos are described, the AI groups your events '
+                'into chapters, links related moments and finds recurring '
+                'themes. You can also organise them yourself.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -586,7 +606,18 @@ class _ChaptersView extends StatelessWidget {
                     ? null
                     : state.buildGraphNow,
                 icon: const Icon(Icons.auto_awesome),
-                label: const Text('Organise now'),
+                label: const Text('Organise with AI'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    fullscreenDialog: true,
+                    builder: (_) => const GraphEditorScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Organise by hand'),
               ),
             ],
           ),
@@ -605,6 +636,46 @@ class _ChaptersView extends StatelessWidget {
       );
     }
 
+    Widget chapterCard(TimelineChapter c) {
+      final number = snapshot.chapters.indexOf(c) + 1;
+      return Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        clipBehavior: Clip.antiAlias,
+        child: Container(
+          decoration: c.color == null
+              ? null
+              : BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: Color(c.color!), width: 6),
+                  ),
+                ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Chapter $number', style: theme.textTheme.labelMedium),
+              Text(c.title, style: theme.textTheme.titleMedium),
+              if (c.summary.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(c.summary),
+              ],
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [for (final id in c.eventIds) eventChip(id)],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final groupIds = snapshot.groups.map((g) => g.id).toSet();
+    final ungrouped = snapshot.chapters
+        .where((c) => !groupIds.contains(c.groupId))
+        .toList();
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -614,34 +685,39 @@ class _ChaptersView extends StatelessWidget {
           Text(snapshot.overview),
           const SizedBox(height: 24),
         ],
-        for (var i = 0; i < snapshot.chapters.length; i++)
-          Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Chapter ${i + 1}', style: theme.textTheme.labelMedium),
-                  Text(
-                    snapshot.chapters[i].title,
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(snapshot.chapters[i].summary),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final id in snapshot.chapters[i].eventIds)
-                        eventChip(id),
-                    ],
-                  ),
-                ],
+        for (final g in snapshot.groups) ...[
+          Row(
+            children: [
+              const Icon(Icons.folder_outlined, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '$groupingLabel: ${g.name}',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...snapshot.chapters.where((c) => c.groupId == g.id).map(chapterCard),
+          if (!snapshot.chapters.any((c) => c.groupId == g.id))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'No chapters yet. Add some in Edit.',
+                style: theme.textTheme.bodySmall,
               ),
             ),
+          const SizedBox(height: 8),
+        ],
+        if (snapshot.groups.isNotEmpty && ungrouped.isNotEmpty) ...[
+          Text(
+            'Not in a ${groupingLabel.toLowerCase()}',
+            style: theme.textTheme.titleMedium,
           ),
+          const SizedBox(height: 8),
+        ],
+        ...ungrouped.map(chapterCard),
         if (snapshot.themes.isNotEmpty) ...[
           const SizedBox(height: 12),
           Text('Themes', style: theme.textTheme.titleMedium),
@@ -651,21 +727,25 @@ class _ChaptersView extends StatelessWidget {
               leading: const Icon(Icons.hub_outlined, color: Color(0xFFFF9800)),
               title: Text(t.name),
               subtitle: Text(
-                '${t.description}\n${t.eventIds.length} event${t.eventIds.length == 1 ? '' : 's'}',
+                '${t.description}${t.description.isEmpty ? '' : '\n'}'
+                '${t.eventIds.length} event${t.eventIds.length == 1 ? '' : 's'}'
+                '${t.manual ? ' · added by you' : ''}',
               ),
-              isThreeLine: true,
+              isThreeLine: t.description.isNotEmpty,
             ),
         ],
         if (snapshot.links.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Text('Connections the AI found', style: theme.textTheme.titleMedium),
+          Text('Connections', style: theme.textTheme.titleMedium),
           for (final l in snapshot.links)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.link, color: aiColor),
+              leading: const Icon(Icons.link, color: linkColor),
               title: Text(l.relation),
               subtitle: Text(
-                '${state.eventById(l.fromEventId)?.title ?? '?'}  →  ${state.eventById(l.toEventId)?.title ?? '?'}',
+                '${state.eventById(l.fromEventId)?.title ?? '?'}  to  '
+                '${state.eventById(l.toEventId)?.title ?? '?'}'
+                '${l.manual ? ' · added by you' : ''}',
               ),
             ),
         ],

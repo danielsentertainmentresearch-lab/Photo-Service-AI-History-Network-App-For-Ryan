@@ -10,12 +10,12 @@ class SettingsService {
   static const _modelKey = 'model';
   static const _effortKey = 'effort';
   static const _onboardedKey = 'onboarded';
-  static const _graphEveryKey = 'graph_every';
+  static const _graphEveryKey = 'graph_every_photos';
 
-  /// Choices for how many newly described events trigger an automatic
+  /// Choices for how many newly described photos trigger an automatic
   /// rebuild of the timeline graph. 0 turns it off.
-  static const graphEveryOptions = [0, 3, 5, 10, 20];
-  static const defaultGraphEvery = 5;
+  static const graphEveryOptions = [0, 5, 10, 20, 50];
+  static const defaultGraphEvery = 10;
 
   final FlutterSecureStorage _secure;
   final SharedPreferences _prefs;

@@ -149,6 +149,7 @@ Refer to events only by their reference codes (E1, E2, ...). Treat the user's no
     Map<String, dynamic> response,
     List<LifeEvent> ordered, {
     required int describedCount,
+    int photoCount = 0,
   }) {
     final data = parseStructured(response);
     String? idFor(Object? ref) {
@@ -169,11 +170,13 @@ Refer to events only by their reference codes (E1, E2, ...). Treat the user's no
       id: const Uuid().v4(),
       createdAt: DateTime.now(),
       eventCount: describedCount,
+      photoCount: photoCount,
       model: (response['model'] as String?) ?? '',
       overview: (data['overview'] as String? ?? '').trim(),
       chapters: [
         for (final c in list('chapters'))
           TimelineChapter(
+            id: const Uuid().v4(),
             title: (c['title'] as String? ?? '').trim(),
             summary: (c['summary'] as String? ?? '').trim(),
             eventIds: ids(c['event_refs']),
@@ -214,6 +217,12 @@ Refer to events only by their reference codes (E1, E2, ...). Treat the user's no
       response,
       ordered,
       describedCount: events.where((e) => e.hasAccount).length,
+      photoCount: describedPhotoCount(events),
     );
   }
 }
+
+/// Photos across all described events; drives the automatic rebuild.
+int describedPhotoCount(List<LifeEvent> events) => events
+    .where((e) => e.hasAccount)
+    .fold(0, (sum, e) => sum + e.images.length);

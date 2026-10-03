@@ -21,12 +21,19 @@ This is **stage 1**: an Android app built with Flutter, ready for Google Play.
 - AI account: a detailed first-person narrative, a short summary, and labels
   for people, places and tags. You can edit it, copy it or rewrite it.
 - Memory screen: add, edit and delete what the AI should always know.
-- Timeline graph: after every N described events (5 by default, set in
-  Settings), the AI organises the whole timeline into chapters, links between
-  related events, and recurring themes. A graph view shows events left to
-  right in time, connected to their people, places, tags, themes and
-  memories. Each node is ringed green (from you), purple (from the AI) or
-  both.
+- Timeline graph: after every 10 photos in newly described events (Off, 5,
+  10, 20 or 50 in Settings), the AI organises the whole timeline into
+  chapters, links between related events, and recurring themes. A graph
+  view shows events left to right in time, connected to their people,
+  places, tags, themes and memories.
+- Edit timeline: every part of the organised timeline can be edited by
+  hand: overview, chapters (title, summary, order, events, colour),
+  larger groupings of chapters (working name "Group", set by
+  `groupingLabel` in `lib/models/memory_graph.dart`), themes, and
+  connections. Chapter colours are chosen by the user and ring that
+  chapter's events in the graph. Edits are repaired before saving so bad
+  input can't break the app, and AI rebuilds keep the user's groups,
+  colours, renamed chapters and own themes/connections.
 - Timeline grouped by month, plus full-text search across everything.
 - Settings: your own Anthropic API key (stored encrypted), the model
   (Claude Opus 5.5 by default, or Sonnet 5.5) and the thinking effort.
@@ -90,6 +97,16 @@ On first launch, open Settings and paste an Anthropic API key from
 Anthropic account. A typical event costs roughly 5–30 US cents on Opus 5.5
 at high effort, depending on photo count and length, and about half that on
 Sonnet 5.5.
+
+To regenerate review screenshots with sample data (`store/screenshots/`):
+
+```bash
+flutter test tool/screenshots_test.dart
+```
+
+Photo thumbnails don't render in this test renderer, and the sample
+photos are placeholders, so take real device screenshots for the Play
+Store listing.
 
 To regenerate the icon or store graphics after changing `tool/generate_icon.dart`:
 
