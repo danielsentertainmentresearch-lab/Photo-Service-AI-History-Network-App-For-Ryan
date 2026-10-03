@@ -371,11 +371,16 @@ void main() {
     expect(find.bySemanticsLabel('Ring colour'), findsNWidgets(2 * 3));
 
     await tester.tap(find.text('Save'));
+    // The editor closes only after the database write finishes; that write
+    // is real I/O, so give it real time (CI machines can be slow).
+    for (var i = 0; i < 50 && find.text('open').evaluate().isEmpty; i++) {
+      await tester.runAsync(
+        () => Future.delayed(const Duration(milliseconds: 100)),
+      );
+      await tester.pump();
+    }
     await tester.pumpAndSettle();
-    await tester.runAsync(
-      () => Future.delayed(const Duration(milliseconds: 200)),
-    );
-    await tester.pumpAndSettle();
+    expect(find.text('open'), findsOneWidget); // editor closed
 
     final graph = state.graphSnapshot!;
     expect(graph.books.single.title, 'Summer of hikes');
@@ -383,7 +388,6 @@ void main() {
     expect(graph.rings, {'e1': 0});
     expect(graph.chapters.single.title, 'Trail weeks');
     expect(state.graph.node('event:e1')!.ringColor, ringPalette[0]);
-    expect(find.text('open'), findsOneWidget); // editor closed
   });
 
   testWidgets('leaving with unsaved changes asks first', (tester) async {
