@@ -36,7 +36,7 @@ Platform: Android, built with Flutter (Dart). Repository:
 | 7 | Owner corrections: graph unlocks **once** at 10 photos and then only builds on itself; AI-owned content read-only; user layer is Books and rings only; rings unlocked by rewarded videos; accounts required after the tutorial | `e37405d`, `1a758c5` |
 | 8 | Screen-by-screen tests; launch checklist and standing reminder | `68f92ab`, `ea989d3` |
 | 9 | Per-account libraries, photo dates and places, On this day, export, optional weather, recent-apps privacy | `3c2a748` |
-| 10 | Full debug (6 confirmed bugs fixed, see §5), Your data dashboard, export unlock at 100 events, analysis CSV and data guide, Web3 identities, owner metrics dashboard demo | this commit |
+| 10 | Full debug (6 confirmed bugs fixed, see §5), Your data dashboard, export unlock at 100 events, analysis CSV and data guide, Web3 identities, owner metrics dashboard demo | `0dedd3b` |
 
 ## 3. Mechanisms, parts and features
 
