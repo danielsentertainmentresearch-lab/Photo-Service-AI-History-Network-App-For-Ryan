@@ -21,3 +21,8 @@
   The Your data meters stay free with no ads.
 - `owner-dashboard/` is owner-only (Python stdlib, localhost). Run its
   tests with `python3 -m unittest discover -s tests` from that folder.
+- Stage 2 network model: **mind maps first** (primary in function and data
+  exploration), then **Obsidian** enterprise/user-level functions added for
+  familiarity. Experimental features ship in irregular updates with feedback
+  rounds; a 90% "yes" vote earns a dedicated update; fully set-up accounts get
+  a collectable linked to the feature that can never be bought or sold.

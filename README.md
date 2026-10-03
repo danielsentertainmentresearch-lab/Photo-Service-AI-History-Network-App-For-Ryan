@@ -220,9 +220,13 @@ fine for testing but not accepted by Play. See [RELEASE.md](RELEASE.md).
 
 ## Roadmap
 
-- **Stage 2**: the AI maps events as a neural network modelled on Obsidian
-  and mind maps, for events added on an irregular schedule at the person's
-  own pace.
+- **Stage 2**: the AI maps events as a neural network, primarily a mind map
+  (in function and in data exploration), with Obsidian's enterprise and
+  user-level functions added for familiarity, for events added on an
+  irregular schedule at the person's own pace.
+- Experimental features in irregular updates, with feedback rounds; features
+  voted 90% "yes" ship in their own update, and fully set-up accounts get a
+  non-tradeable collectable linked to that feature.
 - Paywall tiers: editing AI-owned nodes and custom connections/themes; a
   higher tier for export and backup/sync.
 - Connect the chosen accounts backend (Supabase recommended), including Web3

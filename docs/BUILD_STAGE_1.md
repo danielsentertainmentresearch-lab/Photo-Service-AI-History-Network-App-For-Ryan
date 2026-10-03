@@ -314,7 +314,33 @@ From `docs/LAUNCH_CHECKLIST.md`:
 
 ## 8. Handover to stage 2
 
-Stage 2 designs how the AI maps events as a neural network, modelled on
-Obsidian's linked graph and on mind maps, for events added on an irregular
-schedule at the person's own pace. Stage 2 starts only on the owner's
-command.
+Stage 2 designs how the AI maps events as a neural network, for events added
+on an irregular schedule at the person's own pace. It draws on two models,
+in this order of importance:
+
+### Mind maps
+The primary model. The network works first as a mind map, both in how it
+functions and in how people explore their data: ideas branch out from
+events, people, places and themes, and exploring means following and
+opening branches.
+
+### Obsidian
+Added on top: Obsidian's enterprise-level and user-level functions, so the
+features feel familiar in some way the first time a person uses them.
+
+### Experimental features and feedback
+- Some updates will include features to test: edge-case, fringe or
+  frontier, expert or advanced, experimental, unique, or new in some or all
+  ways. They arrive in updates at irregular times.
+- Each test feature asks people for feedback, over as many rounds as the
+  ongoing review needs.
+- A tested feature may ship in the next major version, or during a holiday
+  or promotional event.
+- From time to time people vote on features they have rated close to
+  perfect. A feature that gets **90% "yes"** ships in its own dedicated
+  update.
+- Everyone with a fully set-up account gets recognition on their account,
+  linked to that feature, as a collectable reward. Collectables can't be
+  bought or sold, with real money or inside the app.
+
+Stage 2 starts only on the owner's command.
