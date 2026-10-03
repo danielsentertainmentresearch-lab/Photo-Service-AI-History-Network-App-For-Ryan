@@ -37,6 +37,24 @@ This is **stage 1**: an Android app built with Flutter, ready for Google Play.
   order with rewarded videos (5, then 6, 7, …). The ring palette in
   `lib/models/ring_palette.dart` is a placeholder until the brand palette
   arrives.
+- Photo dates and places: picking or taking a photo fills in the event's
+  date from its EXIF capture time, and its place from the photo's GPS
+  (named via OpenStreetMap Nominatim). The phone's location permission is
+  never requested.
+- On this day: events from today's date in earlier years, at the top of
+  the timeline.
+- Weather (optional, per event): the weather at the event's place and hour
+  from Open-Meteo. Never sent to the AI and never part of the account.
+  Unlocked for the day by 3 rewarded videos; the day refreshes at 12:00
+  noon.
+- Separate libraries per account: everyone signed in on a shared phone has
+  their own database, photos, API key, settings, rings and weather pass.
+  The library from before accounts goes to the first account to sign in.
+- Export: Settings → Export makes a zip with an Obsidian vault (one note per
+  event, linked to people, places, tags, chapters, books and themes, with
+  photos embedded) and a full `data.json`.
+- Hidden from recent apps by default (Android `FLAG_SECURE`; toggle in
+  Settings), which also blocks screenshots of the app.
 - Timeline grouped by month, plus full-text search across everything.
 - Settings: your own Anthropic API key (stored encrypted), the model
   (Claude Opus 5.5 by default, or Sonnet 5.5) and the thinking effort.
@@ -46,8 +64,8 @@ This is **stage 1**: an Android app built with Flutter, ready for Google Play.
 
 | Data | Location |
 |---|---|
-| Original photos | App-private storage on the device (`files/vault/`) |
-| Events, memories | SQLite database on the device |
+| Original photos | App-private storage on the device (`files/vaults/<account>/`) |
+| Events, memories, weather | SQLite database on the device, one per account |
 | API key | Android Keystore-backed encrypted storage |
 | Account | Firebase Authentication (email or phone, sign-in method) |
 | Ring unlock progress | On the device |
@@ -56,7 +74,10 @@ Data leaves the phone only when an event is described. That request sends the
 event's photos (downscaled to 1568 px), its notes, summaries of the 15 most
 recent events and the saved memories to `api.anthropic.com` over HTTPS. Cloud
 backup is disabled for app data. Signing in contacts Firebase (Google), and
-unlocking ring colours plays AdMob (Google) rewarded videos. See
+unlocking ring colours or weather plays AdMob (Google) rewarded videos.
+Place names send a photo's coordinates to OpenStreetMap Nominatim, and
+weather lookups send coordinates or the place text plus the date to
+Open-Meteo. See
 [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
 
 ## Architecture
@@ -70,8 +91,10 @@ lib/
   data/          SQLite schema, repositories, on-device image vault
   models/        LifeEvent, EventImage, MemoryItem
   services/      Settings, accounts (Firebase Auth + biometric lock),
-                 rewarded videos (AdMob behind a swappable interface)
-  state/         AppState: the single ChangeNotifier the UI watches
+                 rewarded videos (AdMob behind a swappable interface),
+                 photo EXIF, places and weather, export, recents privacy
+  state/         AppState: the ChangeNotifier the UI watches; LibraryScope
+                 opens the signed-in account's own library
   screens/       Tutorial, Account, Home/timeline, New event, Event detail,
                  Memory, Timeline graph, Books & rings, Settings
   widgets/       Shared image and status widgets
@@ -144,6 +167,7 @@ fine for testing but not accepted by Play. See [RELEASE.md](RELEASE.md).
 - Passkeys (FIDO2) in addition to biometric unlock.
 - Optional sync to a self-hosted server (e.g. a Docker container on a home
   NAS), with the AI call moved server-side so the key never sits on the phone.
-- Export/import of the whole library (zip of photos + JSON).
+- Import of an exported library.
 - Ask questions across all events ("when did I last see Sam?").
-- Read EXIF time and location from photos automatically.
+- Owner metrics dashboard, self-hosted on the owner's computer (final
+  stage; see docs/LAUNCH_CHECKLIST.md).

@@ -16,6 +16,7 @@ import 'package:eventlens/services/auth_service.dart';
 import 'package:eventlens/services/rewards_service.dart';
 import 'package:eventlens/services/settings_service.dart';
 import 'package:eventlens/state/app_state.dart';
+import 'package:eventlens/state/library_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -183,6 +184,15 @@ void main() {
       ChangeNotifierProvider<AuthService>.value(value: auth ?? _FakeAuth()),
       ChangeNotifierProvider(create: (_) => BiometricLock(prefs)),
       ChangeNotifierProvider(create: (_) => RingUnlocks(prefs, videos)),
+      ChangeNotifierProvider(create: (_) => WeatherPass(prefs, videos)),
+      // Signing in opens the account's library; tests reuse [state].
+      Provider<LibraryOpener>.value(
+        value: (uid) async => Library(
+          state: state,
+          unlocks: RingUnlocks(prefs, videos, scope: uid),
+          weather: WeatherPass(prefs, videos, scope: uid),
+        ),
+      ),
     ],
     child: child,
   );

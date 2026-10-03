@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../ai/event_describer.dart';
 import '../app.dart';
 import '../services/auth_service.dart';
+import '../services/export_service.dart';
+import '../services/recents_privacy.dart';
 import '../state/app_state.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -137,7 +141,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onSelectionChanged: (s) => state.setEffort(s.first),
           ),
           const Divider(height: 32),
+          const _ExportSection(),
+          const Divider(height: 32),
           Text('Privacy', style: theme.textTheme.titleMedium),
+          const _RecentsToggle(),
           const SizedBox(height: 4),
           Text(
             'Your photos, notes and memories are stored only on this device. '
@@ -274,5 +281,93 @@ class _AccountSection extends StatelessWidget {
             .showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
+  }
+}
+
+class _RecentsToggle extends StatelessWidget {
+  const _RecentsToggle();
+
+  @override
+  Widget build(BuildContext context) {
+    final privacy = context.watch<RecentsPrivacy?>();
+    if (privacy == null) return const SizedBox.shrink();
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      secondary: const Icon(Icons.visibility_off_outlined),
+      title: const Text('Hide in recent apps'),
+      subtitle: const Text(
+        'Blanks the app in the app switcher so photos aren\'t visible. '
+        'Also blocks screenshots of the app.',
+      ),
+      value: privacy.enabled,
+      onChanged: privacy.setEnabled,
+    );
+  }
+}
+
+class _ExportSection extends StatefulWidget {
+  const _ExportSection();
+
+  @override
+  State<_ExportSection> createState() => _ExportSectionState();
+}
+
+class _ExportSectionState extends State<_ExportSection> {
+  bool _busy = false;
+
+  Future<void> _export() async {
+    final state = context.read<AppState>();
+    setState(() => _busy = true);
+    try {
+      final exporter = LibraryExporter(state.vault);
+      final archive = await exporter.build(
+        events: state.allEvents,
+        memories: state.memories,
+        graph: state.graphSnapshot,
+      );
+      final file = await exporter.writeZip(
+        archive,
+        await getTemporaryDirectory(),
+      );
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)], subject: 'EventLens export'),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Export', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 4),
+        Text(
+          'Save everything as one zip: original photos, all data, and a '
+          'folder of linked notes that opens as an Obsidian vault.',
+          style: theme.textTheme.bodySmall,
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _busy ? null : _export,
+          icon: _busy
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.ios_share),
+          label: const Text('Export library'),
+        ),
+      ],
+    );
   }
 }

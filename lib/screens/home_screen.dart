@@ -63,6 +63,8 @@ class HomeScreen extends StatelessWidget {
                 ),
               ],
             ),
+          if (state.onThisDay().isNotEmpty)
+            _OnThisDay(events: state.onThisDay()),
           Expanded(
             child: events.isEmpty
                 ? const _EmptyState()
@@ -254,4 +256,53 @@ class _EventSearch extends SearchDelegate<void> {
     }
     return ListView(children: [for (final e in events) EventTile(event: e)]);
   }
+}
+
+/// Events from this calendar day in earlier years.
+class _OnThisDay extends StatelessWidget {
+  final List<LifeEvent> events;
+
+  const _OnThisDay({required this.events});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final now = DateTime.now();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Card(
+        color: theme.colorScheme.secondaryContainer,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'On this day',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: theme.colorScheme.onSecondaryContainer,
+                ),
+              ),
+              for (final e in events.take(3))
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: Text(e.title.isEmpty ? 'Untitled event' : e.title),
+                  subtitle: Text(_ago(now.year - e.occurredAt.year)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => EventDetailScreen(eventId: e.id),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _ago(int years) =>
+      years == 1 ? '1 year ago today' : '$years years ago today';
 }

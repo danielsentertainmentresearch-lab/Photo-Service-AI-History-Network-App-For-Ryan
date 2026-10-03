@@ -28,12 +28,18 @@ YOUR LIBRARY STAYS YOURS
 • Only the event you choose to describe is sent to the AI, using your own
   Anthropic API key.
 • No analytics or tracking. Ads appear only if you choose to watch a short
-  video to unlock extra ring colours.
+  video to unlock extra ring colours or the day's weather lookups.
+• Sharing a phone? Every account has its own private library.
+• Hidden from the recent-apps screen by default.
 
 FEATURES
 • Your timeline becomes a connected graph of chapters, people, places and
   themes, and keeps growing as you add events
 • Gather chapters into your own titled Books; mark events with coloured rings
+• Dates and places filled in from your photos automatically
+• "On this day": events from this date in earlier years
+• Optional weather for any event, kept separate from the AI's account
+• Export everything as a zip, including an Obsidian-ready vault
 • Timeline of events grouped by month
 • Full-text search across titles, notes, accounts, people, places and tags
 • Edit, copy or rewrite any account
@@ -80,8 +86,13 @@ actually does:
     prevention.
 - **Purposes**: App functionality, Account management, Advertising or
   marketing, Fraud prevention, security, and compliance.
-- No location, contacts, financial or health data is collected. Location is
-  free text the user types and goes under Other info.
+  - Location → Precise location (from a photo's GPS data, or a typed place
+    name): *shared* with OpenStreetMap Nominatim (place names) and
+    Open-Meteo (optional weather), at the user's request, for app
+    functionality. Optional. Not collected (never stored off the phone by
+    the developer). The app does not request the phone's location
+    permission.
+- No contacts, financial or health data is collected.
 - **Contains ads**: Yes.
 
 > Google counts data sent to a third party at the user's request as

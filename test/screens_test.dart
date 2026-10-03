@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:eventlens/data/app_database.dart';
@@ -12,12 +13,15 @@ import 'package:eventlens/screens/memory_screen.dart';
 import 'package:eventlens/screens/new_event_screen.dart';
 import 'package:eventlens/screens/settings_screen.dart';
 import 'package:eventlens/services/auth_service.dart';
+import 'package:eventlens/services/places_service.dart';
 import 'package:eventlens/services/rewards_service.dart';
 import 'package:eventlens/services/settings_service.dart';
 import 'package:eventlens/state/app_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -45,6 +49,31 @@ class _NoVideos implements RewardedVideoProvider {
   Future<bool> showRewardedVideo() async => false;
 }
 
+class _FinishedVideos implements RewardedVideoProvider {
+  @override
+  Future<bool> showRewardedVideo() async => true;
+}
+
+/// Open-Meteo stand-in: one clear evening at 21 °C.
+final _weatherServer = MockClient((request) async {
+  final day = request.url.queryParameters['start_date'];
+  return http.Response(
+    jsonEncode({
+      'results': [
+        {'latitude': 38.9, 'longitude': -120.05},
+      ],
+      'hourly': {
+        'time': ['${day}T20:00'],
+        'temperature_2m': [21.0],
+        'weather_code': [0],
+        'precipitation': [0.0],
+        'wind_speed_10m': [5.0],
+      },
+    }),
+    200,
+  );
+});
+
 void main() {
   sqfliteFfiInit();
 
@@ -70,6 +99,7 @@ void main() {
         graphRepo: GraphRepository(db),
         vault: ImageVault(Directory('${tmp.path}/vault')),
         settings: SettingsService(const FlutterSecureStorage(), prefs),
+        places: PlacesService(httpClient: _weatherServer),
       );
       final at = DateTime(2026, 6, 6, 20);
       await state.events.save(
@@ -113,12 +143,15 @@ void main() {
     addTearDown(tester.view.reset);
   }
 
-  Widget app(Widget home) => MultiProvider(
+  Widget app(Widget home, {RewardedVideoProvider? videos}) => MultiProvider(
     providers: [
       ChangeNotifierProvider.value(value: state),
       ChangeNotifierProvider<AuthService>.value(value: auth),
       ChangeNotifierProvider(create: (_) => BiometricLock(prefs)),
       ChangeNotifierProvider(create: (_) => RingUnlocks(prefs, _NoVideos())),
+      ChangeNotifierProvider(
+        create: (_) => WeatherPass(prefs, videos ?? _NoVideos()),
+      ),
     ],
     child: MaterialApp(home: home),
   );
@@ -270,5 +303,61 @@ void main() {
     await tester.tap(find.text('Sign out'));
     await settle(tester, () => auth.signedOut);
     expect(auth.signedOut, isTrue);
+  });
+
+  testWidgets('weather: three videos unlock the lookup, then it shows', (
+    tester,
+  ) async {
+    await setUpState(tester);
+    await tester.pumpWidget(
+      app(const EventDetailScreen(eventId: 'lake'), videos: _FinishedVideos()),
+    );
+    await tester.ensureVisible(find.text('Weather (optional)'));
+    await tester.pumpAndSettle();
+    expect(find.text('0 of 3 watched today'), findsOneWidget);
+    for (var i = 1; i <= 3; i++) {
+      await tester.ensureVisible(find.text('Watch a video'));
+      await tester.tap(find.text('Watch a video'));
+      await settle(
+        tester,
+        () =>
+            find.text('Watch a video').evaluate().isEmpty ||
+            find.text('$i of 3 watched today').evaluate().isNotEmpty,
+      );
+    }
+    await tester.ensureVisible(find.text('Look up the weather'));
+    await tester.tap(find.text('Look up the weather'));
+    await settle(tester, () => state.eventById('lake')!.weather != null);
+    expect(find.text('Clear sky, 21°C'), findsOneWidget);
+    expect(find.text('Weather data by Open-Meteo.com'), findsOneWidget);
+  });
+
+  testWidgets('home shows events from this day in earlier years', (
+    tester,
+  ) async {
+    await setUpState(tester);
+    final now = DateTime.now();
+    final then = DateTime(now.year - 2, now.month, now.day, 9);
+    await tester.runAsync(() async {
+      await state.events.save(
+        LifeEvent(
+          id: 'old',
+          title: 'First day at the cabin',
+          notes: '',
+          location: '',
+          occurredAt: then,
+          createdAt: then,
+          updatedAt: then,
+        ),
+      );
+      await state.load();
+    });
+    await tester.pumpWidget(app(const HomeScreen()));
+    await tester.pump();
+    expect(find.text('On this day'), findsOneWidget);
+    expect(find.text('2 years ago today'), findsOneWidget);
+    await tester.tap(find.text('2 years ago today'));
+    await tester.pumpAndSettle();
+    expect(find.byType(EventDetailScreen), findsOneWidget);
   });
 }

@@ -74,14 +74,17 @@ class AdMobRewardedProvider implements RewardedVideoProvider {
 /// [ringUnlockCost] watched videos (5, then 6, 7, …). Progress is stored on
 /// this device.
 class RingUnlocks extends ChangeNotifier {
-  static const _unlockedKey = 'ring_unlocked_count';
-  static const _progressKey = 'ring_unlock_progress';
-
   final SharedPreferences _prefs;
   final RewardedVideoProvider provider;
+  final String _scope;
   bool _watching = false;
 
-  RingUnlocks(this._prefs, this.provider);
+  /// [scope] keeps each account's unlocks separate on a shared phone.
+  RingUnlocks(this._prefs, this.provider, {String scope = ''})
+    : _scope = scope.isEmpty ? '' : '_$scope';
+
+  String get _unlockedKey => 'ring_unlocked_count$_scope';
+  String get _progressKey => 'ring_unlock_progress$_scope';
 
   int get unlockedCount => (_prefs.getInt(_unlockedKey) ?? freeRingColors)
       .clamp(freeRingColors, ringPalette.length);
@@ -119,6 +122,77 @@ class RingUnlocks extends ChangeNotifier {
       } else {
         await _prefs.setInt(_progressKey, watched);
       }
+      return true;
+    } finally {
+      _watching = false;
+      notifyListeners();
+    }
+  }
+}
+
+/// Hour of day (local time) when daily features refresh.
+const dailyRefreshHour = 12;
+
+/// Rewarded videos that unlock weather lookups for one day.
+const weatherVideosPerDay = 3;
+
+/// Start of the daily window that contains [now]: the most recent 12:00
+/// noon at or before it.
+DateTime dailyWindowStart(DateTime now) {
+  final todayNoon = DateTime(now.year, now.month, now.day, dailyRefreshHour);
+  return now.isBefore(todayNoon)
+      ? todayNoon.subtract(const Duration(days: 1))
+      : todayNoon;
+}
+
+/// The optional weather lookup, unlocked for the current day by watching
+/// [weatherVideosPerDay] rewarded videos. Progress and the unlock reset at
+/// [dailyRefreshHour] (12:00 noon) every day.
+class WeatherPass extends ChangeNotifier {
+  final SharedPreferences _prefs;
+  final RewardedVideoProvider provider;
+  final String _scope;
+  final DateTime Function() _now;
+  bool _watching = false;
+
+  WeatherPass(
+    this._prefs,
+    this.provider, {
+    String scope = '',
+    DateTime Function()? now,
+  }) : _scope = scope.isEmpty ? '' : '_$scope',
+       _now = now ?? DateTime.now;
+
+  String get _windowKey => 'weather_pass_window$_scope';
+  String get _progressKey => 'weather_pass_progress$_scope';
+
+  int get _currentWindow => dailyWindowStart(_now()).millisecondsSinceEpoch;
+
+  /// Videos watched in the current daily window.
+  int get progress =>
+      _prefs.getInt(_windowKey) == _currentWindow
+          ? (_prefs.getInt(_progressKey) ?? 0)
+          : 0;
+
+  bool get unlocked => progress >= weatherVideosPerDay;
+
+  bool get watching => _watching;
+
+  /// When the current unlock (or progress) resets.
+  DateTime get resetsAt =>
+      dailyWindowStart(_now()).add(const Duration(days: 1));
+
+  /// Plays one rewarded video; returns true if it counted.
+  Future<bool> watchVideo() async {
+    if (unlocked || _watching) return false;
+    _watching = true;
+    notifyListeners();
+    try {
+      final earned = await provider.showRewardedVideo();
+      if (!earned) return false;
+      final window = _currentWindow;
+      await _prefs.setInt(_progressKey, progress + 1);
+      await _prefs.setInt(_windowKey, window);
       return true;
     } finally {
       _watching = false;

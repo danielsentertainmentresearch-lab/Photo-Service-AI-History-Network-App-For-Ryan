@@ -1,10 +1,12 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../services/photo_metadata.dart';
 import '../state/app_state.dart';
 import 'event_detail_screen.dart';
 
@@ -23,6 +25,10 @@ class _NewEventScreenState extends State<NewEventScreen> {
   final List<File> _photos = [];
   DateTime _occurredAt = DateTime.now();
   bool _saving = false;
+  bool _userPickedDate = false;
+  double? _latitude;
+  double? _longitude;
+  String? _filledFromPhoto;
 
   int get _remaining => AppState.maxPhotosPerEvent - _photos.length;
 
@@ -40,6 +46,7 @@ class _NewEventScreenState extends State<NewEventScreen> {
     if (picked.isEmpty) return;
     setState(() =>
         _photos.addAll(picked.take(_remaining).map((x) => File(x.path))));
+    _fillFromPhoto();
   }
 
   Future<void> _takePhoto() async {
@@ -47,6 +54,49 @@ class _NewEventScreenState extends State<NewEventScreen> {
     final picked = await _picker.pickImage(source: ImageSource.camera);
     if (picked == null) return;
     setState(() => _photos.add(File(picked.path)));
+    _fillFromPhoto();
+  }
+
+  /// Uses the first photo's EXIF capture time and GPS position to fill in
+  /// "when" and "where", without overriding anything the user set.
+  Future<void> _fillFromPhoto() async {
+    if (_photos.isEmpty) return;
+    final PhotoMetadata meta;
+    try {
+      final bytes = await _photos.first.readAsBytes();
+      meta = await compute(readPhotoMetadata, bytes);
+    } catch (_) {
+      return;
+    }
+    if (!mounted || meta.isEmpty) return;
+    final filled = <String>[];
+    setState(() {
+      if (meta.takenAt != null && !_userPickedDate) {
+        _occurredAt = meta.takenAt!;
+        filled.add('date');
+      }
+      if (meta.hasLocation && _latitude == null) {
+        _latitude = meta.latitude;
+        _longitude = meta.longitude;
+        filled.add('place');
+      }
+      if (filled.isNotEmpty) {
+        _filledFromPhoto = 'Filled in the ${filled.join(' and ')} from your photo.';
+      }
+    });
+    if (meta.hasLocation && _location.text.trim().isEmpty) {
+      try {
+        final name = await context.read<AppState>().places.placeName(
+              meta.latitude!,
+              meta.longitude!,
+            );
+        if (mounted && name != null && _location.text.trim().isEmpty) {
+          setState(() => _location.text = name);
+        }
+      } catch (_) {
+        // Offline or the service is busy: the coordinates are still kept.
+      }
+    }
   }
 
   Future<void> _pickDateTime() async {
@@ -59,8 +109,11 @@ class _NewEventScreenState extends State<NewEventScreen> {
     if (date == null || !mounted) return;
     final time = await showTimePicker(
         context: context, initialTime: TimeOfDay.fromDateTime(_occurredAt));
-    setState(() => _occurredAt = DateTime(date.year, date.month, date.day,
-        time?.hour ?? _occurredAt.hour, time?.minute ?? _occurredAt.minute));
+    setState(() {
+      _userPickedDate = true;
+      _occurredAt = DateTime(date.year, date.month, date.day,
+          time?.hour ?? _occurredAt.hour, time?.minute ?? _occurredAt.minute);
+    });
   }
 
   Future<void> _save({required bool describe}) async {
@@ -78,6 +131,8 @@ class _NewEventScreenState extends State<NewEventScreen> {
         location: _location.text,
         occurredAt: _occurredAt,
         photos: _photos,
+        latitude: _latitude,
+        longitude: _longitude,
       );
       if (describe) {
         // Runs in the background; the detail screen shows its progress.
@@ -135,7 +190,7 @@ class _NewEventScreenState extends State<NewEventScreen> {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.schedule),
               title: Text(DateFormat.yMMMEd().add_jm().format(_occurredAt)),
-              subtitle: const Text('When it happened'),
+              subtitle: Text(_filledFromPhoto ?? 'When it happened'),
               trailing: const Icon(Icons.edit_calendar_outlined),
               onTap: _pickDateTime,
             ),

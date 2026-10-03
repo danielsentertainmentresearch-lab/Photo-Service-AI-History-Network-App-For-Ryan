@@ -5,6 +5,7 @@ import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/tutorial_screen.dart';
 import 'services/auth_service.dart';
+import 'state/library_scope.dart';
 
 const appName = 'EventLens';
 
@@ -49,7 +50,8 @@ class _EventLensAppState extends State<EventLensApp>
 
   @override
   Widget build(BuildContext context) {
-    final signedIn = context.select<AuthService, bool>((a) => a.user != null);
+    final uid = context.select<AuthService, String?>((a) => a.user?.uid);
+    final signedIn = uid != null;
     final unlocked = context.select<BiometricLock, bool>((l) => l.unlocked);
     return MaterialApp(
       title: appName,
@@ -60,7 +62,13 @@ class _EventLensAppState extends State<EventLensApp>
           ? const TutorialScreen()
           : !unlocked
           ? const LockScreen()
-          : const HomeScreen(),
+          // Each account opens its own library; a new key reopens it when
+          // a different person signs in.
+          : LibraryScope(
+              key: ValueKey(uid),
+              uid: uid,
+              child: const HomeScreen(),
+            ),
     );
   }
 }

@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import '../ai/event_describer.dart';
 import '../models/event.dart';
 import '../models/memory_item.dart';
+import '../services/places_service.dart';
+import '../services/rewards_service.dart';
 import '../state/app_state.dart';
 import '../widgets/common.dart';
 
@@ -113,6 +115,8 @@ class EventDetailScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   SelectableText(event.notes),
                 ],
+                const SizedBox(height: 24),
+                _WeatherSection(event: event),
               ],
             ),
           ),
@@ -495,6 +499,149 @@ class _TextEditorPageState extends State<_TextEditorPage> {
           decoration: const InputDecoration(border: OutlineInputBorder()),
         ),
       ),
+    );
+  }
+}
+
+/// Optional weather for the event's time and place. It isn't part of the
+/// AI's account and is never sent to the AI. Lookups are unlocked for the
+/// day with rewarded videos (see [WeatherPass]).
+class _WeatherSection extends StatefulWidget {
+  final LifeEvent event;
+
+  const _WeatherSection({required this.event});
+
+  @override
+  State<_WeatherSection> createState() => _WeatherSectionState();
+}
+
+class _WeatherSectionState extends State<_WeatherSection> {
+  bool _loading = false;
+  String? _error;
+
+  Future<void> _lookUp() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await context.read<AppState>().lookUpWeather(widget.event.id);
+    } on PlacesException catch (e) {
+      _error = e.message;
+    } catch (e) {
+      _error = 'Couldn\'t get the weather: $e';
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _watch(WeatherPass pass) async {
+    final counted = await pass.watchVideo();
+    if (!counted && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'The video didn\'t finish or couldn\'t load, so it wasn\'t '
+            'counted. Try again.',
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final weather = widget.event.weather;
+    final pass = context.watch<WeatherPass>();
+    final resets = DateFormat.MMMd().add_jm().format(pass.resetsAt);
+
+    final Widget body;
+    if (weather != null) {
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${weather.condition}, ${weather.temperatureC.round()}°C',
+            style: theme.textTheme.titleMedium,
+          ),
+          Text(
+            'Precipitation ${weather.precipitationMm.toStringAsFixed(1)} mm · '
+            'wind ${weather.windKmh.round()} km/h',
+          ),
+          Text(
+            'Weather data by Open-Meteo.com',
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
+      );
+    } else if (pass.unlocked) {
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Weather lookups are unlocked until $resets.',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          FilledButton.tonalIcon(
+            onPressed: _loading ? null : _lookUp,
+            icon: _loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.cloud_outlined),
+            label: const Text('Look up the weather'),
+          ),
+        ],
+      );
+    } else {
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'See the weather at the time and place of this event. Watch '
+            '$weatherVideosPerDay short videos to unlock weather lookups '
+            'until $resets (they refresh every day at 12:00 noon).',
+          ),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: pass.progress / weatherVideosPerDay,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${pass.progress} of $weatherVideosPerDay watched today',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: pass.watching ? null : () => _watch(pass),
+            icon: const Icon(Icons.play_circle_outline),
+            label: const Text('Watch a video'),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.cloud_outlined, size: 18),
+            const SizedBox(width: 6),
+            Text('Weather (optional)', style: theme.textTheme.titleSmall),
+          ],
+        ),
+        const SizedBox(height: 6),
+        body,
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
+          ),
+      ],
     );
   }
 }

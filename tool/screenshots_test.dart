@@ -304,6 +304,9 @@ void main() {
             ChangeNotifierProvider(
               create: (_) => RingUnlocks(prefs, _NoVideos()),
             ),
+            ChangeNotifierProvider(
+              create: (_) => WeatherPass(prefs, _NoVideos()),
+            ),
           ],
           child: MaterialApp(
             debugShowCheckedModeBanner: false,

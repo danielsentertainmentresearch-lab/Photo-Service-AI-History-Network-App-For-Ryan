@@ -10,11 +10,11 @@ services. Rewarded ads are the exception: Google AdMob stays an option.
 ## Standing reminder (repeat at the end of every build stage until done)
 
 - [ ] **Accounts backend**: not active. Test builds use "Continue as
-      reviewer". Recommended at stage 7: **Supabase** (open source, managed
+      reviewer". Recommended at stage 8: **Supabase** (open source, managed
       now, can self-host later). Alternatives: PocketBase (cheapest,
       single binary, pre-1.0), Appwrite, Firebase (Google; already wired).
 - [ ] **Rewarded ads**: not active. Test builds show Google test ads.
-      Recommended at stage 7: **AdMob** (already integrated). Alternatives:
+      Recommended at stage 8: **AdMob** (already integrated). Alternatives:
       AppLovin MAX, Unity LevelPlay, Liftoff, Mintegral, Pangle, Meta
       Audience Network; open source Prebid Mobile only at large scale.
 
@@ -32,11 +32,19 @@ services. Rewarded ads are the exception: Google AdMob stays an option.
 | Privacy policy URL | Waiting on owner | GitHub Pages |
 | Support email | Waiting on owner | Proton Mail on a custom domain |
 | AI access | Active | Each user's own Anthropic API key |
-| Crash reporting | Later | Sentry or GlitchTip (open source) |
+| Crash reporting | Owner to choose (not picked yet) | Options: GlitchTip (open source, self-host or hosted), Sentry (open-source SDK; self-host or sentry.io), Bugsink (open source, self-host). Crash data goes to the owner dashboard |
 | Payments (paywall stage) | Later | Google Play Billing (required); RevenueCat optional |
+| Place names (Nominatim) | Active (free, light use) | OpenStreetMap's public server allows max 1 request/s and no heavy use. Before launch at scale: self-host Nominatim or Photon (open source), or a paid OSM-based provider; base URL is configurable in `PlacesService` |
+| Weather (Open-Meteo) | Active (free, non-commercial) | Free tier is non-commercial only. A monetized release needs the Open-Meteo API subscription, or self-host Open-Meteo (open source, Docker) |
+| Weather daily pass | Built (3 rewarded videos, refresh 12:00 noon) | Uses the same rewarded-ad platform as rings |
+| Owner metrics dashboard | Final stage | Self-hosted on the owner's computer (localhost). Metrics source options, open source first: PostHog (self-host), Umami, Plausible, Matomo; Aptabase (open source, privacy-first, has a Flutter SDK). Not chosen yet. Needs a consent line in the privacy policy before any usage metrics are sent |
+| Backup/sync paywall | Ideas listed, not built | Payments platform above; storage options: Supabase Storage, Backblaze B2, Cloudflare R2, or self-hosted MinIO/Garage |
 | Brand palette | After this build phase | Swap `lib/models/ring_palette.dart` |
 
 ## Reminder log
 
 - **Stage 7 (3 Oct 2026)**: accounts and ads not active. Recommended:
   Supabase for accounts, AdMob for ads.
+- **Stage 8 (3 Oct 2026)**: accounts and ads still not active. Recommended:
+  Supabase for accounts, AdMob for ads. Added: crash reporting (undecided),
+  owner dashboard, Nominatim and Open-Meteo usage terms.

@@ -15,6 +15,7 @@ import '../data/memory_repository.dart';
 import '../models/event.dart';
 import '../models/memory_graph.dart';
 import '../models/memory_item.dart';
+import '../services/places_service.dart';
 import '../services/settings_service.dart';
 
 typedef DescriberFactory = EventDescriber Function(
@@ -52,6 +53,7 @@ class AppState extends ChangeNotifier {
   final SettingsService settings;
   final DescriberFactory describerFactory;
   final GraphBuilderFactory graphBuilderFactory;
+  final PlacesService places;
   final Uuid _uuid = const Uuid();
 
   AppState({
@@ -62,7 +64,8 @@ class AppState extends ChangeNotifier {
     required this.settings,
     this.describerFactory = _defaultDescriber,
     this.graphBuilderFactory = _defaultGraphBuilder,
-  });
+    PlacesService? places,
+  }) : places = places ?? PlacesService();
 
   static const int maxPhotosPerEvent = 10;
 
@@ -135,6 +138,8 @@ class AppState extends ChangeNotifier {
     required String location,
     required DateTime occurredAt,
     required List<File> photos,
+    double? latitude,
+    double? longitude,
   }) async {
     final id = _uuid.v4();
     final images = <EventImage>[];
@@ -160,6 +165,8 @@ class AppState extends ChangeNotifier {
       occurredAt: occurredAt,
       createdAt: now,
       updatedAt: now,
+      latitude: latitude,
+      longitude: longitude,
       images: images,
     );
     await events.save(event);
@@ -344,6 +351,49 @@ class AppState extends ChangeNotifier {
     await graphRepo.replace(next);
     _graph = next;
     notifyListeners();
+  }
+
+  /// Events from this calendar day in earlier years, most recent first.
+  List<LifeEvent> onThisDay([DateTime? today]) {
+    final day = today ?? DateTime.now();
+    return _events
+        .where(
+          (e) =>
+              e.occurredAt.month == day.month &&
+              e.occurredAt.day == day.day &&
+              e.occurredAt.year < day.year,
+        )
+        .toList()
+      ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+  }
+
+  /// Looks up the weather for an event and stores it with the event. Uses
+  /// the event's coordinates, or finds them from its place name. The
+  /// weather is never sent to the AI. Throws [PlacesException] with a
+  /// readable message when it can't be found.
+  Future<void> lookUpWeather(String eventId) async {
+    final event = await events.byId(eventId);
+    if (event == null) return;
+    var lat = event.latitude, lon = event.longitude;
+    if (lat == null || lon == null) {
+      if (event.location.trim().isEmpty) {
+        throw const PlacesException(
+          'Add a place to this event first (Edit details → Where).',
+        );
+      }
+      final found = await places.findPlace(event.location);
+      if (found == null) {
+        throw PlacesException('Couldn\'t find "${event.location}" on the map.');
+      }
+      (lat, lon) = found;
+    }
+    final weather = await places.weatherAt(lat, lon, event.occurredAt);
+    final current = await events.byId(eventId);
+    if (current == null) return;
+    await events.update(
+      current.copyWith(latitude: lat, longitude: lon, weather: weather),
+    );
+    await _reload();
   }
 
   // ---- Memory ---------------------------------------------------------------

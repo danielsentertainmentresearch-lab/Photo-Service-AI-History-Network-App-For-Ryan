@@ -5,7 +5,7 @@ import 'package:sqflite/sqflite.dart';
 /// [factory] and [path] are injectable so tests can use an in-memory FFI
 /// database instead of the platform plugin.
 class AppDatabase {
-  static const int version = 2;
+  static const int version = 3;
 
   static Future<Database> open({DatabaseFactory? factory, String? path}) async {
     final dbFactory = factory ?? databaseFactory;
@@ -18,9 +18,11 @@ class AppDatabase {
         onCreate: (db, _) async {
           await _createV1(db);
           await _createV2(db);
+          await _createV3(db);
         },
         onUpgrade: (db, oldVersion, _) async {
           if (oldVersion < 2) await _createV2(db);
+          if (oldVersion < 3) await _createV3(db);
         },
       ),
     );
@@ -84,5 +86,12 @@ class AppDatabase {
         data TEXT NOT NULL
       )
     ''');
+  }
+
+  /// v3: optional place coordinates and weather on events.
+  static Future<void> _createV3(Database db) async {
+    await db.execute('ALTER TABLE events ADD COLUMN latitude REAL');
+    await db.execute('ALTER TABLE events ADD COLUMN longitude REAL');
+    await db.execute('ALTER TABLE events ADD COLUMN weather TEXT');
   }
 }

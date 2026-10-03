@@ -20,6 +20,60 @@ class MemorySuggestion {
   Map<String, dynamic> toJson() => {'kind': kind, 'content': content};
 }
 
+/// Weather at the time and place of an event. Optional, looked up on
+/// request, shown with the event only: it is never sent to the AI.
+class EventWeather {
+  final double temperatureC;
+  final int weatherCode;
+  final double precipitationMm;
+  final double windKmh;
+  final DateTime fetchedAt;
+
+  const EventWeather({
+    required this.temperatureC,
+    required this.weatherCode,
+    required this.precipitationMm,
+    required this.windKmh,
+    required this.fetchedAt,
+  });
+
+  /// WMO weather interpretation code as words.
+  String get condition => switch (weatherCode) {
+        0 => 'Clear sky',
+        1 => 'Mainly clear',
+        2 => 'Partly cloudy',
+        3 => 'Overcast',
+        45 || 48 => 'Fog',
+        51 || 53 || 55 => 'Drizzle',
+        56 || 57 => 'Freezing drizzle',
+        61 || 63 || 65 => 'Rain',
+        66 || 67 => 'Freezing rain',
+        71 || 73 || 75 || 77 => 'Snow',
+        80 || 81 || 82 => 'Rain showers',
+        85 || 86 => 'Snow showers',
+        95 => 'Thunderstorm',
+        96 || 99 => 'Thunderstorm with hail',
+        _ => 'Unknown',
+      };
+
+  factory EventWeather.fromJson(Map<String, dynamic> json) => EventWeather(
+        temperatureC: (json['temperature_c'] as num).toDouble(),
+        weatherCode: (json['weather_code'] as num).toInt(),
+        precipitationMm: (json['precipitation_mm'] as num).toDouble(),
+        windKmh: (json['wind_kmh'] as num).toDouble(),
+        fetchedAt:
+            DateTime.fromMillisecondsSinceEpoch(json['fetched_at'] as int),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'temperature_c': temperatureC,
+        'weather_code': weatherCode,
+        'precipitation_mm': precipitationMm,
+        'wind_kmh': windKmh,
+        'fetched_at': fetchedAt.millisecondsSinceEpoch,
+      };
+}
+
 /// One photo stored in the on-device vault.
 class EventImage {
   final String id;
@@ -77,7 +131,15 @@ class LifeEvent {
   final String? error;
   final String? model;
 
+  /// Where the event happened, when known (from photo GPS or the place
+  /// name). Used for the optional weather lookup.
+  final double? latitude;
+  final double? longitude;
+  final EventWeather? weather;
+
   final List<EventImage> images;
+
+  bool get hasCoordinates => latitude != null && longitude != null;
 
   const LifeEvent({
     required this.id,
@@ -96,6 +158,9 @@ class LifeEvent {
     this.status = EventStatus.draft,
     this.error,
     this.model,
+    this.latitude,
+    this.longitude,
+    this.weather,
     this.images = const [],
   });
 
@@ -117,6 +182,9 @@ class LifeEvent {
     String? error,
     bool clearError = false,
     String? model,
+    double? latitude,
+    double? longitude,
+    EventWeather? weather,
     List<EventImage>? images,
   }) {
     return LifeEvent(
@@ -136,6 +204,9 @@ class LifeEvent {
       status: status ?? this.status,
       error: clearError ? null : (error ?? this.error),
       model: model ?? this.model,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      weather: weather ?? this.weather,
       images: images ?? this.images,
     );
   }
@@ -167,6 +238,12 @@ class LifeEvent {
       status: EventStatus.values.byName((row['status'] as String?) ?? 'draft'),
       error: row['error'] as String?,
       model: row['model'] as String?,
+      latitude: (row['latitude'] as num?)?.toDouble(),
+      longitude: (row['longitude'] as num?)?.toDouble(),
+      weather: row['weather'] == null
+          ? null
+          : EventWeather.fromJson(
+              jsonDecode(row['weather'] as String) as Map<String, dynamic>),
       images: images,
     );
   }
@@ -188,5 +265,8 @@ class LifeEvent {
         'status': status.name,
         'error': error,
         'model': model,
+        'latitude': latitude,
+        'longitude': longitude,
+        'weather': weather == null ? null : jsonEncode(weather!.toJson()),
       };
 }

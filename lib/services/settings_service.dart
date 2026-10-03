@@ -5,21 +5,21 @@ import '../ai/event_describer.dart';
 
 /// User settings. The API key lives in the Android Keystore-backed secure
 /// storage; everything else is plain preferences.
+///
+/// [scope] (the account) keeps each account's settings and API key separate
+/// on a shared phone; empty means the unscoped, pre-account keys.
 class SettingsService {
-  static const _apiKeyKey = 'anthropic_api_key';
-  static const _modelKey = 'model';
-  static const _effortKey = 'effort';
-  static const _onboardedKey = 'onboarded';
-
   final FlutterSecureStorage _secure;
   final SharedPreferences _prefs;
+  final String _scope;
 
-  SettingsService(this._secure, this._prefs);
+  SettingsService(this._secure, this._prefs, {String scope = ''})
+    : _scope = scope.isEmpty ? '' : '_$scope';
 
-  static Future<SettingsService> create() async => SettingsService(
-    const FlutterSecureStorage(),
-    await SharedPreferences.getInstance(),
-  );
+  String get _apiKeyKey => 'anthropic_api_key$_scope';
+  String get _modelKey => 'model$_scope';
+  String get _effortKey => 'effort$_scope';
+  static const _onboardedKey = 'onboarded';
 
   Future<String?> readApiKey() => _secure.read(key: _apiKeyKey);
 
