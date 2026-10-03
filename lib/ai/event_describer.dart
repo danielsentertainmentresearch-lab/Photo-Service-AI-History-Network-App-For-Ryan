@@ -143,10 +143,9 @@ Also return:
   /// The per-event text: working memory plus earlier events for continuity.
   static String eventContext(LifeEvent event, List<LifeEvent> history) {
     final buffer = StringBuffer();
-    final earlier = history
-        .where((e) => e.id != event.id && e.summary.isNotEmpty)
-        .toList()
-      ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+    final earlier =
+        history.where((e) => e.id != event.id && e.summary.isNotEmpty).toList()
+          ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
     final recent = earlier.take(recentEventLimit).toList().reversed;
     if (recent.isNotEmpty) {
       buffer.writeln('<earlier_events>');
@@ -166,9 +165,11 @@ Also return:
     }
     buffer.writeln('Photos attached: ${event.images.length}');
     buffer.writeln("User's notes at the time (working memory):");
-    buffer.writeln(event.notes.trim().isEmpty
-        ? '(none — rely on the photos and memory)'
-        : event.notes.trim());
+    buffer.writeln(
+      event.notes.trim().isEmpty
+          ? '(none — rely on the photos and memory)'
+          : event.notes.trim(),
+    );
     buffer.writeln('</this_event>\n');
     buffer.write('Write the account of this event.');
     return buffer.toString();
@@ -220,32 +221,7 @@ Also return:
   /// Turns an API response into an [EventAccount], or throws a user-facing
   /// [AnthropicException] explaining why there is no account.
   static EventAccount parseResponse(Map<String, dynamic> response) {
-    final stopReason = response['stop_reason'] as String?;
-    if (stopReason == 'refusal') {
-      throw const AnthropicException(
-          'The AI declined to describe this event. Try editing the notes or '
-          'removing a photo, then retry.');
-    }
-    if (stopReason == 'max_tokens') {
-      throw const AnthropicException(
-          'The description was cut off. Try fewer photos or a lower effort '
-          'level in Settings.');
-    }
-    final blocks = (response['content'] as List).cast<Map<String, dynamic>>();
-    final text = blocks
-        .where((b) => b['type'] == 'text')
-        .map((b) => b['text'] as String)
-        .join();
-    if (text.trim().isEmpty) {
-      throw const AnthropicException('The AI returned an empty response.');
-    }
-    final Map<String, dynamic> data;
-    try {
-      data = jsonDecode(text) as Map<String, dynamic>;
-    } on FormatException {
-      throw const AnthropicException(
-          'The AI response could not be read. Please retry.');
-    }
+    final data = parseStructured(response);
     List<String> strings(String key) => ((data[key] as List?) ?? const [])
         .map((e) => e.toString().trim())
         .where((e) => e.isNotEmpty)
@@ -273,9 +249,46 @@ Also return:
   }) async {
     final response = await client.createMessage(
       buildRequest(
-          event: event, jpegs: jpegs, memories: memories, history: history),
+        event: event,
+        jpegs: jpegs,
+        memories: memories,
+        history: history,
+      ),
       betas: const [AnthropicClient.fallbackBeta],
     );
     return parseResponse(response);
+  }
+}
+
+/// Checks the stop reason and decodes the JSON text of a structured-output
+/// response, throwing a user-facing [AnthropicException] on any problem.
+Map<String, dynamic> parseStructured(Map<String, dynamic> response) {
+  final stopReason = response['stop_reason'] as String?;
+  if (stopReason == 'refusal') {
+    throw const AnthropicException(
+      'The AI declined this request. Try editing the notes or removing a '
+      'photo, then retry.',
+    );
+  }
+  if (stopReason == 'max_tokens') {
+    throw const AnthropicException(
+      'The AI response was cut off. Try fewer photos or a lower effort '
+      'level in Settings.',
+    );
+  }
+  final blocks = (response['content'] as List).cast<Map<String, dynamic>>();
+  final text = blocks
+      .where((b) => b['type'] == 'text')
+      .map((b) => b['text'] as String)
+      .join();
+  if (text.trim().isEmpty) {
+    throw const AnthropicException('The AI returned an empty response.');
+  }
+  try {
+    return jsonDecode(text) as Map<String, dynamic>;
+  } on FormatException {
+    throw const AnthropicException(
+      'The AI response could not be read. Please retry.',
+    );
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
@@ -6,35 +7,61 @@ import 'package:uuid/uuid.dart';
 
 import '../ai/anthropic_client.dart';
 import '../ai/event_describer.dart';
+import '../ai/graph_builder.dart';
 import '../data/event_repository.dart';
+import '../data/graph_repository.dart';
 import '../data/image_vault.dart';
 import '../data/memory_repository.dart';
 import '../models/event.dart';
+import '../models/memory_graph.dart';
 import '../models/memory_item.dart';
 import '../services/settings_service.dart';
 
 typedef DescriberFactory = EventDescriber Function(
-    String apiKey, String model, String effort);
+  String apiKey,
+  String model,
+  String effort,
+);
+
+typedef GraphBuilderFactory = GraphBuilder Function(
+  String apiKey,
+  String model,
+  String effort,
+);
+
+GraphBuilder _defaultGraphBuilder(String apiKey, String model, String effort) =>
+    GraphBuilder(
+      client: AnthropicClient(apiKey: apiKey),
+      model: model,
+      effort: effort,
+    );
 
 EventDescriber _defaultDescriber(String apiKey, String model, String effort) =>
     EventDescriber(
-        client: AnthropicClient(apiKey: apiKey), model: model, effort: effort);
+      client: AnthropicClient(apiKey: apiKey),
+      model: model,
+      effort: effort,
+    );
 
 /// Single source of truth for the UI.
 class AppState extends ChangeNotifier {
   final EventRepository events;
   final MemoryRepository memoryRepo;
+  final GraphRepository graphRepo;
   final ImageVault vault;
   final SettingsService settings;
   final DescriberFactory describerFactory;
+  final GraphBuilderFactory graphBuilderFactory;
   final Uuid _uuid = const Uuid();
 
   AppState({
     required this.events,
     required this.memoryRepo,
+    required this.graphRepo,
     required this.vault,
     required this.settings,
     this.describerFactory = _defaultDescriber,
+    this.graphBuilderFactory = _defaultGraphBuilder,
   });
 
   static const int maxPhotosPerEvent = 10;
@@ -43,6 +70,9 @@ class AppState extends ChangeNotifier {
   List<MemoryItem> _memories = const [];
   bool _hasApiKey = false;
   bool _loaded = false;
+  GraphSnapshot? _graph;
+  bool _graphBuilding = false;
+  String? _graphError;
 
   List<LifeEvent> get allEvents => _events;
   List<MemoryItem> get memories => _memories;
@@ -50,6 +80,26 @@ class AppState extends ChangeNotifier {
   bool get loaded => _loaded;
   String get model => settings.model;
   String get effort => settings.effort;
+
+  GraphSnapshot? get graphSnapshot => _graph;
+  bool get graphBuilding => _graphBuilding;
+  String? get graphError => _graphError;
+  int get graphEvery => settings.graphEvery;
+  int get describedCount => _events.where((e) => e.hasAccount).length;
+
+  /// The knowledge graph of everything recorded so far.
+  GraphData get graph =>
+      buildGraph(events: _events, memories: _memories, snapshot: _graph);
+
+  /// Described events still needed before the next automatic timeline
+  /// build, or null when automatic builds are off.
+  int? get eventsUntilNextGraph {
+    if (graphEvery == 0) return null;
+    final since = describedCount - (_graph?.eventCount ?? 0);
+    final firstMin = _graph == null ? 2 : 0;
+    final needed = max(graphEvery - since, firstMin - describedCount);
+    return max(needed, 0);
+  }
 
   LifeEvent? eventById(String id) {
     for (final e in _events) {
@@ -61,6 +111,7 @@ class AppState extends ChangeNotifier {
   Future<void> load() async {
     await events.recoverInterrupted();
     _hasApiKey = ((await settings.readApiKey()) ?? '').isNotEmpty;
+    _graph = await graphRepo.latest();
     await _reload();
     _loaded = true;
     notifyListeners();
@@ -88,8 +139,14 @@ class AppState extends ChangeNotifier {
       final ext = p.extension(photos[i].path).toLowerCase();
       final fileName = '${_uuid.v4()}${ext.isEmpty ? '.jpg' : ext}';
       await vault.import(photos[i], fileName);
-      images.add(EventImage(
-          id: _uuid.v4(), eventId: id, fileName: fileName, position: i));
+      images.add(
+        EventImage(
+          id: _uuid.v4(),
+          eventId: id,
+          fileName: fileName,
+          position: i,
+        ),
+      );
     }
     final now = DateTime.now();
     final event = LifeEvent(
@@ -107,21 +164,32 @@ class AppState extends ChangeNotifier {
     return event;
   }
 
-  Future<void> updateEventDetails(LifeEvent event,
-      {String? title, String? notes, String? location, DateTime? occurredAt}) async {
-    await events.update(event.copyWith(
-      title: title?.trim(),
-      notes: notes?.trim(),
-      location: location?.trim(),
-      occurredAt: occurredAt,
-      updatedAt: DateTime.now(),
-    ));
+  Future<void> updateEventDetails(
+    LifeEvent event, {
+    String? title,
+    String? notes,
+    String? location,
+    DateTime? occurredAt,
+  }) async {
+    await events.update(
+      event.copyWith(
+        title: title?.trim(),
+        notes: notes?.trim(),
+        location: location?.trim(),
+        occurredAt: occurredAt,
+        updatedAt: DateTime.now(),
+      ),
+    );
     await _reload();
   }
 
   Future<void> updateDescription(LifeEvent event, String description) async {
-    await events.update(event.copyWith(
-        description: description.trim(), updatedAt: DateTime.now()));
+    await events.update(
+      event.copyWith(
+        description: description.trim(),
+        updatedAt: DateTime.now(),
+      ),
+    );
     await _reload();
   }
 
@@ -141,15 +209,19 @@ class AppState extends ChangeNotifier {
 
     final apiKey = await settings.readApiKey();
     if (apiKey == null || apiKey.isEmpty) {
-      await events.update(event.copyWith(
+      await events.update(
+        event.copyWith(
           status: EventStatus.failed,
-          error: 'Add your Anthropic API key in Settings first.'));
+          error: 'Add your Anthropic API key in Settings first.',
+        ),
+      );
       await _reload();
       return;
     }
 
     await events.update(
-        event.copyWith(status: EventStatus.describing, clearError: true));
+      event.copyWith(status: EventStatus.describing, clearError: true),
+    );
     await _reload();
 
     try {
@@ -157,34 +229,83 @@ class AppState extends ChangeNotifier {
       for (final image in event.images) {
         jpegs.add(await vault.jpegForAi(image.fileName));
       }
-      final describer = describerFactory(apiKey, settings.model, settings.effort);
+      final describer = describerFactory(
+        apiKey,
+        settings.model,
+        settings.effort,
+      );
       final account = await describer.describe(
         event: event,
         jpegs: jpegs,
         memories: _memories,
         history: _events,
       );
-      await events.update(event.copyWith(
-        title: event.title.isEmpty ? account.title : event.title,
-        summary: account.summary,
-        description: account.description,
-        people: account.people,
-        places: account.places,
-        tags: account.tags,
-        suggestions: _withoutKnown(account.memorySuggestions),
-        status: EventStatus.described,
-        clearError: true,
-        model: account.model,
-        updatedAt: DateTime.now(),
-      ));
+      await events.update(
+        event.copyWith(
+          title: event.title.isEmpty ? account.title : event.title,
+          summary: account.summary,
+          description: account.description,
+          people: account.people,
+          places: account.places,
+          tags: account.tags,
+          suggestions: _withoutKnown(account.memorySuggestions),
+          status: EventStatus.described,
+          clearError: true,
+          model: account.model,
+          updatedAt: DateTime.now(),
+        ),
+      );
     } catch (e) {
       final message = e is AnthropicException || e is FormatException
           ? e.toString()
           : 'Something went wrong: $e';
       await events.update(
-          event.copyWith(status: EventStatus.failed, error: message));
+        event.copyWith(status: EventStatus.failed, error: message),
+      );
     }
     await _reload();
+    if (eventById(eventId)?.status == EventStatus.described &&
+        eventsUntilNextGraph == 0) {
+      await buildGraphNow();
+    }
+  }
+
+  /// Asks the AI to organise all described events into chapters, links and
+  /// themes. Runs automatically every [graphEvery] described events, or on
+  /// demand from the graph screen.
+  Future<void> buildGraphNow() async {
+    if (_graphBuilding) return;
+    if (describedCount < 2) {
+      _graphError = 'Describe at least two events first.';
+      notifyListeners();
+      return;
+    }
+    final apiKey = await settings.readApiKey();
+    if (apiKey == null || apiKey.isEmpty) {
+      _graphError = 'Add your Anthropic API key in Settings first.';
+      notifyListeners();
+      return;
+    }
+    _graphBuilding = true;
+    _graphError = null;
+    notifyListeners();
+    try {
+      final builder = graphBuilderFactory(
+        apiKey,
+        settings.model,
+        settings.effort,
+      );
+      final snapshot = await builder.build(_events, _memories);
+      await graphRepo.replace(snapshot);
+      _graph = snapshot;
+    } catch (e) {
+      _graphError = e is AnthropicException
+          ? e.toString()
+          : 'Could not build the timeline: $e';
+    } finally {
+      _graphBuilding = false;
+      notifyListeners();
+    }
   }
 
   List<MemorySuggestion> _withoutKnown(List<MemorySuggestion> suggestions) {
@@ -196,21 +317,31 @@ class AppState extends ChangeNotifier {
 
   // ---- Memory ---------------------------------------------------------------
 
-  Future<void> addMemory(String kind, String content,
-      {String source = 'user', String? eventId}) async {
+  Future<void> addMemory(
+    String kind,
+    String content, {
+    String source = 'user',
+    String? eventId,
+  }) async {
     if (content.trim().isEmpty) return;
-    await memoryRepo.save(MemoryItem(
-      id: _uuid.v4(),
-      kind: kind,
-      content: content.trim(),
-      source: source,
-      eventId: eventId,
-      createdAt: DateTime.now(),
-    ));
+    await memoryRepo.save(
+      MemoryItem(
+        id: _uuid.v4(),
+        kind: kind,
+        content: content.trim(),
+        source: source,
+        eventId: eventId,
+        createdAt: DateTime.now(),
+      ),
+    );
     await _reload();
   }
 
-  Future<void> updateMemory(MemoryItem item, String kind, String content) async {
+  Future<void> updateMemory(
+    MemoryItem item,
+    String kind,
+    String content,
+  ) async {
     await memoryRepo.save(item.copyWith(kind: kind, content: content.trim()));
     await _reload();
   }
@@ -229,9 +360,13 @@ class AppState extends ChangeNotifier {
   Future<void> dismissSuggestion(LifeEvent event, MemorySuggestion s) async {
     final current = await events.byId(event.id);
     if (current == null) return;
-    await events.update(current.copyWith(
-        suggestions:
-            current.suggestions.where((x) => x.content != s.content).toList()));
+    await events.update(
+      current.copyWith(
+        suggestions: current.suggestions
+            .where((x) => x.content != s.content)
+            .toList(),
+      ),
+    );
     await _reload();
   }
 
@@ -245,6 +380,11 @@ class AppState extends ChangeNotifier {
 
   Future<void> setModel(String value) async {
     await settings.setModel(value);
+    notifyListeners();
+  }
+
+  Future<void> setGraphEvery(int value) async {
+    await settings.setGraphEvery(value);
     notifyListeners();
   }
 

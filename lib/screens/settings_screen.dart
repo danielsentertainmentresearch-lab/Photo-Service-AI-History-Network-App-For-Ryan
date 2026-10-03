@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../ai/event_describer.dart';
 import '../app.dart';
+import '../services/settings_service.dart';
 import '../state/app_state.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -25,9 +26,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _saveKey() async {
     final key = _keyController.text.trim();
     if (!key.startsWith('sk-ant-')) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('That does not look like an Anthropic API key '
-              '(they start with "sk-ant-").')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'That does not look like an Anthropic API key '
+            '(they start with "sk-ant-").',
+          ),
+        ),
+      );
       return;
     }
     await context.read<AppState>().setApiKey(key);
@@ -77,7 +83,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 labelText: 'sk-ant-…',
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
-                  icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+                  icon: Icon(
+                    _obscure ? Icons.visibility : Icons.visibility_off,
+                  ),
                   onPressed: () => setState(() => _obscure = !_obscure),
                 ),
               ),
@@ -88,7 +96,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: FilledButton(
-                  onPressed: _saveKey, child: const Text('Save key')),
+                onPressed: _saveKey,
+                child: const Text('Save key'),
+              ),
             ),
           ],
           const Divider(height: 32),
@@ -125,6 +135,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onSelectionChanged: (s) => state.setEffort(s.first),
           ),
           const Divider(height: 32),
+          Text('Timeline graph', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            'After this many newly described events, the AI automatically '
+            'organises your whole timeline into chapters, connections and '
+            'themes. Each rebuild is one extra AI request.',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<int>(
+            initialValue: state.graphEvery,
+            decoration: const InputDecoration(
+              labelText: 'Rebuild automatically',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              for (final n in SettingsService.graphEveryOptions)
+                DropdownMenuItem(
+                  value: n,
+                  child: Text(n == 0 ? 'Off (manual only)' : 'Every $n events'),
+                ),
+            ],
+            onChanged: (v) => v == null ? null : state.setGraphEvery(v),
+          ),
+          const Divider(height: 32),
           Text('Privacy', style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
@@ -154,10 +189,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   static String _effortLabel(String e) => switch (e) {
-        'low' => 'Low',
-        'medium' => 'Medium',
-        'high' => 'High',
-        'xhigh' => 'Max',
-        _ => e,
-      };
+    'low' => 'Low',
+    'medium' => 'Medium',
+    'high' => 'High',
+    'xhigh' => 'Max',
+    _ => e,
+  };
 }

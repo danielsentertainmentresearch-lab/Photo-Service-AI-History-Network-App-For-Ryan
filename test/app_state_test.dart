@@ -3,11 +3,14 @@ import 'dart:io';
 
 import 'package:eventlens/ai/anthropic_client.dart';
 import 'package:eventlens/ai/event_describer.dart';
+import 'package:eventlens/ai/graph_builder.dart';
 import 'package:eventlens/data/app_database.dart';
 import 'package:eventlens/data/event_repository.dart';
+import 'package:eventlens/data/graph_repository.dart';
 import 'package:eventlens/data/image_vault.dart';
 import 'package:eventlens/data/memory_repository.dart';
 import 'package:eventlens/models/event.dart';
+import 'package:eventlens/models/memory_graph.dart';
 import 'package:eventlens/services/settings_service.dart';
 import 'package:eventlens/state/app_state.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -25,18 +28,27 @@ void main() {
   late Directory tmp;
   late AppState state;
   late List<Map<String, dynamic>> sentBodies;
+  late List<Map<String, dynamic>> graphBodies;
 
-  Future<AppState> build({required String? apiKey}) async {
-    SharedPreferences.setMockInitialValues({});
+  Future<AppState> build({required String? apiKey, int? graphEvery}) async {
+    SharedPreferences.setMockInitialValues(
+      graphEvery == null ? {} : {'graph_every': graphEvery},
+    );
     FlutterSecureStorage.setMockInitialValues(
-        apiKey == null ? {} : {'anthropic_api_key': apiKey});
+      apiKey == null ? {} : {'anthropic_api_key': apiKey},
+    );
     final db = await AppDatabase.open(
-        factory: databaseFactoryFfi, path: '${tmp.path}/test.db');
+      factory: databaseFactoryFfi,
+      path: '${tmp.path}/test.db',
+    );
     final settings = SettingsService(
-        const FlutterSecureStorage(), await SharedPreferences.getInstance());
+      const FlutterSecureStorage(),
+      await SharedPreferences.getInstance(),
+    );
     final s = AppState(
       events: EventRepository(db),
       memoryRepo: MemoryRepository(db),
+      graphRepo: GraphRepository(db),
       vault: ImageVault(Directory('${tmp.path}/vault')),
       settings: settings,
       describerFactory: (key, model, effort) => EventDescriber(
@@ -72,6 +84,48 @@ void main() {
           }),
         ),
       ),
+      graphBuilderFactory: (key, model, effort) => GraphBuilder(
+        model: model,
+        effort: effort,
+        client: AnthropicClient(
+          apiKey: key,
+          httpClient: MockClient((request) async {
+            graphBodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+            return http.Response(
+              jsonEncode({
+                'model': model,
+                'stop_reason': 'end_turn',
+                'content': [
+                  {
+                    'type': 'text',
+                    'text': jsonEncode({
+                      'overview': 'A summer of evenings at the lake.',
+                      'chapters': [
+                        {
+                          'title': 'Lake summer',
+                          'summary': 'Evenings by the water.',
+                          'event_refs': ['E1', 'E2', 'E3'],
+                        },
+                      ],
+                      'links': [
+                        {'from': 'E1', 'to': 'E3', 'relation': 'same lake'},
+                      ],
+                      'themes': [
+                        {
+                          'name': 'Time with Sam',
+                          'description': 'Evenings with my brother.',
+                          'event_refs': ['E1', 'E2'],
+                        },
+                      ],
+                    }),
+                  },
+                ],
+              }),
+              200,
+            );
+          }),
+        ),
+      ),
     );
     await s.load();
     return s;
@@ -86,6 +140,7 @@ void main() {
   setUp(() async {
     tmp = await Directory.systemTemp.createTemp('eventlens_test');
     sentBodies = [];
+    graphBodies = [];
   });
 
   tearDown(() => tmp.delete(recursive: true));
@@ -100,8 +155,10 @@ void main() {
       photos: [photo()],
     );
     expect(state.allEvents, hasLength(1));
-    expect(state.vault.fileFor(event.images.single.fileName).existsSync(),
-        isTrue);
+    expect(
+      state.vault.fileFor(event.images.single.fileName).existsSync(),
+      isTrue,
+    );
 
     await state.describeEvent(event.id);
 
@@ -132,10 +189,14 @@ void main() {
     );
     await state.describeEvent(second.id);
     final body = sentBodies.last;
-    expect((body['system'] as List).last['text'],
-        contains('The lake is our spot'));
-    expect((body['messages'][0]['content'] as List).last['text'],
-        contains('Sam and I watched the sunset.'));
+    expect(
+      (body['system'] as List).last['text'],
+      contains('The lake is our spot'),
+    );
+    expect(
+      (body['messages'][0]['content'] as List).last['text'],
+      contains('Sam and I watched the sunset.'),
+    );
     // Known memories are not suggested again.
     expect(state.eventById(second.id)!.suggestions, isEmpty);
   });
@@ -169,5 +230,82 @@ void main() {
     await state.deleteEvent(state.eventById(event.id)!);
     expect(state.allEvents, isEmpty);
     expect(file.existsSync(), isFalse);
+  });
+
+  Future<LifeEvent> describedEvent(AppState s, int day) async {
+    final e = await s.createEvent(
+      title: '',
+      notes: 'Evening $day at the lake with Sam',
+      location: '',
+      occurredAt: DateTime(2026, 7, day, 19),
+      photos: const [],
+    );
+    await s.describeEvent(e.id);
+    return s.eventById(e.id)!;
+  }
+
+  test('timeline graph builds automatically after N described events',
+      () async {
+    state = await build(apiKey: 'sk-ant-test', graphEvery: 3);
+    final first = await describedEvent(state, 1);
+    await describedEvent(state, 2);
+    expect(graphBodies, isEmpty);
+    expect(state.eventsUntilNextGraph, 1);
+
+    final third = await describedEvent(state, 3);
+    expect(graphBodies, hasLength(1));
+    final journal = graphBodies.single['messages'][0]['content'] as String;
+    expect(journal, contains('E1 |'));
+    expect(journal, contains('E3 |'));
+    expect(journal, contains('User notes: Evening 1 at the lake with Sam'));
+
+    final snapshot = state.graphSnapshot!;
+    expect(snapshot.eventCount, 3);
+    expect(snapshot.chapters.single.eventIds, hasLength(3));
+    expect(snapshot.links.single.fromEventId, first.id);
+    expect(snapshot.links.single.toEventId, third.id);
+    expect(state.eventsUntilNextGraph, 3);
+
+    final graph = state.graph;
+    expect(
+      graph.nodes.where((n) => n.kind == NodeKind.event),
+      hasLength(3),
+    );
+    expect(graph.node('theme:time with sam')!.provenance, Provenance.ai);
+    // "Sam" appears in the user's own notes, so it counts as human-supplied.
+    expect(graph.node('person:sam')!.provenance, Provenance.human);
+    expect(graph.edges.where((e) => e.kind == EdgeKind.aiLink), hasLength(1));
+    expect(
+      graph.edges.where((e) => e.kind == EdgeKind.chronology),
+      hasLength(2),
+    );
+
+    // A fourth event does not rebuild yet; the snapshot survives a restart.
+    await describedEvent(state, 4);
+    expect(graphBodies, hasLength(1));
+    final reopened = await build(apiKey: 'sk-ant-test', graphEvery: 3);
+    expect(reopened.graphSnapshot!.id, snapshot.id);
+    expect(reopened.eventsUntilNextGraph, 2);
+  });
+
+  test('automatic graph builds can be turned off', () async {
+    state = await build(apiKey: 'sk-ant-test', graphEvery: 0);
+    for (var day = 1; day <= 4; day++) {
+      await describedEvent(state, day);
+    }
+    expect(graphBodies, isEmpty);
+    expect(state.eventsUntilNextGraph, isNull);
+
+    await state.buildGraphNow();
+    expect(graphBodies, hasLength(1));
+    expect(state.graphSnapshot, isNotNull);
+  });
+
+  test('manual build needs two described events', () async {
+    state = await build(apiKey: 'sk-ant-test');
+    await describedEvent(state, 1);
+    await state.buildGraphNow();
+    expect(graphBodies, isEmpty);
+    expect(state.graphError, contains('two events'));
   });
 }

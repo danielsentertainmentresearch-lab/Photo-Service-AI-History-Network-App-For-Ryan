@@ -21,6 +21,12 @@ This is **stage 1**: an Android app built with Flutter, ready for Google Play.
 - AI account: a detailed first-person narrative, a short summary, and labels
   for people, places and tags. You can edit it, copy it or rewrite it.
 - Memory screen: add, edit and delete what the AI should always know.
+- Timeline graph: after every N described events (5 by default, set in
+  Settings), the AI organises the whole timeline into chapters, links between
+  related events, and recurring themes. A graph view shows events left to
+  right in time, connected to their people, places, tags, themes and
+  memories. Each node is ringed green (from you), purple (from the AI) or
+  both.
 - Timeline grouped by month, plus full-text search across everything.
 - Settings: your own Anthropic API key (stored encrypted), the model
   (Claude Opus 5.5 by default, or Sonnet 5.5) and the thinking effort.
@@ -45,7 +51,8 @@ backup is disabled for app data. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
 lib/
   main.dart      Opens the database, vault and settings; starts the app
   app.dart       Theme, first-run routing
-  ai/            Claude API client (raw HTTP) and the event-description prompt
+  ai/            Claude API client (raw HTTP), event descriptions, timeline graph
+  graph/         Force-directed layout with events pinned to a time axis
   data/          SQLite schema, repositories, on-device image vault
   models/        LifeEvent, EventImage, MemoryItem
   services/      Settings (secure API key, preferences)

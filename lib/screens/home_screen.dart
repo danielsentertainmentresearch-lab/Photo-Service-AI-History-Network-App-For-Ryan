@@ -7,6 +7,7 @@ import '../models/event.dart';
 import '../state/app_state.dart';
 import '../widgets/common.dart';
 import 'event_detail_screen.dart';
+import 'graph_screen.dart';
 import 'memory_screen.dart';
 import 'new_event_screen.dart';
 import 'settings_screen.dart';
@@ -31,6 +32,11 @@ class HomeScreen extends StatelessWidget {
                 : () => showSearch(context: context, delegate: _EventSearch()),
           ),
           IconButton(
+            tooltip: 'Timeline graph',
+            icon: const Icon(Icons.hub_outlined),
+            onPressed: () => _push(context, const GraphScreen()),
+          ),
+          IconButton(
             tooltip: 'Memory',
             icon: const Icon(Icons.psychology_outlined),
             onPressed: () => _push(context, const MemoryScreen()),
@@ -48,7 +54,8 @@ class HomeScreen extends StatelessWidget {
             MaterialBanner(
               leading: const Icon(Icons.key_outlined),
               content: const Text(
-                  'Add your Anthropic API key so the AI can describe events.'),
+                'Add your Anthropic API key so the AI can describe events.',
+              ),
               actions: [
                 TextButton(
                   onPressed: () => _push(context, const SettingsScreen()),
@@ -63,16 +70,18 @@ class HomeScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 96),
                     itemCount: events.length,
                     itemBuilder: (context, i) {
-                      final showHeader = i == 0 ||
-                          !_sameMonth(events[i - 1].occurredAt,
-                              events[i].occurredAt);
+                      final showHeader =
+                          i == 0 ||
+                          !_sameMonth(
+                            events[i - 1].occurredAt,
+                            events[i].occurredAt,
+                          );
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (showHeader)
                             Padding(
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                               child: Text(
                                 DateFormat.yMMMM().format(events[i].occurredAt),
                                 style: Theme.of(context).textTheme.titleSmall,
@@ -115,8 +124,11 @@ class EventTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => EventDetailScreen(eventId: event.id))),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => EventDetailScreen(eventId: event.id),
+          ),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -138,10 +150,12 @@ class EventTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        style: theme.textTheme.titleMedium,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
+                    Text(
+                      title,
+                      style: theme.textTheme.titleMedium,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       DateFormat.MMMEd().add_jm().format(event.occurredAt),
@@ -149,10 +163,12 @@ class EventTile extends StatelessWidget {
                     ),
                     if (subtitle.isNotEmpty) ...[
                       const SizedBox(height: 4),
-                      Text(subtitle,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium),
+                      Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium,
+                      ),
                     ],
                     const SizedBox(height: 6),
                     StatusChip(event.status),
@@ -179,8 +195,11 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.photo_camera_back_outlined,
-                size: 64, color: theme.colorScheme.outline),
+            Icon(
+              Icons.photo_camera_back_outlined,
+              size: 64,
+              color: theme.colorScheme.outline,
+            ),
             const SizedBox(height: 16),
             Text('No events yet', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
@@ -199,13 +218,15 @@ class _EmptyState extends StatelessWidget {
 class _EventSearch extends SearchDelegate<void> {
   @override
   List<Widget> buildActions(BuildContext context) => [
-        if (query.isNotEmpty)
-          IconButton(icon: const Icon(Icons.clear), onPressed: () => query = ''),
-      ];
+    if (query.isNotEmpty)
+      IconButton(icon: const Icon(Icons.clear), onPressed: () => query = ''),
+  ];
 
   @override
   Widget buildLeading(BuildContext context) => IconButton(
-      icon: const BackButtonIcon(), onPressed: () => close(context, null));
+    icon: const BackButtonIcon(),
+    onPressed: () => close(context, null),
+  );
 
   @override
   Widget buildResults(BuildContext context) => _results(context);

@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'app.dart';
 import 'data/app_database.dart';
 import 'data/event_repository.dart';
+import 'data/graph_repository.dart';
 import 'data/image_vault.dart';
 import 'data/memory_repository.dart';
 import 'services/settings_service.dart';
@@ -21,10 +22,13 @@ Future<void> main() async {
   final state = AppState(
     events: EventRepository(db),
     memoryRepo: MemoryRepository(db),
+    graphRepo: GraphRepository(db),
     vault: ImageVault(Directory(p.join(docs.path, 'vault'))),
     settings: await SettingsService.create(),
   );
   await state.load();
 
-  runApp(ChangeNotifierProvider.value(value: state, child: const EventLensApp()));
+  runApp(
+    ChangeNotifierProvider.value(value: state, child: const EventLensApp()),
+  );
 }

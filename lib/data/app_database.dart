@@ -5,7 +5,7 @@ import 'package:sqflite/sqflite.dart';
 /// [factory] and [path] are injectable so tests can use an in-memory FFI
 /// database instead of the platform plugin.
 class AppDatabase {
-  static const int version = 1;
+  static const int version = 2;
 
   static Future<Database> open({DatabaseFactory? factory, String? path}) async {
     final dbFactory = factory ?? databaseFactory;
@@ -15,7 +15,13 @@ class AppDatabase {
       options: OpenDatabaseOptions(
         version: version,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
-        onCreate: (db, _) => _createV1(db),
+        onCreate: (db, _) async {
+          await _createV1(db);
+          await _createV2(db);
+        },
+        onUpgrade: (db, oldVersion, _) async {
+          if (oldVersion < 2) await _createV2(db);
+        },
       ),
     );
   }
@@ -42,7 +48,8 @@ class AppDatabase {
       )
     ''');
     await db.execute(
-        'CREATE INDEX idx_events_occurred_at ON events (occurred_at DESC)');
+      'CREATE INDEX idx_events_occurred_at ON events (occurred_at DESC)',
+    );
     await db.execute('''
       CREATE TABLE event_images (
         id TEXT PRIMARY KEY,
@@ -52,7 +59,8 @@ class AppDatabase {
       )
     ''');
     await db.execute(
-        'CREATE INDEX idx_event_images_event ON event_images (event_id)');
+      'CREATE INDEX idx_event_images_event ON event_images (event_id)',
+    );
     await db.execute('''
       CREATE TABLE memories (
         id TEXT PRIMARY KEY,
@@ -61,6 +69,19 @@ class AppDatabase {
         source TEXT NOT NULL,
         event_id TEXT REFERENCES events (id) ON DELETE SET NULL,
         created_at INTEGER NOT NULL
+      )
+    ''');
+  }
+
+  /// v2: the AI-organised timeline (chapters, links, themes).
+  static Future<void> _createV2(Database db) async {
+    await db.execute('''
+      CREATE TABLE graph_snapshots (
+        id TEXT PRIMARY KEY,
+        created_at INTEGER NOT NULL,
+        event_count INTEGER NOT NULL,
+        model TEXT,
+        data TEXT NOT NULL
       )
     ''');
   }
