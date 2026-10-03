@@ -10,12 +10,6 @@ class SettingsService {
   static const _modelKey = 'model';
   static const _effortKey = 'effort';
   static const _onboardedKey = 'onboarded';
-  static const _graphEveryKey = 'graph_every_photos';
-
-  /// Choices for how many newly described photos trigger an automatic
-  /// rebuild of the timeline graph. 0 turns it off.
-  static const graphEveryOptions = [0, 5, 10, 20, 50];
-  static const defaultGraphEvery = 10;
 
   final FlutterSecureStorage _secure;
   final SharedPreferences _prefs;
@@ -46,13 +40,6 @@ class SettingsService {
   }
 
   Future<void> setEffort(String value) => _prefs.setString(_effortKey, value);
-
-  int get graphEvery {
-    final stored = _prefs.getInt(_graphEveryKey);
-    return graphEveryOptions.contains(stored) ? stored! : defaultGraphEvery;
-  }
-
-  Future<void> setGraphEvery(int value) => _prefs.setInt(_graphEveryKey, value);
 
   bool get onboarded => _prefs.getBool(_onboardedKey) ?? false;
 

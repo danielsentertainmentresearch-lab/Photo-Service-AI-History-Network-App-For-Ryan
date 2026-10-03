@@ -23,13 +23,17 @@ HOW IT WORKS
   what to keep.
 
 YOUR LIBRARY STAYS YOURS
-• Photos, notes and memories are stored only on your phone, with no account
-  and no developer server.
+• Photos, notes and memories are stored only on your phone, never on a
+  developer server.
 • Only the event you choose to describe is sent to the AI, using your own
   Anthropic API key.
-• No ads, no tracking, no analytics.
+• No analytics or tracking. Ads appear only if you choose to watch a short
+  video to unlock extra ring colours.
 
 FEATURES
+• Your timeline becomes a connected graph of chapters, people, places and
+  themes, and keeps growing as you add events
+• Gather chapters into your own titled Books; mark events with coloured rings
 • Timeline of events grouped by month
 • Full-text search across titles, notes, accounts, people, places and tags
 • Edit, copy or rewrite any account
@@ -57,17 +61,28 @@ actually does:
 - **Does your app collect or share any of the required user data types?** Yes.
 - **Is all user data encrypted in transit?** Yes (HTTPS only).
 - **Do you provide a way for users to request that their data is deleted?**
-  Yes. Users can delete events and memories in the app, and uninstalling
-  removes all data. The developer holds no data.
-- **Data types** (each: *Shared* = yes, with Anthropic, to provide app
-  functionality. *Collected* = no, because data stays on the device and is
-  sent directly to Anthropic at the user's request. Processed ephemerally =
-  no. Optional = yes, used only when the user taps Describe):
-  - Photos and videos → Photos
-  - Personal info → Other info (free-text notes and memories)
-- **Purpose**: App functionality.
-- No location, contacts, identifiers, financial or health data is collected.
-  Location is free text the user types and goes under Other info.
+  Yes. Users can delete events and memories in the app, delete their
+  account in Settings → Delete account, and uninstalling removes all data
+  on the phone. Play also asks for a web link for account deletion
+  requests: use the privacy policy's contact email.
+- **Data types**:
+  - Photos and videos → Photos: *shared* with Anthropic, at the user's
+    request, for app functionality. Optional. Not collected.
+  - Personal info → Other info (free-text notes and memories): same as
+    photos.
+  - Personal info → Email address and/or Phone number: *collected* for
+    account management (Firebase Authentication). Required.
+  - Personal info → User IDs: *collected* for account management.
+  - Device or other IDs (advertising ID): *collected and shared* by the
+    AdMob SDK for advertising. Optional (only when a video is watched).
+  - App activity → App interactions, and App info and performance →
+    Diagnostics: *collected* by the AdMob SDK for advertising and fraud
+    prevention.
+- **Purposes**: App functionality, Account management, Advertising or
+  marketing, Fraud prevention, security, and compliance.
+- No location, contacts, financial or health data is collected. Location is
+  free text the user types and goes under Other info.
+- **Contains ads**: Yes.
 
 > Google counts data sent to a third party at the user's request as
 > "shared". If Play's form treats a user-initiated transfer differently when

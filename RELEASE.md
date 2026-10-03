@@ -13,7 +13,39 @@ owner's own accounts, so they can't be done ahead of time.
   `android/app/src/main/AndroidManifest.xml`, and `appName` in `lib/app.dart`).
   The name can change later, but check that it isn't already taken on Play.
 
-## 1. Create an upload key (once, keep it forever)
+## 1. Accounts: create the Firebase project (once)
+
+Accounts are required to use the app, and they run on Firebase
+Authentication. Until this is done, release builds can't sign anyone in
+(test builds offer "Continue as reviewer").
+
+1. At <https://console.firebase.google.com> create a project, then **Add
+   app → Android** with package `com.danielsentertainmentresearch.eventlens`.
+   Add the SHA-1 and SHA-256 of your upload key and, after the first Play
+   upload, of Play's app-signing key (Play Console → App integrity). Phone
+   and Google sign-in need these.
+2. **Authentication → Sign-in method**: enable *Email/Password*, *Phone*
+   (SMS is billed per message after the free quota) and *Google*. Enable
+   *Anonymous* too if you want reviewer sign-in on test builds to create
+   real (anonymous) accounts.
+3. From **Project settings → General → Your apps**, copy the values into
+   GitHub repo secrets: `FIREBASE_API_KEY` (Web API key),
+   `FIREBASE_APP_ID` (App ID, `1:…:android:…`), `FIREBASE_SENDER_ID`
+   (Project number) and `FIREBASE_PROJECT_ID`.
+
+## 2. Ads: create the AdMob app (once)
+
+Ring colours unlock with rewarded videos. Until this is done, builds show
+Google's test ads, which earn nothing.
+
+1. At <https://admob.google.com> add the app (Android), and create a
+   **Rewarded** ad unit.
+2. Add GitHub repo secrets `ADMOB_APP_ID` (`ca-app-pub-…~…`) and
+   `ADMOB_REWARDED_ID` (`ca-app-pub-…/…`).
+3. Link AdMob to the Play listing once the app is published, and complete
+   AdMob's privacy & messaging (consent) setup for EEA/UK users.
+
+## 3. Create an upload key (once, keep it forever)
 
 ```bash
 keytool -genkey -v -keystore ~/eventlens-upload.jks -keyalg RSA \
@@ -25,7 +57,7 @@ manager. Never commit them. With Play App Signing (the default), Google holds
 the real app-signing key. If the upload key is lost, Google support can reset
 it, but that takes days.
 
-## 2. Get a signed build
+## 4. Get a signed build
 
 ### Option A: GitHub Actions (recommended)
 
@@ -59,7 +91,7 @@ storeFile=/absolute/path/to/eventlens-upload.jks
 Then run `flutter build appbundle --release`. The output is
 `build/app/outputs/bundle/release/app-release.aab`.
 
-## 3. Google Play Console
+## 5. Google Play Console
 
 1. Create a developer account at <https://play.google.com/console> (one-time
    $25 fee). New personal accounts must run a **closed test with at least 12
@@ -76,14 +108,18 @@ Then run `flutter build appbundle --release`. The output is
    - *Content rating*: complete the questionnaire (no violence, gambling or
      user-to-user sharing). The usual result is "Everyone" or "Teen".
    - *Target audience*: 18+ is simplest, because users must hold their own
-     paid API key.
-   - *Ads*: No ads.
+     paid API key, and it keeps ads out of Families policy scope.
+   - *Ads*: **Yes, the app contains ads** (rewarded videos via AdMob).
+   - *Advertising ID*: declare that the app uses it (AdMob).
 6. **Testing → Closed testing**: create a track, add testers, and upload the
    signed `.aab`. After the testing period, **promote to Production**.
 
-## 4. Pre-release checklist
+## 6. Pre-release checklist
 
 - [ ] The latest Android workflow run is green.
+- [ ] Sign up with email, with phone (SMS arrives) and with Google; sign
+      out and back in; turn on fingerprint unlock.
+- [ ] Unlock a ring colour with real (not test) rewarded videos.
 - [ ] Install the release APK on a real phone. Add an API key, create an
       event with camera and gallery photos, describe it, accept a memory
       suggestion, then create a second event and confirm the account

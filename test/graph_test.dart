@@ -9,7 +9,10 @@ import 'package:eventlens/graph/force_layout.dart';
 import 'package:eventlens/models/event.dart';
 import 'package:eventlens/models/memory_graph.dart';
 import 'package:eventlens/models/memory_item.dart';
+import 'package:eventlens/models/ring_palette.dart';
+import 'package:eventlens/services/rewards_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 LifeEvent described(String id, int day, {List<String> people = const []}) {
@@ -210,7 +213,7 @@ void main() {
     await db.close();
   });
 
-  test('old snapshots without ids, groups or photo counts still load', () {
+  test('older saved graphs (no ids, "groups", chapter colours) still load', () {
     final row = {
       'id': 'old',
       'created_at': 0,
@@ -225,13 +228,17 @@ void main() {
             'event_ids': ['a'],
           },
           {
+            'id': 'x',
             'title': 'B',
             'summary': 's',
             'event_ids': ['b'],
+            'color': 0xFFE53935,
+            'group_id': 'g',
+            'edited': true,
           },
         ],
         'links': [
-          {'from': 'a', 'to': 'b', 'relation': 'r'},
+          {'from': 'a', 'to': 'b', 'relation': 'r', 'manual': true},
         ],
         'themes': [
           {
@@ -240,35 +247,37 @@ void main() {
             'event_ids': ['a'],
           },
         ],
+        'groups': [
+          {'id': 'g', 'name': 'Era'},
+        ],
       }),
     };
     final snapshot = GraphSnapshot.fromRow(row);
-    expect(snapshot.chapters.map((c) => c.id), ['c0', 'c1']);
+    expect(snapshot.chapters.map((c) => c.id), ['c0', 'x']);
+    expect(snapshot.chapters.last.bookId, 'g');
+    expect(snapshot.books.single.title, 'Era');
     expect(snapshot.photoCount, 0);
-    expect(snapshot.groups, isEmpty);
-    expect(snapshot.links.single.manual, isFalse);
+    expect(snapshot.rings, isEmpty);
+    expect(snapshot.updatedAt, snapshot.createdAt);
     // Round-trips with the new fields.
     final again = GraphSnapshot.fromRow(
-      snapshot
-          .copyWith(
-            groups: const [ChapterGroup(id: 'g', name: 'G')],
-          )
-          .toRow(),
+      snapshot.copyWith(rings: const {'a': 3}).toRow(),
     );
-    expect(again.groups.single.name, 'G');
+    expect(again.books.single.title, 'Era');
+    expect(again.rings, {'a': 3});
     expect(again.chapters.first.id, 'c0');
   });
 
-  test('sanitize repairs every kind of bad edit', () {
+  test('sanitize repairs every kind of bad data', () {
     final dirty = GraphSnapshot(
       id: 's',
       createdAt: DateTime(2026),
       eventCount: 3,
       model: '',
       overview: '  spaced  ',
-      groups: const [
-        ChapterGroup(id: 'g', name: ' '),
-        ChapterGroup(id: 'g', name: 'Dup id'),
+      books: const [
+        Book(id: 'b', title: ' '),
+        Book(id: 'b', title: 'Dup id'),
       ],
       chapters: const [
         TimelineChapter(
@@ -281,9 +290,8 @@ void main() {
           id: 'x',
           title: '',
           summary: '',
-          eventIds: [],
-          color: 42,
-          groupId: 'nope',
+          eventIds: ['a', 'b'],
+          bookId: 'nope',
         ),
       ],
       links: const [
@@ -297,110 +305,226 @@ void main() {
         StoryTheme(name: 'Walks', description: '', eventIds: ['b']),
         StoryTheme(name: 'walks', description: 'dup', eventIds: []),
       ],
+      rings: const {'a': 1, 'gone': 1, 'b': 99, 'c': -1},
     );
     final clean = dirty.sanitized({'a', 'b', 'c'});
     expect(clean.overview, 'spaced');
-    expect(clean.groups.map((g) => g.name), [untitledGroupName, 'Dup id']);
-    expect(clean.groups.map((g) => g.id).toSet(), hasLength(2));
+    expect(clean.books.map((b) => b.title), [untitledBookTitle, 'Dup id']);
+    expect(clean.books.map((b) => b.id).toSet(), hasLength(2));
     expect(clean.chapters.map((c) => c.id).toSet(), hasLength(2));
     expect(clean.chapters.first.eventIds, ['a']);
+    // 'a' already sits in the first chapter.
+    expect(clean.chapters.last.eventIds, ['b']);
     expect(clean.chapters.last.title, 'Untitled chapter');
-    expect(clean.chapters.last.color, isNull);
-    expect(clean.chapters.last.groupId, isNull);
+    expect(clean.chapters.last.bookId, isNull);
     expect(clean.links, hasLength(1));
     expect(clean.links.single.relation, 'related');
     expect(clean.themes.map((t) => t.name), ['Untitled theme', 'Walks']);
-    expect(clean.themes.first.eventIds, isEmpty);
+    expect(clean.rings, {'a': 1});
     // Sanitising is stable.
     expect(clean.sanitized({'a', 'b', 'c'}).toRow(), clean.toRow());
   });
 
-  test('rebuild merge keeps user choices only where chapters still match', () {
-    final previous = GraphSnapshot(
-      id: 'p',
+  test('withUserLayer cannot change anything the AI wrote', () {
+    final ai = GraphSnapshot(
+      id: 's',
+      createdAt: DateTime(2026),
+      eventCount: 2,
+      model: 'm',
+      overview: 'AI overview',
+      chapters: const [
+        TimelineChapter(id: 'c', title: 'AI', summary: 'AI', eventIds: ['a']),
+      ],
+      links: const [EventLink(fromEventId: 'a', toEventId: 'b', relation: 'r')],
+      themes: const [
+        StoryTheme(name: 'T', description: 'd', eventIds: ['a']),
+      ],
+    );
+    final user = ai.withUserLayer(
+      books: const [Book(id: 'b1', title: 'Mine')],
+      chapterBooks: const {'c': 'b1', 'unknown': 'b1'},
+      rings: const {'a': 0},
+    );
+    expect(user.overview, ai.overview);
+    expect(user.chapters.single.title, 'AI');
+    expect(user.chapters.single.summary, 'AI');
+    expect(user.chapters.single.eventIds, ['a']);
+    expect(user.chapters.single.bookId, 'b1');
+    expect(user.links.single.relation, 'r');
+    expect(user.themes.single.name, 'T');
+    expect(user.books.single.title, 'Mine');
+    expect(user.rings, {'a': 0});
+    // Taking a chapter out of a book.
+    expect(
+      user
+          .withUserLayer(
+            books: user.books,
+            chapterBooks: const {'c': null},
+            rings: user.rings,
+          )
+          .chapters
+          .single
+          .bookId,
+      isNull,
+    );
+  });
+
+  test('AI updates add to the graph and ignore bad references', () {
+    final graph = GraphSnapshot(
+      id: 's',
       createdAt: DateTime(2026),
       eventCount: 3,
-      model: '',
-      overview: 'AI overview',
-      groups: const [ChapterGroup(id: 'g', name: 'Era')],
-      chapters: const [
-        TimelineChapter(
-          id: 'keep',
-          title: 'My name',
-          summary: 'Mine',
-          eventIds: ['a', 'b'],
-          color: 0xFFE53935,
-          groupId: 'g',
-          edited: true,
-        ),
-        TimelineChapter(
-          id: 'gone',
-          title: 'Old',
-          summary: '',
-          eventIds: ['c'],
-          color: 0xFF43A047,
-        ),
-      ],
-      links: const [
-        EventLink(
-          fromEventId: 'a',
-          toEventId: 'c',
-          relation: 'mine',
-          manual: true,
-        ),
-        EventLink(fromEventId: 'b', toEventId: 'c', relation: 'old ai'),
-      ],
-      themes: const [
-        StoryTheme(
-          name: 'Mine',
-          description: '',
-          eventIds: ['a'],
-          manual: true,
-        ),
-      ],
-    );
-    final fresh = GraphSnapshot(
-      id: 'f',
-      createdAt: DateTime(2026, 2),
-      eventCount: 4,
       model: 'm',
-      overview: 'New AI overview',
+      overview: 'Old overview',
       chapters: const [
-        TimelineChapter(
-          id: 'n1',
-          title: 'AI title',
-          summary: 'AI',
-          eventIds: ['a', 'b', 'd'],
-        ),
-        TimelineChapter(
-          id: 'n2',
-          title: 'Other',
-          summary: '',
-          eventIds: ['x', 'y'],
-        ),
+        TimelineChapter(id: 'c1', title: 'May', summary: 's', eventIds: ['a']),
+        TimelineChapter(id: 'c2', title: 'June', summary: 's', eventIds: ['b']),
       ],
-      links: const [
-        EventLink(fromEventId: 'a', toEventId: 'd', relation: 'new ai'),
-      ],
+      links: const [EventLink(fromEventId: 'a', toEventId: 'b', relation: 'r')],
       themes: const [
-        StoryTheme(name: 'mine', description: 'AI version', eventIds: []),
-        StoryTheme(name: 'AI theme', description: '', eventIds: ['d']),
+        StoryTheme(name: 'Walks', description: 'd', eventIds: ['a']),
       ],
+      books: const [Book(id: 'b1', title: 'Mine')],
+      rings: const {'a': 0},
     );
-    final merged = GraphSnapshot.mergeRebuild(previous, fresh);
-    final first = merged.chapters.first;
-    expect(first.id, 'keep');
-    expect(first.title, 'My name');
-    expect(first.color, 0xFFE53935);
-    expect(first.groupId, 'g');
-    expect(first.eventIds, ['a', 'b', 'd']);
-    // 'c' alone doesn't overlap 'x','y': nothing inherited.
-    expect(merged.chapters.last.id, 'n2');
-    expect(merged.chapters.last.color, isNull);
-    expect(merged.overview, 'New AI overview');
-    expect(merged.groups.single.name, 'Era');
-    expect(merged.links.map((l) => l.relation), ['new ai', 'mine']);
-    expect(merged.themes.map((t) => t.name), ['AI theme', 'Mine']);
-    expect(GraphSnapshot.mergeRebuild(null, fresh), same(fresh));
+    final existing = [described('a', 1), described('b', 2)];
+    final fresh = [described('n1', 5), described('n2', 6), described('n3', 7)];
+    final updated = GraphBuilder.applyUpdate(
+      response({
+        'overview': 'New overview',
+        'placements': [
+          {
+            'event': 'N1',
+            'chapter': 'C2',
+            'new_chapter_title': '',
+            'new_chapter_summary': '',
+          },
+          {
+            'event': 'N2',
+            'chapter': 'NEW',
+            'new_chapter_title': 'July',
+            'new_chapter_summary': 'Summer',
+          },
+          // Duplicate and unknown placements are ignored.
+          {
+            'event': 'N2',
+            'chapter': 'C1',
+            'new_chapter_title': '',
+            'new_chapter_summary': '',
+          },
+          {
+            'event': 'E1',
+            'chapter': 'C2',
+            'new_chapter_title': '',
+            'new_chapter_summary': '',
+          },
+          {
+            'event': 'N9',
+            'chapter': 'C1',
+            'new_chapter_title': '',
+            'new_chapter_summary': '',
+          },
+        ],
+        'links': [
+          {'from': 'N2', 'to': 'E1', 'relation': 'again'},
+          // Links between earlier events are not the update's business.
+          {'from': 'E1', 'to': 'E2', 'relation': 'rewritten'},
+          {'from': 'N1', 'to': 'X', 'relation': 'bad'},
+        ],
+        'themes': [
+          {
+            'name': 'walks',
+            'description': 'ignored',
+            'event_refs': ['N1'],
+          },
+          {
+            'name': 'Heat',
+            'description': 'Hot days',
+            'event_refs': ['N2'],
+          },
+          {
+            'name': 'Empty',
+            'description': '',
+            'event_refs': ['Q1'],
+          },
+        ],
+      }),
+      graph,
+      existing,
+      fresh,
+      describedCount: 5,
+      photoCount: 12,
+    );
+    expect(updated.chapters.map((c) => c.title), ['May', 'June', 'July']);
+    expect(updated.chapters[0].eventIds, ['a']);
+    expect(updated.chapters[1].eventIds, ['b', 'n1']);
+    // N3 was forgotten by the AI, so it joins the latest chapter.
+    expect(updated.chapters[2].eventIds, ['n2', 'n3']);
+    expect(updated.chapters[2].summary, 'Summer');
+    expect(updated.links.map((l) => l.relation), ['r', 'again']);
+    expect(updated.themes.first.description, 'd');
+    expect(updated.themes.first.eventIds, ['a', 'n1']);
+    expect(updated.themes.map((t) => t.name), ['Walks', 'Heat']);
+    expect(updated.overview, 'New overview');
+    expect(updated.books.single.title, 'Mine');
+    expect(updated.rings, {'a': 0});
+    expect(updated.photoCount, 12);
+    expect(updated.createdAt, graph.createdAt);
+    expect(updated.updatedAt.isAfter(graph.updatedAt), isTrue);
   });
+
+  test('ring colours unlock in order: 1 free, then 5, 6, 7… videos', () {
+    expect(ringUnlockCost(0), 0);
+    expect(ringUnlockCost(1), 5);
+    expect(ringUnlockCost(2), 6);
+    expect(ringUnlockCost(ringPalette.length - 1), 4 + ringPalette.length - 1);
+    expect(ringColorFor(null), isNull);
+    expect(ringColorFor(ringPalette.length), isNull);
+  });
+
+  test('watching rewarded videos unlocks the next colour', () async {
+    SharedPreferences.setMockInitialValues({});
+    final videos = _FakeVideos();
+    final unlocks = RingUnlocks(await SharedPreferences.getInstance(), videos);
+    expect(unlocks.unlockedCount, 1);
+    expect(unlocks.isUnlocked(0), isTrue);
+    expect(unlocks.isUnlocked(1), isFalse);
+    expect(unlocks.nextLocked, 1);
+    expect(unlocks.videosForNext, 5);
+
+    // A skipped or failed video doesn't count.
+    videos.finish = false;
+    expect(await unlocks.watchVideo(), isFalse);
+    expect(unlocks.progress, 0);
+
+    videos.finish = true;
+    for (var i = 0; i < 4; i++) {
+      await unlocks.watchVideo();
+    }
+    expect(unlocks.isUnlocked(1), isFalse);
+    expect(unlocks.videosForNext, 1);
+    await unlocks.watchVideo();
+    expect(unlocks.isUnlocked(1), isTrue);
+    expect(unlocks.progress, 0);
+    expect(unlocks.videosForNext, 6);
+
+    for (var i = 0; i < 100; i++) {
+      await unlocks.watchVideo();
+    }
+    expect(unlocks.unlockedCount, ringPalette.length);
+    expect(unlocks.nextLocked, isNull);
+    expect(await unlocks.watchVideo(), isFalse);
+    expect(videos.shown, 1 + 5 + 6 + 7 + 8 + 9 + 10 + 11);
+  });
+}
+
+class _FakeVideos implements RewardedVideoProvider {
+  bool finish = true;
+  int shown = 0;
+
+  @override
+  Future<bool> showRewardedVideo() async {
+    shown++;
+    return finish;
+  }
 }

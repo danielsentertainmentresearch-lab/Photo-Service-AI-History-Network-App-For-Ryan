@@ -11,6 +11,7 @@ import 'package:eventlens/data/image_vault.dart';
 import 'package:eventlens/data/memory_repository.dart';
 import 'package:eventlens/models/event.dart';
 import 'package:eventlens/models/memory_graph.dart';
+import 'package:eventlens/models/ring_palette.dart';
 import 'package:eventlens/services/settings_service.dart';
 import 'package:eventlens/state/app_state.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -30,10 +31,13 @@ void main() {
   late List<Map<String, dynamic>> sentBodies;
   late List<Map<String, dynamic>> graphBodies;
 
-  Future<AppState> build({required String? apiKey, int? graphEvery}) async {
-    SharedPreferences.setMockInitialValues(
-      graphEvery == null ? {} : {'graph_every_photos': graphEvery},
-    );
+  // What the mocked AI returns for the first build and for later updates.
+  var graphBuild = <String, dynamic>{};
+  var graphUpdate = <String, dynamic>{};
+  var graphStatus = 200;
+
+  Future<AppState> build({required String? apiKey}) async {
+    SharedPreferences.setMockInitialValues({});
     FlutterSecureStorage.setMockInitialValues(
       apiKey == null ? {} : {'anthropic_api_key': apiKey},
     );
@@ -90,7 +94,11 @@ void main() {
         client: AnthropicClient(
           apiKey: key,
           httpClient: MockClient((request) async {
-            graphBodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            graphBodies.add(body);
+            final isUpdate =
+                (body['output_config']['format']['schema']['required'] as List)
+                    .contains('placements');
             return http.Response(
               jsonEncode({
                 'model': model,
@@ -98,30 +106,11 @@ void main() {
                 'content': [
                   {
                     'type': 'text',
-                    'text': jsonEncode({
-                      'overview': 'A summer of evenings at the lake.',
-                      'chapters': [
-                        {
-                          'title': 'Lake summer',
-                          'summary': 'Evenings by the water.',
-                          'event_refs': ['E1', 'E2', 'E3'],
-                        },
-                      ],
-                      'links': [
-                        {'from': 'E1', 'to': 'E3', 'relation': 'same lake'},
-                      ],
-                      'themes': [
-                        {
-                          'name': 'Time with Sam',
-                          'description': 'Evenings with my brother.',
-                          'event_refs': ['E1', 'E2'],
-                        },
-                      ],
-                    }),
+                    'text': jsonEncode(isUpdate ? graphUpdate : graphBuild),
                   },
                 ],
               }),
-              200,
+              graphStatus,
             );
           }),
         ),
@@ -141,6 +130,48 @@ void main() {
     tmp = await Directory.systemTemp.createTemp('eventlens_test');
     sentBodies = [];
     graphBodies = [];
+    graphStatus = 200;
+    graphBuild = {
+      'overview': 'A summer of evenings at the lake.',
+      'chapters': [
+        {
+          'title': 'Lake summer',
+          'summary': 'Evenings by the water.',
+          'event_refs': ['E1', 'E2', 'E3'],
+        },
+      ],
+      'links': [
+        {'from': 'E1', 'to': 'E3', 'relation': 'same lake'},
+      ],
+      'themes': [
+        {
+          'name': 'Time with Sam',
+          'description': 'Evenings with my brother.',
+          'event_refs': ['E1', 'E2'],
+        },
+      ],
+    };
+    graphUpdate = {
+      'overview': 'A summer of evenings at the lake, then a trip away.',
+      'placements': [
+        {
+          'event': 'N1',
+          'chapter': 'NEW',
+          'new_chapter_title': 'Road trip',
+          'new_chapter_summary': 'Leaving the lake behind.',
+        },
+      ],
+      'links': [
+        {'from': 'N1', 'to': 'E1', 'relation': 'missed the lake'},
+      ],
+      'themes': [
+        {
+          'name': 'Time with Sam',
+          'description': '',
+          'event_refs': ['N1'],
+        },
+      ],
+    };
   });
 
   tearDown(() => tmp.delete(recursive: true));
@@ -254,157 +285,147 @@ void main() {
     return s.eventById(e.id)!;
   }
 
-  test('AI rebuilds the timeline after 10 newly described photos', () async {
+  test('the first 10 described photos unlock the graph, once', () async {
     state = await build(apiKey: 'sk-ant-test');
-    expect(state.graphEvery, 10);
+    expect(state.graphUnlocked, isFalse);
     final first = await describedEvent(state, 1, photoCount: 4);
     await describedEvent(state, 2, photoCount: 4);
     expect(graphBodies, isEmpty);
-    expect(state.photosUntilNextGraph, 2);
+    expect(state.photosUntilUnlock, 2);
 
     final third = await describedEvent(state, 3, photoCount: 2);
     expect(graphBodies, hasLength(1));
+    expect(state.graphUnlocked, isTrue);
+    expect(state.photosUntilUnlock, 0);
     final journal = graphBodies.single['messages'][0]['content'] as String;
     expect(journal, contains('E1 |'));
-    expect(journal, contains('E3 |'));
     expect(journal, contains('User notes: Evening 1 at the lake with Sam'));
 
-    final snapshot = state.graphSnapshot!;
-    expect(snapshot.eventCount, 3);
-    expect(snapshot.photoCount, 10);
-    expect(snapshot.chapters.single.eventIds, hasLength(3));
-    expect(snapshot.links.single.fromEventId, first.id);
-    expect(snapshot.links.single.toEventId, third.id);
-    expect(state.photosUntilNextGraph, 10);
-
-    final graph = state.graph;
-    expect(graph.nodes.where((n) => n.kind == NodeKind.event), hasLength(3));
-    expect(graph.node('theme:time with sam'), isNotNull);
-    expect(graph.edges.where((e) => e.kind == EdgeKind.aiLink), hasLength(1));
-    // No automatic rings: nothing is coloured until the user picks colours.
-    expect(graph.nodes.where((n) => n.ringColor != null), isEmpty);
-
-    // Photo-less events don't count towards the next rebuild.
-    await describedEvent(state, 4);
-    expect(graphBodies, hasLength(1));
-    expect(state.photosUntilNextGraph, 10);
+    final graph = state.graphSnapshot!;
+    expect(graph.chapters.single.eventIds, hasLength(3));
+    expect(graph.links.single.fromEventId, first.id);
+    expect(graph.links.single.toEventId, third.id);
+    expect(state.eventsAwaitingGraph, 0);
+    // Rings are the user's: none until they add one.
+    expect(state.graph.nodes.where((n) => n.ringColor != null), isEmpty);
     final reopened = await build(apiKey: 'sk-ant-test');
-    expect(reopened.graphSnapshot!.id, snapshot.id);
+    expect(reopened.graphUnlocked, isTrue);
   });
 
-  test('automatic rebuilds can be turned off', () async {
-    state = await build(apiKey: 'sk-ant-test', graphEvery: 0);
-    for (var day = 1; day <= 3; day++) {
-      await describedEvent(state, day, photoCount: 5);
-    }
-    expect(graphBodies, isEmpty);
-    expect(state.photosUntilNextGraph, isNull);
+  test(
+    'after unlocking, the AI builds on the graph without rewriting it',
+    () async {
+      state = await build(apiKey: 'sk-ant-test');
+      for (var day = 1; day <= 3; day++) {
+        await describedEvent(state, day, photoCount: 4);
+      }
+      final before = state.graphSnapshot!;
+      expect(graphBodies, hasLength(1));
 
-    await state.buildGraphNow();
-    expect(graphBodies, hasLength(1));
-    expect(state.graphSnapshot, isNotNull);
-  });
+      final trip = await describedEvent(state, 10);
+      expect(graphBodies, hasLength(2));
+      final update = graphBodies.last;
+      expect(
+        (update['output_config']['format']['schema']['required'] as List),
+        contains('placements'),
+      );
+      final text = update['messages'][0]['content'] as String;
+      expect(text, contains('C1 | Lake summer'));
+      expect(text, contains('N1 |'));
 
-  test('manual AI build needs two described events', () async {
+      final after = state.graphSnapshot!;
+      // Earlier AI work is untouched…
+      expect(after.chapters.first.title, before.chapters.first.title);
+      expect(after.chapters.first.summary, before.chapters.first.summary);
+      expect(after.chapters.first.eventIds, before.chapters.first.eventIds);
+      expect(after.links.first.relation, 'same lake');
+      // …and the new event is built on top.
+      expect(after.chapters.last.title, 'Road trip');
+      expect(after.chapters.last.eventIds, [trip.id]);
+      expect(after.links.last.fromEventId, trip.id);
+      expect(after.themes.single.eventIds, contains(trip.id));
+      expect(after.overview, contains('trip away'));
+      expect(state.eventsAwaitingGraph, 0);
+
+      // Nothing new: no AI call.
+      await state.advanceGraph();
+      expect(graphBodies, hasLength(2));
+    },
+  );
+
+  test('an incomplete AI update still places every new event', () async {
     state = await build(apiKey: 'sk-ant-test');
-    await describedEvent(state, 1);
-    await state.buildGraphNow();
-    expect(graphBodies, isEmpty);
-    expect(state.graphError, contains('two events'));
+    for (var day = 1; day <= 3; day++) {
+      await describedEvent(state, day, photoCount: 4);
+    }
+    graphUpdate = {'overview': '', 'placements': [], 'links': [], 'themes': []};
+    final late = await describedEvent(state, 10);
+    expect(state.eventsAwaitingGraph, 0);
+    expect(state.graphSnapshot!.chapters.last.eventIds, contains(late.id));
+    expect(state.graphSnapshot!.overview, 'A summer of evenings at the lake.');
   });
 
-  test('hand edits are saved, repaired, and survive an AI rebuild', () async {
-    state = await build(apiKey: 'sk-ant-test', graphEvery: 0);
-    final a = await describedEvent(state, 1);
-    final b = await describedEvent(state, 2);
-    final c = await describedEvent(state, 3);
-    await state.buildGraphNow();
-    final built = state.graphSnapshot!;
+  test('a failed update stays pending and Retry adds it', () async {
+    state = await build(apiKey: 'sk-ant-test');
+    for (var day = 1; day <= 3; day++) {
+      await describedEvent(state, day, photoCount: 4);
+    }
+    graphStatus = 400;
+    await describedEvent(state, 10);
+    expect(state.graphError, isNotNull);
+    expect(state.eventsAwaitingGraph, 1);
+    expect(state.graphSnapshot!.chapters, hasLength(1));
 
-    const group = ChapterGroup(id: 'g1', name: 'Summer 2026');
-    await state.saveGraph(
-      built.copyWith(
-        overview: 'My own summary of the summer.',
-        overviewEdited: true,
-        groups: const [group],
-        chapters: [
-          built.chapters.single.copyWith(
-            title: 'Lake evenings',
-            edited: true,
-            color: chapterColors[3],
-            groupId: 'g1',
-          ),
-          // Invalid bits the editor could produce; saving must repair them.
-          const TimelineChapter(
-            id: '',
-            title: '   ',
-            summary: '',
-            eventIds: ['deleted-event'],
-            color: 0x12345678,
-            groupId: 'missing-group',
-          ),
-        ],
-        links: [
-          ...built.links,
-          EventLink(
-            fromEventId: a.id,
-            toEventId: b.id,
-            relation: 'next day',
-            manual: true,
-          ),
-          EventLink(
-            fromEventId: c.id,
-            toEventId: c.id,
-            relation: 'self',
-            manual: true,
-          ),
-        ],
-        themes: [
-          ...built.themes,
-          StoryTheme(
-            name: 'Swims',
-            description: '',
-            eventIds: [a.id, c.id],
-            manual: true,
-          ),
-        ],
-      ),
+    graphStatus = 200;
+    await state.advanceGraph();
+    expect(state.graphError, isNull);
+    expect(state.eventsAwaitingGraph, 0);
+    expect(state.graphSnapshot!.chapters.last.title, 'Road trip');
+  });
+
+  test('the user layer changes only books, placement and rings', () async {
+    state = await build(apiKey: 'sk-ant-test');
+    final a = await describedEvent(state, 1, photoCount: 5);
+    await describedEvent(state, 2, photoCount: 5);
+    final before = state.graphSnapshot!;
+    final chapter = before.chapters.single;
+
+    const book = Book(id: 'b1', title: 'Summer 2026');
+    await state.updateUserLayer(
+      books: const [
+        book,
+        Book(id: 'b2', title: '  '),
+      ],
+      chapterBooks: {chapter.id: 'b1', 'not-a-chapter': 'b1'},
+      rings: {a.id: 2, 'deleted-event': 1, 'x': 99},
     );
+    final after = state.graphSnapshot!;
+    expect(after.books.map((b) => b.title), ['Summer 2026', untitledBookTitle]);
+    expect(after.chapters.single.bookId, 'b1');
+    expect(after.rings, {a.id: 2});
+    expect(state.graph.node('event:${a.id}')!.ringColor, ringPalette[2]);
+    // The AI's content is exactly as it was.
+    expect(after.overview, before.overview);
+    expect(after.chapters.single.title, chapter.title);
+    expect(after.chapters.single.eventIds, chapter.eventIds);
+    expect(after.links.length, before.links.length);
+    expect(after.themes.single.name, before.themes.single.name);
 
-    var saved = state.graphSnapshot!;
-    expect(saved.chapters, hasLength(2));
-    final repaired = saved.chapters[1];
-    expect(repaired.title, 'Untitled chapter');
-    expect(repaired.id, isNotEmpty);
-    expect(repaired.eventIds, isEmpty);
-    expect(repaired.color, isNull);
-    expect(repaired.groupId, isNull);
-    expect(saved.links.where((l) => l.fromEventId == l.toEventId), isEmpty);
-    // The user's colour rings the chapter's events in the graph.
-    expect(state.graph.node('event:${a.id}')!.ringColor, chapterColors[3]);
+    // Books and rings survive the AI building on the graph.
+    await describedEvent(state, 9);
+    final grown = state.graphSnapshot!;
+    expect(grown.chapters.first.bookId, 'b1');
+    expect(grown.rings, {a.id: 2});
+    expect(grown.books.first.title, 'Summer 2026');
 
-    // The AI rebuild keeps the user's group, colour, wording and additions.
-    await state.buildGraphNow();
-    saved = state.graphSnapshot!;
-    expect(graphBodies, hasLength(2));
-    expect(saved.groups.single.name, 'Summer 2026');
-    expect(saved.overview, 'My own summary of the summer.');
-    final lake = saved.chapters.single;
-    expect(lake.title, 'Lake evenings');
-    expect(lake.color, chapterColors[3]);
-    expect(lake.groupId, 'g1');
-    expect(saved.links.where((l) => l.manual).single.relation, 'next day');
-    expect(
-      saved.themes.map((t) => t.name),
-      containsAll(['Time with Sam', 'Swims']),
-    );
-
-    // Deleting an event leaves the saved timeline consistent.
+    // Deleting an event drops its ring and keeps everything consistent.
     await state.deleteEvent(state.eventById(a.id)!);
-    await state.saveGraph(state.graphSnapshot!);
-    saved = state.graphSnapshot!;
-    expect(saved.chapters.single.eventIds, isNot(contains(a.id)));
-    expect(saved.links.where((l) => l.fromEventId == a.id), isEmpty);
-    expect(state.graph.nodes, isNotEmpty);
+    await state.updateUserLayer(
+      books: grown.books,
+      chapterBooks: const {},
+      rings: grown.rings,
+    );
+    expect(state.graphSnapshot!.rings, isEmpty);
+    expect(state.graphSnapshot!.chapters.first.eventIds, isNot(contains(a.id)));
   });
 }

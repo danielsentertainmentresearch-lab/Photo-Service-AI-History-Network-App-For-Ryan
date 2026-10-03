@@ -63,10 +63,33 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # Accounts and ads. Empty until the secrets are added (RELEASE.md):
+          # without Firebase, test builds offer "Continue as reviewer"; without
+          # AdMob ids, Google's test ads are used.
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_SENDER_ID: ${{ secrets.FIREBASE_SENDER_ID }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
+          ADMOB_REWARDED_ID: ${{ secrets.ADMOB_REWARDED_ID }}
         run: |
+          DEFINES=(
+            --dart-define=FIREBASE_API_KEY="$FIREBASE_API_KEY"
+            --dart-define=FIREBASE_APP_ID="$FIREBASE_APP_ID"
+            --dart-define=FIREBASE_SENDER_ID="$FIREBASE_SENDER_ID"
+            --dart-define=FIREBASE_PROJECT_ID="$FIREBASE_PROJECT_ID"
+          )
+          if [ -n "$ADMOB_REWARDED_ID" ]; then
+            DEFINES+=(--dart-define=ADMOB_REWARDED_ID="$ADMOB_REWARDED_ID")
+          fi
+          # Version tags are store releases; everything else is a test build
+          # with the reviewer sign-in.
+          if [[ "$GITHUB_REF" != refs/tags/v* ]]; then
+            DEFINES+=(--dart-define=REVIEW_MODE=true)
+          fi
           # Version code = workflow run number, so every Play upload is unique.
-          flutter build apk --release --build-number=${{ github.run_number }}
-          flutter build appbundle --release --build-number=${{ github.run_number }}
+          flutter build apk --release --build-number=${{ github.run_number }} "${DEFINES[@]}"
+          flutter build appbundle --release --build-number=${{ github.run_number }} "${DEFINES[@]}"
       - uses: actions/upload-artifact@v5
         with:
           name: eventlens-${{ github.run_number }}

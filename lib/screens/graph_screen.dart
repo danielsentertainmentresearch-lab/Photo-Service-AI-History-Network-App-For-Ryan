@@ -6,7 +6,9 @@ import 'package:intl/intl.dart' show DateFormat;
 import 'package:provider/provider.dart';
 
 import '../graph/force_layout.dart';
+import '../ai/graph_builder.dart';
 import '../models/memory_graph.dart';
+import '../models/ring_palette.dart';
 import '../state/app_state.dart';
 import 'event_detail_screen.dart';
 import 'graph_editor_screen.dart';
@@ -19,6 +21,18 @@ class GraphScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    if (!state.graphUnlocked) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Timeline graph')),
+        body: Column(
+          children: [
+            if (state.graphBuilding || state.graphError != null)
+              _StatusBar(state: state),
+            Expanded(child: _LockedGraph(state: state)),
+          ],
+        ),
+      );
+    }
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -41,7 +55,7 @@ class GraphScreen extends StatelessWidget {
                 ),
               ),
             IconButton(
-              tooltip: 'Edit timeline',
+              tooltip: 'Books & rings',
               icon: const Icon(Icons.edit_outlined),
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(
@@ -68,6 +82,52 @@ class GraphScreen extends StatelessWidget {
   }
 }
 
+/// Shown until the first [graphUnlockPhotos] described photos turn the
+/// timeline into a graph.
+class _LockedGraph extends StatelessWidget {
+  final AppState state;
+
+  const _LockedGraph({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final have = graphUnlockPhotos - state.photosUntilUnlock;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.hub_outlined,
+              size: 64,
+              color: theme.colorScheme.outline,
+            ),
+            const SizedBox(height: 16),
+            Text('Your graph is on its way', style: theme.textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(
+              'Once $graphUnlockPhotos photos have been described, the AI '
+              'turns your timeline into a connected graph of chapters, '
+              'people, places and themes, and keeps building on it as you '
+              'add events.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            LinearProgressIndicator(value: have / graphUnlockPhotos),
+            const SizedBox(height: 8),
+            Text(
+              '$have of $graphUnlockPhotos photos described',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _StatusBar extends StatelessWidget {
   final AppState state;
 
@@ -77,31 +137,39 @@ class _StatusBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final String text;
+    var retry = false;
     if (state.graphBuilding) {
-      text = 'The AI is organising your timeline…';
+      text = state.graphUnlocked
+          ? 'The AI is adding your new events to the graph…'
+          : 'The AI is turning your timeline into a graph…';
     } else if (state.graphError != null) {
       text = state.graphError!;
+      retry = true;
     } else {
-      final snapshot = state.graphSnapshot;
-      final next = state.photosUntilNextGraph;
-      final built = snapshot == null
-          ? 'Not organised yet.'
-          : 'Organised ${DateFormat.yMMMd().add_jm().format(snapshot.createdAt)}.';
-      final upcoming = next == null
-          ? ' Automatic AI rebuilds are off.'
-          : next == 0
-          ? ''
-          : ' The AI rebuilds after $next more described '
-                'photo${next == 1 ? '' : 's'}.';
-      text = '$built$upcoming';
+      final graph = state.graphSnapshot!;
+      final waiting = state.eventsAwaitingGraph;
+      text =
+          'Updated ${DateFormat.yMMMd().add_jm().format(graph.updatedAt)}. '
+          '${waiting == 0 ? 'The AI adds new events as you describe them.' : '$waiting new event${waiting == 1 ? '' : 's'} not added yet.'}';
+      retry = waiting > 0;
     }
     return Container(
       width: double.infinity,
       color: state.graphError != null
           ? theme.colorScheme.errorContainer
           : theme.colorScheme.surfaceContainerHighest,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Text(text, style: theme.textTheme.bodySmall),
+      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+      constraints: const BoxConstraints(minHeight: 40),
+      child: Row(
+        children: [
+          Expanded(child: Text(text, style: theme.textTheme.bodySmall)),
+          if (retry && !state.graphBuilding)
+            TextButton(
+              onPressed: state.advanceGraph,
+              child: const Text('Retry'),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -348,26 +416,8 @@ class _Legend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = Theme.of(context).textTheme.labelSmall;
-    final coloured =
-        (context.watch<AppState>().graphSnapshot?.chapters ??
-                const <TimelineChapter>[])
-            .where((c) => c.color != null)
-            .toList();
-    Widget ring(Color c, String label) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: c, width: 3),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(label, style: style),
-      ],
-    );
+    final ringed =
+        context.watch<AppState>().graphSnapshot?.rings.isNotEmpty ?? false;
     return SafeArea(
       top: false,
       child: Padding(
@@ -376,13 +426,10 @@ class _Legend extends StatelessWidget {
           spacing: 16,
           runSpacing: 4,
           children: [
-            for (final c in coloured) ring(Color(c.color!), c.title),
             Text(
-              coloured.isEmpty
-                  ? 'Events run left to right in time · purple lines: links '
-                        'between events · colour chapters in Edit'
-                  : 'Events run left to right in time · purple lines: links '
-                        'between events',
+              'Events run left to right in time · purple lines: '
+              'connections found by the AI · '
+              '${ringed ? 'coloured rings: your own markings' : 'add rings to events in Books & rings'}',
               style: style,
             ),
           ],
@@ -585,50 +632,22 @@ class _ChaptersView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final snapshot = state.graphSnapshot;
+    final snapshot = state.graphSnapshot!;
     final theme = Theme.of(context);
-    if (snapshot == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Once enough photos are described, the AI groups your events '
-                'into chapters, links related moments and finds recurring '
-                'themes. You can also organise them yourself.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: state.graphBuilding || state.describedCount < 2
-                    ? null
-                    : state.buildGraphNow,
-                icon: const Icon(Icons.auto_awesome),
-                label: const Text('Organise with AI'),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    fullscreenDialog: true,
-                    builder: (_) => const GraphEditorScreen(),
-                  ),
-                ),
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('Organise by hand'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
 
     Widget eventChip(String id) {
       final e = state.eventById(id);
       if (e == null) return const SizedBox.shrink();
+      final ring = ringColorFor(snapshot.rings[id]);
       return ActionChip(
+        avatar: ring == null
+            ? null
+            : Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Color(ring), width: 3),
+                ),
+              ),
         label: Text(e.title.isEmpty ? 'Untitled' : e.title),
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: id)),
@@ -640,15 +659,7 @@ class _ChaptersView extends StatelessWidget {
       final number = snapshot.chapters.indexOf(c) + 1;
       return Card(
         margin: const EdgeInsets.only(bottom: 12),
-        clipBehavior: Clip.antiAlias,
-        child: Container(
-          decoration: c.color == null
-              ? null
-              : BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: Color(c.color!), width: 6),
-                  ),
-                ),
+        child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -671,9 +682,9 @@ class _ChaptersView extends StatelessWidget {
       );
     }
 
-    final groupIds = snapshot.groups.map((g) => g.id).toSet();
-    final ungrouped = snapshot.chapters
-        .where((c) => !groupIds.contains(c.groupId))
+    final bookIds = snapshot.books.map((b) => b.id).toSet();
+    final loose = snapshot.chapters
+        .where((c) => !bookIds.contains(c.bookId))
         .toList();
 
     return ListView(
@@ -685,39 +696,31 @@ class _ChaptersView extends StatelessWidget {
           Text(snapshot.overview),
           const SizedBox(height: 24),
         ],
-        for (final g in snapshot.groups) ...[
+        for (final b in snapshot.books) ...[
           Row(
             children: [
-              const Icon(Icons.folder_outlined, size: 20),
+              const Icon(Icons.menu_book_outlined, size: 20),
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '$groupingLabel: ${g.name}',
-                  style: theme.textTheme.titleMedium,
-                ),
-              ),
+              Expanded(child: Text(b.title, style: theme.textTheme.titleLarge)),
             ],
           ),
           const SizedBox(height: 8),
-          ...snapshot.chapters.where((c) => c.groupId == g.id).map(chapterCard),
-          if (!snapshot.chapters.any((c) => c.groupId == g.id))
+          ...snapshot.chapters.where((c) => c.bookId == b.id).map(chapterCard),
+          if (!snapshot.chapters.any((c) => c.bookId == b.id))
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Text(
-                'No chapters yet. Add some in Edit.',
+                'No chapters in this book yet. Add some in Books & rings.',
                 style: theme.textTheme.bodySmall,
               ),
             ),
           const SizedBox(height: 8),
         ],
-        if (snapshot.groups.isNotEmpty && ungrouped.isNotEmpty) ...[
-          Text(
-            'Not in a ${groupingLabel.toLowerCase()}',
-            style: theme.textTheme.titleMedium,
-          ),
+        if (snapshot.books.isNotEmpty && loose.isNotEmpty) ...[
+          Text('Not in a book', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
         ],
-        ...ungrouped.map(chapterCard),
+        ...loose.map(chapterCard),
         if (snapshot.themes.isNotEmpty) ...[
           const SizedBox(height: 12),
           Text('Themes', style: theme.textTheme.titleMedium),
@@ -728,8 +731,7 @@ class _ChaptersView extends StatelessWidget {
               title: Text(t.name),
               subtitle: Text(
                 '${t.description}${t.description.isEmpty ? '' : '\n'}'
-                '${t.eventIds.length} event${t.eventIds.length == 1 ? '' : 's'}'
-                '${t.manual ? ' · added by you' : ''}',
+                '${t.eventIds.length} event${t.eventIds.length == 1 ? '' : 's'}',
               ),
               isThreeLine: t.description.isNotEmpty,
             ),
@@ -744,8 +746,7 @@ class _ChaptersView extends StatelessWidget {
               title: Text(l.relation),
               subtitle: Text(
                 '${state.eventById(l.fromEventId)?.title ?? '?'}  to  '
-                '${state.eventById(l.toEventId)?.title ?? '?'}'
-                '${l.manual ? ' · added by you' : ''}',
+                '${state.eventById(l.toEventId)?.title ?? '?'}',
               ),
             ),
         ],

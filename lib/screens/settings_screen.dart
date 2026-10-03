@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../ai/event_describer.dart';
 import '../app.dart';
-import '../services/settings_service.dart';
+import '../services/auth_service.dart';
 import '../state/app_state.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -54,6 +54,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const _AccountSection(),
+          const Divider(height: 32),
           Text('Anthropic API key', style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
@@ -135,33 +137,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onSelectionChanged: (s) => state.setEffort(s.first),
           ),
           const Divider(height: 32),
-          Text('Timeline graph', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(
-            'After this many photos in newly described events, the AI '
-            'automatically reorganises your whole timeline into chapters, '
-            'connections and themes. Your own edits (groups, colours, renamed '
-            'chapters, themes and connections you added) are kept. Each '
-            'rebuild is one extra AI request.',
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<int>(
-            initialValue: state.graphEvery,
-            decoration: const InputDecoration(
-              labelText: 'Rebuild automatically',
-              border: OutlineInputBorder(),
-            ),
-            items: [
-              for (final n in SettingsService.graphEveryOptions)
-                DropdownMenuItem(
-                  value: n,
-                  child: Text(n == 0 ? 'Off (manual only)' : 'Every $n photos'),
-                ),
-            ],
-            onChanged: (v) => v == null ? null : state.setGraphEvery(v),
-          ),
-          const Divider(height: 32),
           Text('Privacy', style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
@@ -197,4 +172,107 @@ class _SettingsScreenState extends State<SettingsScreen> {
     'xhigh' => 'Max',
     _ => e,
   };
+}
+
+class _AccountSection extends StatelessWidget {
+  const _AccountSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final auth = context.watch<AuthService>();
+    final lock = context.watch<BiometricLock>();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Account', style: theme.textTheme.titleMedium),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.person_outline),
+          title: Text(auth.user?.label ?? 'Not signed in'),
+          subtitle: const Text('Signed in'),
+        ),
+        FutureBuilder<bool>(
+          future: lock.supported,
+          builder: (context, snap) => SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.fingerprint),
+            title: const Text('Unlock with fingerprint or face'),
+            subtitle: snap.data == false
+                ? const Text('Not available on this device')
+                : const Text('Asked each time the app opens'),
+            value: lock.enabled,
+            onChanged: snap.data == true
+                ? (on) async {
+                    final ok = await lock.setEnabled(on);
+                    if (!ok && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Not turned on.')),
+                      );
+                    }
+                  }
+                : null,
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: () async {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+              await auth.signOut();
+            },
+            icon: const Icon(Icons.logout),
+            label: const Text('Sign out'),
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.error,
+            ),
+            onPressed: () => _deleteAccount(context, auth),
+            icon: const Icon(Icons.person_remove_outlined),
+            label: const Text('Delete account'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _deleteAccount(BuildContext context, AuthService auth) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete your account?'),
+        content: const Text(
+          'Your account is deleted permanently and you\'ll need a new one to '
+          'use the app. Events, photos and memories on this phone are not '
+          'deleted; uninstall the app to remove them.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete account'),
+          ),
+        ],
+      ),
+    );
+    if (yes != true || !context.mounted) return;
+    try {
+      await auth.deleteAccount();
+      if (context.mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } on AuthException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    }
+  }
 }

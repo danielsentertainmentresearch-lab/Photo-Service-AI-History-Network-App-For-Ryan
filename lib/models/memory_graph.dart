@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'event.dart';
 import 'memory_item.dart';
+import 'ring_palette.dart';
 
 /// Who supplied a piece of the graph: the user, the AI, or both.
 enum Provenance { human, ai, both }
@@ -25,88 +26,56 @@ enum EdgeKind {
   learnedFrom,
 }
 
-/// Placeholder name for the larger groupings chapters can be put into.
-/// The final name hasn't been decided; change it here and it changes
-/// everywhere in the app.
-const groupingLabel = 'Group';
-const untitledGroupName = 'Untitled group';
+/// User-made collection of chapters, titled by the user.
+const bookLabel = 'Book';
+const untitledBookTitle = 'Untitled book';
 
-/// Colours the user can mark a chapter with (ARGB). Events in a coloured
-/// chapter get a ring of that colour in the graph.
-const chapterColors = [
-  0xFFE53935,
-  0xFFFB8C00,
-  0xFFFDD835,
-  0xFF43A047,
-  0xFF00ACC1,
-  0xFF1E88E5,
-  0xFF8E24AA,
-  0xFF6D4C41,
-];
-
-/// A user-made grouping of chapters (see [groupingLabel]).
-class ChapterGroup {
+class Book {
   final String id;
-  final String name;
+  final String title;
 
-  const ChapterGroup({required this.id, required this.name});
+  const Book({required this.id, required this.title});
 
-  ChapterGroup copyWith({String? name}) =>
-      ChapterGroup(id: id, name: name ?? this.name);
+  Book copyWith({String? title}) => Book(id: id, title: title ?? this.title);
 
-  Map<String, dynamic> toJson() => {'id': id, 'name': name};
+  Map<String, dynamic> toJson() => {'id': id, 'title': title};
 
-  factory ChapterGroup.fromJson(Map<String, dynamic> j) => ChapterGroup(
+  factory Book.fromJson(Map<String, dynamic> j) => Book(
     id: j['id'] as String,
-    name: (j['name'] as String?) ?? untitledGroupName,
+    // 'name' is how the earlier "group" builds stored it.
+    title:
+        (j['title'] as String?) ?? (j['name'] as String?) ?? untitledBookTitle,
   );
 }
 
-/// A stretch of the timeline grouped together, by the AI or the user.
+/// A stretch of the timeline the AI grouped together. Its wording and
+/// events belong to the AI; the user only chooses which [Book] it sits in.
 class TimelineChapter {
   final String id;
   final String title;
   final String summary;
   final List<String> eventIds;
-
-  /// User-chosen colour from [chapterColors], or null for none.
-  final int? color;
-
-  /// The [ChapterGroup] this chapter belongs to, if any.
-  final String? groupId;
-
-  /// True once the user has edited the title or summary; an AI rebuild then
-  /// keeps their wording.
-  final bool edited;
+  final String? bookId;
 
   const TimelineChapter({
     this.id = '',
     required this.title,
     required this.summary,
     required this.eventIds,
-    this.color,
-    this.groupId,
-    this.edited = false,
+    this.bookId,
   });
 
   TimelineChapter copyWith({
     String? id,
-    String? title,
-    String? summary,
     List<String>? eventIds,
-    int? color,
-    bool clearColor = false,
-    String? groupId,
-    bool clearGroup = false,
-    bool? edited,
+    String? bookId,
+    bool clearBook = false,
   }) => TimelineChapter(
     id: id ?? this.id,
-    title: title ?? this.title,
-    summary: summary ?? this.summary,
+    title: title,
+    summary: summary,
     eventIds: eventIds ?? this.eventIds,
-    color: clearColor ? null : (color ?? this.color),
-    groupId: clearGroup ? null : (groupId ?? this.groupId),
-    edited: edited ?? this.edited,
+    bookId: clearBook ? null : (bookId ?? this.bookId),
   );
 
   Map<String, dynamic> toJson() => {
@@ -114,9 +83,7 @@ class TimelineChapter {
     'title': title,
     'summary': summary,
     'event_ids': eventIds,
-    'color': color,
-    'group_id': groupId,
-    'edited': edited,
+    'book_id': bookId,
   };
 
   factory TimelineChapter.fromJson(Map<String, dynamic> j) => TimelineChapter(
@@ -124,140 +91,132 @@ class TimelineChapter {
     title: (j['title'] as String?) ?? '',
     summary: (j['summary'] as String?) ?? '',
     eventIds: ((j['event_ids'] as List?) ?? const []).cast<String>(),
-    color: j['color'] as int?,
-    groupId: j['group_id'] as String?,
-    edited: (j['edited'] as bool?) ?? false,
+    bookId: (j['book_id'] as String?) ?? (j['group_id'] as String?),
   );
 }
 
+/// A connection between two events, made by the AI.
 class EventLink {
   final String fromEventId;
   final String toEventId;
   final String relation;
 
-  /// Added by the user; survives AI rebuilds.
-  final bool manual;
-
   const EventLink({
     required this.fromEventId,
     required this.toEventId,
     required this.relation,
-    this.manual = false,
   });
 
   Map<String, dynamic> toJson() => {
     'from': fromEventId,
     'to': toEventId,
     'relation': relation,
-    'manual': manual,
   };
 
   factory EventLink.fromJson(Map<String, dynamic> j) => EventLink(
     fromEventId: j['from'] as String,
     toEventId: j['to'] as String,
     relation: (j['relation'] as String?) ?? '',
-    manual: (j['manual'] as bool?) ?? false,
   );
 }
 
+/// A recurring thread across events, found by the AI.
 class StoryTheme {
   final String name;
   final String description;
   final List<String> eventIds;
 
-  /// Added or edited by the user; survives AI rebuilds.
-  final bool manual;
-
   const StoryTheme({
     required this.name,
     required this.description,
     required this.eventIds,
-    this.manual = false,
   });
+
+  StoryTheme copyWith({List<String>? eventIds}) => StoryTheme(
+    name: name,
+    description: description,
+    eventIds: eventIds ?? this.eventIds,
+  );
 
   Map<String, dynamic> toJson() => {
     'name': name,
     'description': description,
     'event_ids': eventIds,
-    'manual': manual,
   };
 
   factory StoryTheme.fromJson(Map<String, dynamic> j) => StoryTheme(
     name: (j['name'] as String?) ?? '',
     description: (j['description'] as String?) ?? '',
     eventIds: ((j['event_ids'] as List?) ?? const []).cast<String>(),
-    manual: (j['manual'] as bool?) ?? false,
   );
 }
 
-/// The organised timeline: chapters, groups, links and themes. Built by the
-/// AI and freely editable by the user.
+/// The organised timeline.
+///
+/// Two layers live here. The AI layer (overview, chapters' wording and
+/// events, links, themes) is written only by the AI, which builds on it as
+/// new events are described. The user layer (books, which book each chapter
+/// is in, and rings on events) is the only part the user can change; see
+/// [withUserLayer].
 class GraphSnapshot {
   final String id;
   final DateTime createdAt;
+  final DateTime updatedAt;
 
-  /// Described events and photos when the AI last built this; the next
-  /// automatic build happens once enough new photos are described.
+  /// Described events and photos the AI had seen at its last update.
   final int eventCount;
   final int photoCount;
   final String model;
   final String overview;
-  final bool overviewEdited;
   final List<TimelineChapter> chapters;
   final List<EventLink> links;
   final List<StoryTheme> themes;
-  final List<ChapterGroup> groups;
 
-  const GraphSnapshot({
+  // ---- User layer ----
+  final List<Book> books;
+
+  /// Event id → index into [ringPalette].
+  final Map<String, int> rings;
+
+  GraphSnapshot({
     required this.id,
     required this.createdAt,
+    DateTime? updatedAt,
     required this.eventCount,
     this.photoCount = 0,
     required this.model,
     required this.overview,
-    this.overviewEdited = false,
     required this.chapters,
     required this.links,
     required this.themes,
-    this.groups = const [],
-  });
-
-  /// An empty timeline for organising entirely by hand.
-  factory GraphSnapshot.empty(String id) => GraphSnapshot(
-    id: id,
-    createdAt: DateTime.now(),
-    eventCount: 0,
-    model: '',
-    overview: '',
-    chapters: const [],
-    links: const [],
-    themes: const [],
-  );
+    this.books = const [],
+    this.rings = const {},
+  }) : updatedAt = updatedAt ?? createdAt;
 
   GraphSnapshot copyWith({
-    String? id,
-    DateTime? createdAt,
+    DateTime? updatedAt,
     int? eventCount,
     int? photoCount,
     String? model,
     String? overview,
-    bool? overviewEdited,
     List<TimelineChapter>? chapters,
     List<EventLink>? links,
     List<StoryTheme>? themes,
-    List<ChapterGroup>? groups,
+    List<Book>? books,
+    Map<String, int>? rings,
   }) => GraphSnapshot(
-    id: id ?? this.id,
-    createdAt: createdAt ?? this.createdAt,
+    id: id,
+    createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
     eventCount: eventCount ?? this.eventCount,
     photoCount: photoCount ?? this.photoCount,
     model: model ?? this.model,
     overview: overview ?? this.overview,
-    overviewEdited: overviewEdited ?? this.overviewEdited,
     chapters: chapters ?? this.chapters,
     links: links ?? this.links,
     themes: themes ?? this.themes,
-    groups: groups ?? this.groups,
+    books: books ?? this.books,
+    rings: rings ?? this.rings,
   );
 
   TimelineChapter? chapterOf(String eventId) {
@@ -267,23 +226,45 @@ class GraphSnapshot {
     return null;
   }
 
+  /// Applies the user's choices without touching anything the AI owns:
+  /// only books, chapter → book placement and rings are taken from the
+  /// arguments. Unknown chapters in [chapterBooks] are ignored.
+  GraphSnapshot withUserLayer({
+    required List<Book> books,
+    required Map<String, String?> chapterBooks,
+    required Map<String, int> rings,
+  }) => copyWith(
+    books: books,
+    rings: rings,
+    chapters: [
+      for (final c in chapters)
+        chapterBooks.containsKey(c.id)
+            ? c.copyWith(
+                bookId: chapterBooks[c.id],
+                clearBook: chapterBooks[c.id] == null,
+              )
+            : c,
+    ],
+  );
+
   /// Repairs anything that could break the app: references to events that
-  /// no longer exist, unknown groups or colours, blank names, duplicate or
-  /// self links, and missing or duplicate chapter ids. Always safe to call.
+  /// no longer exist, unknown books, out-of-range rings, blank titles,
+  /// duplicate or self links, duplicate themes, and missing or duplicate
+  /// ids. Always safe to call, and stable when called again.
   GraphSnapshot sanitized(Set<String> validEventIds) {
-    final groupIds = <String>{};
-    final cleanGroups = <ChapterGroup>[];
-    for (var i = 0; i < groups.length; i++) {
-      final g = groups[i];
-      var id = g.id.isEmpty ? 'g$i' : g.id;
-      while (groupIds.contains(id)) {
+    final bookIds = <String>{};
+    final cleanBooks = <Book>[];
+    for (var i = 0; i < books.length; i++) {
+      final b = books[i];
+      var id = b.id.isEmpty ? 'b$i' : b.id;
+      while (bookIds.contains(id)) {
         id = '$id-$i';
       }
-      groupIds.add(id);
-      cleanGroups.add(
-        ChapterGroup(
+      bookIds.add(id);
+      cleanBooks.add(
+        Book(
           id: id,
-          name: g.name.trim().isEmpty ? untitledGroupName : g.name.trim(),
+          title: b.title.trim().isEmpty ? untitledBookTitle : b.title.trim(),
         ),
       );
     }
@@ -294,6 +275,7 @@ class GraphSnapshot {
     ];
 
     final chapterIds = <String>{};
+    final placed = <String>{};
     final cleanChapters = <TimelineChapter>[];
     for (var i = 0; i < chapters.length; i++) {
       final c = chapters[i];
@@ -302,15 +284,18 @@ class GraphSnapshot {
         id = '$id-$i';
       }
       chapterIds.add(id);
+      // An event sits in one chapter: the first one that claims it.
+      final ids = [
+        for (final e in events(c.eventIds))
+          if (placed.add(e)) e,
+      ];
       cleanChapters.add(
         TimelineChapter(
           id: id,
           title: c.title.trim().isEmpty ? 'Untitled chapter' : c.title.trim(),
           summary: c.summary.trim(),
-          eventIds: events(c.eventIds),
-          color: chapterColors.contains(c.color) ? c.color : null,
-          groupId: groupIds.contains(c.groupId) ? c.groupId : null,
-          edited: c.edited,
+          eventIds: ids,
+          bookId: bookIds.contains(c.bookId) ? c.bookId : null,
         ),
       );
     }
@@ -318,11 +303,10 @@ class GraphSnapshot {
     final seenLinks = <String>{};
     final cleanLinks = <EventLink>[];
     for (final l in links) {
-      final key = '${l.fromEventId}>${l.toEventId}';
       if (l.fromEventId == l.toEventId ||
           !validEventIds.contains(l.fromEventId) ||
           !validEventIds.contains(l.toEventId) ||
-          !seenLinks.add(key)) {
+          !seenLinks.add('${l.fromEventId}>${l.toEventId}')) {
         continue;
       }
       cleanLinks.add(
@@ -330,7 +314,6 @@ class GraphSnapshot {
           fromEventId: l.fromEventId,
           toEventId: l.toEventId,
           relation: l.relation.trim().isEmpty ? 'related' : l.relation.trim(),
-          manual: l.manual,
         ),
       );
     }
@@ -345,77 +328,23 @@ class GraphSnapshot {
           name: name,
           description: t.description.trim(),
           eventIds: events(t.eventIds),
-          manual: t.manual,
         ),
       );
     }
 
     return copyWith(
       overview: overview.trim(),
-      groups: cleanGroups,
+      books: cleanBooks,
       chapters: cleanChapters,
       links: cleanLinks,
       themes: cleanThemes,
-    );
-  }
-
-  /// Combines a fresh AI build with the user's edits to [previous]:
-  /// groups, chapter colours, group membership, edited chapter wording, an
-  /// edited overview, and the user's own links and themes are all kept.
-  /// A fresh chapter inherits from the previous chapter it overlaps most.
-  static GraphSnapshot mergeRebuild(
-    GraphSnapshot? previous,
-    GraphSnapshot fresh,
-  ) {
-    if (previous == null) return fresh;
-    final used = <String>{};
-    final chapters = <TimelineChapter>[];
-    for (final c in fresh.chapters) {
-      TimelineChapter? best;
-      var bestScore = 0.0;
-      final a = c.eventIds.toSet();
-      for (final old in previous.chapters) {
-        if (used.contains(old.id)) continue;
-        final b = old.eventIds.toSet();
-        final union = a.union(b).length;
-        final score = union == 0 ? 0.0 : a.intersection(b).length / union;
-        if (score > bestScore) {
-          bestScore = score;
-          best = old;
-        }
-      }
-      if (best != null && bestScore >= 0.5) {
-        used.add(best.id);
-        chapters.add(
-          c.copyWith(
-            id: best.id,
-            color: best.color,
-            groupId: best.groupId,
-            title: best.edited ? best.title : null,
-            summary: best.edited ? best.summary : null,
-            edited: best.edited,
-          ),
-        );
-      } else {
-        chapters.add(c);
-      }
-    }
-
-    final links = [...fresh.links, ...previous.links.where((l) => l.manual)];
-    final manualThemes = previous.themes.where((t) => t.manual).toList();
-    final manualNames = manualThemes.map((t) => t.name.toLowerCase()).toSet();
-    final themes = [
-      ...fresh.themes.where((t) => !manualNames.contains(t.name.toLowerCase())),
-      ...manualThemes,
-    ];
-
-    return fresh.copyWith(
-      overview: previous.overviewEdited ? previous.overview : fresh.overview,
-      overviewEdited: previous.overviewEdited,
-      chapters: chapters,
-      links: links,
-      themes: themes,
-      groups: previous.groups,
+      rings: {
+        for (final entry in rings.entries)
+          if (validEventIds.contains(entry.key) &&
+              entry.value >= 0 &&
+              entry.value < ringPalette.length)
+            entry.key: entry.value,
+      },
     );
   }
 
@@ -425,13 +354,14 @@ class GraphSnapshot {
     'event_count': eventCount,
     'model': model,
     'data': jsonEncode({
+      'updated_at': updatedAt.millisecondsSinceEpoch,
       'photo_count': photoCount,
       'overview': overview,
-      'overview_edited': overviewEdited,
       'chapters': chapters.map((c) => c.toJson()).toList(),
       'links': links.map((l) => l.toJson()).toList(),
       'themes': themes.map((t) => t.toJson()).toList(),
-      'groups': groups.map((g) => g.toJson()).toList(),
+      'books': books.map((b) => b.toJson()).toList(),
+      'rings': rings,
     }),
   };
 
@@ -440,14 +370,20 @@ class GraphSnapshot {
     List<Map<String, dynamic>> list(String key) =>
         ((data[key] as List?) ?? const []).cast<Map<String, dynamic>>();
     final chapters = list('chapters').map(TimelineChapter.fromJson).toList();
+    final createdAt = DateTime.fromMillisecondsSinceEpoch(
+      row['created_at'] as int,
+    );
+    final updated = data['updated_at'] as int?;
     return GraphSnapshot(
       id: row['id'] as String,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(row['created_at'] as int),
+      createdAt: createdAt,
+      updatedAt: updated == null
+          ? createdAt
+          : DateTime.fromMillisecondsSinceEpoch(updated),
       eventCount: row['event_count'] as int,
       photoCount: (data['photo_count'] as int?) ?? 0,
       model: (row['model'] as String?) ?? '',
       overview: (data['overview'] as String?) ?? '',
-      overviewEdited: (data['overview_edited'] as bool?) ?? false,
       chapters: [
         // Snapshots from before chapters had ids get stable ones.
         for (var i = 0; i < chapters.length; i++)
@@ -457,7 +393,14 @@ class GraphSnapshot {
       ],
       links: list('links').map(EventLink.fromJson).toList(),
       themes: list('themes').map(StoryTheme.fromJson).toList(),
-      groups: list('groups').map(ChapterGroup.fromJson).toList(),
+      // Earlier builds called books "groups".
+      books: (data['books'] != null ? list('books') : list('groups'))
+          .map(Book.fromJson)
+          .toList(),
+      rings: {
+        for (final e in ((data['rings'] as Map?) ?? const {}).entries)
+          if (e.value is int) e.key as String: e.value as int,
+      },
     );
   }
 }
@@ -475,7 +418,7 @@ class GraphNode {
   final DateTime? time;
   final String detail;
 
-  /// Ring colour the user chose for this event's chapter, if any.
+  /// Ring colour the user put on this event, if any.
   final int? ringColor;
 
   const GraphNode({
@@ -519,8 +462,8 @@ String _key(String s) => s.toLowerCase().trim();
 ///
 /// Events, people, places and tags come from each event; links, themes come
 /// from the AI's [snapshot] (if any); memories come from long-term memory.
-/// Each node is marked with who supplied it, and events carry the colour of
-/// their chapter when the user has picked one.
+/// Each node is marked with who supplied it, and events carry the ring
+/// colour the user gave them, if any.
 GraphData buildGraph({
   required List<LifeEvent> events,
   required List<MemoryItem> memories,
@@ -566,7 +509,7 @@ GraphData buildGraph({
       eventId: e.id,
       time: e.occurredAt,
       detail: e.summary,
-      ringColor: snapshot?.chapterOf(e.id)?.color,
+      ringColor: ringColorFor(snapshot?.rings[e.id]),
     );
     for (final p in e.people) {
       addLabel(e, p, NodeKind.person);

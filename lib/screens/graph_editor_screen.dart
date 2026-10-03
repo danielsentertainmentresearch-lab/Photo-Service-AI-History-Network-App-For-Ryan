@@ -5,15 +5,17 @@ import 'package:uuid/uuid.dart';
 
 import '../models/event.dart';
 import '../models/memory_graph.dart';
+import '../models/ring_palette.dart';
+import '../services/rewards_service.dart';
 import '../state/app_state.dart';
 
-/// Hand-editing of every part of the organised timeline: overview, groups,
-/// chapters (title, summary, colour, group, events, order), themes and
-/// links between events.
+/// The user's own layer of the timeline graph: Books (titled collections of
+/// chapters), which Book each chapter is in, and rings on events.
 ///
-/// Edits are made on a working copy and only saved when the user taps Save.
-/// Saving goes through [AppState.saveGraph], which repairs anything invalid,
-/// so no combination of edits can leave the app with data it can't show.
+/// Everything the AI wrote (chapter titles, summaries and events, themes,
+/// connections, overview) is shown read-only and can't be changed here;
+/// saving goes through [AppState.updateUserLayer], which only accepts the
+/// user layer.
 class GraphEditorScreen extends StatefulWidget {
   const GraphEditorScreen({super.key});
 
@@ -21,85 +23,11 @@ class GraphEditorScreen extends StatefulWidget {
   State<GraphEditorScreen> createState() => _GraphEditorScreenState();
 }
 
-class _ChapterDraft {
-  final String id;
-  String title;
-  String summary;
-  List<String> eventIds;
-  int? color;
-  String? groupId;
-  bool edited;
-
-  _ChapterDraft(TimelineChapter c)
-    : id = c.id.isEmpty ? const Uuid().v4() : c.id,
-      title = c.title,
-      summary = c.summary,
-      eventIds = [...c.eventIds],
-      color = c.color,
-      groupId = c.groupId,
-      edited = c.edited;
-
-  TimelineChapter build() => TimelineChapter(
-    id: id,
-    title: title,
-    summary: summary,
-    eventIds: eventIds,
-    color: color,
-    groupId: groupId,
-    edited: edited,
-  );
-}
-
-class _ThemeDraft {
-  final String key = const Uuid().v4();
-  String name;
-  String description;
-  List<String> eventIds;
-  bool manual;
-
-  _ThemeDraft(StoryTheme t)
-    : name = t.name,
-      description = t.description,
-      eventIds = [...t.eventIds],
-      manual = t.manual;
-
-  StoryTheme build() => StoryTheme(
-    name: name,
-    description: description,
-    eventIds: eventIds,
-    manual: manual,
-  );
-}
-
-class _LinkDraft {
-  final String key = const Uuid().v4();
-  String from;
-  String to;
-  String relation;
-  bool manual;
-
-  _LinkDraft(EventLink l)
-    : from = l.fromEventId,
-      to = l.toEventId,
-      relation = l.relation,
-      manual = l.manual;
-
-  EventLink build() => EventLink(
-    fromEventId: from,
-    toEventId: to,
-    relation: relation,
-    manual: manual,
-  );
-}
-
 class _GraphEditorScreenState extends State<GraphEditorScreen> {
-  late final GraphSnapshot _base;
-  late String _overview;
-  late bool _overviewEdited;
-  late List<ChapterGroup> _groups;
-  late List<_ChapterDraft> _chapters;
-  late List<_ThemeDraft> _themes;
-  late List<_LinkDraft> _links;
+  late List<Book> _books;
+  late Map<String, String?> _chapterBooks;
+  late Map<String, int> _rings;
+  late List<TimelineChapter> _chapters;
   late List<LifeEvent> _events;
   bool _dirty = false;
   bool _saving = false;
@@ -108,13 +36,11 @@ class _GraphEditorScreenState extends State<GraphEditorScreen> {
   void initState() {
     super.initState();
     final state = context.read<AppState>();
-    _base = state.graphSnapshot ?? GraphSnapshot.empty(const Uuid().v4());
-    _overview = _base.overview;
-    _overviewEdited = _base.overviewEdited;
-    _groups = [..._base.groups];
-    _chapters = _base.chapters.map(_ChapterDraft.new).toList();
-    _themes = _base.themes.map(_ThemeDraft.new).toList();
-    _links = _base.links.map(_LinkDraft.new).toList();
+    final graph = state.graphSnapshot;
+    _books = [...?graph?.books];
+    _chapters = [...?graph?.chapters];
+    _chapterBooks = {for (final c in _chapters) c.id: c.bookId};
+    _rings = {...?graph?.rings};
     _events = state.allEvents.where((e) => e.hasAccount).toList()
       ..sort((a, b) => a.occurredAt.compareTo(b.occurredAt));
   }
@@ -131,31 +57,14 @@ class _GraphEditorScreenState extends State<GraphEditorScreen> {
     return 'Deleted event';
   }
 
-  GraphSnapshot _result() => _base.copyWith(
-    overview: _overview,
-    overviewEdited: _overviewEdited,
-    groups: _groups,
-    chapters: _chapters.map((c) => c.build()).toList(),
-    themes: _themes.map((t) => t.build()).toList(),
-    links: _links.map((l) => l.build()).toList(),
-  );
-
   Future<void> _save() async {
-    final state = context.read<AppState>();
-    // The AI may have rebuilt the timeline while this screen was open.
-    final current = state.graphSnapshot;
-    if (current != null && current.id != _base.id) {
-      final overwrite = await _confirm(
-        'The timeline changed',
-        'The AI rebuilt the timeline while you were editing. Save your '
-            'version anyway? This replaces the AI\'s new version.',
-        'Save mine',
-      );
-      if (!overwrite) return;
-    }
     setState(() => _saving = true);
     try {
-      await state.saveGraph(_result());
+      await context.read<AppState>().updateUserLayer(
+        books: _books,
+        chapterBooks: _chapterBooks,
+        rings: _rings,
+      );
       if (!mounted) return;
       _dirty = false;
       Navigator.of(context).pop();
@@ -165,29 +74,6 @@ class _GraphEditorScreenState extends State<GraphEditorScreen> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Could not save: $e')));
     }
-  }
-
-  Future<void> _rebuildWithAi() async {
-    final state = context.read<AppState>();
-    if (state.describedCount < 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Describe at least two events first.')),
-      );
-      return;
-    }
-    final ok = await _confirm(
-      'Rebuild with AI?',
-      'The AI re-reads every event and reorganises the chapters, themes and '
-          'connections. Your ${groupingLabel.toLowerCase()}s, chapter colours, '
-          'chapters you renamed, and the themes and connections you added are '
-          'kept.${_dirty ? ' Unsaved changes on this screen are saved first.' : ''}',
-      'Rebuild',
-    );
-    if (!ok || !mounted) return;
-    if (_dirty) await state.saveGraph(_result());
-    if (!mounted) return;
-    Navigator.of(context).pop();
-    await state.buildGraphNow();
   }
 
   Future<bool> _confirm(String title, String body, String action) async {
@@ -211,97 +97,30 @@ class _GraphEditorScreenState extends State<GraphEditorScreen> {
     return result ?? false;
   }
 
-  Future<String?> _askText(String title, String initial) async {
-    final controller = TextEditingController(text: initial);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
-          onSubmitted: (v) => Navigator.pop(context, v),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    return result;
-  }
+  Future<String?> _askTitle(String title, String initial) => showDialog<String>(
+    context: context,
+    builder: (_) => _TitleDialog(title: title, initial: initial),
+  );
 
-  Future<List<String>?> _pickEvents(String title, List<String> selected) {
-    final chosen = {...selected};
-    return showDialog<List<String>>(
+  Future<void> _showUnlock(int index) async {
+    await showModalBottomSheet<void>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialog) => AlertDialog(
-          title: Text(title),
-          contentPadding: const EdgeInsets.symmetric(vertical: 8),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: _events.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text('No described events yet.'),
-                  )
-                : ListView(
-                    shrinkWrap: true,
-                    children: [
-                      for (final e in _events)
-                        CheckboxListTile(
-                          value: chosen.contains(e.id),
-                          title: Text(e.title.isEmpty ? 'Untitled' : e.title),
-                          subtitle: Text(
-                            DateFormat.yMMMd().format(e.occurredAt),
-                          ),
-                          onChanged: (on) => setDialog(
-                            () => on == true
-                                ? chosen.add(e.id)
-                                : chosen.remove(e.id),
-                          ),
-                        ),
-                    ],
-                  ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              // Keep timeline order.
-              onPressed: () => Navigator.pop(context, [
-                for (final e in _events)
-                  if (chosen.contains(e.id)) e.id,
-              ]),
-              child: const Text('Done'),
-            ),
-          ],
-        ),
-      ),
+      showDragHandle: true,
+      builder: (_) => _UnlockSheet(index: index),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final unlocks = context.watch<RingUnlocks>();
     return PopScope(
       canPop: !_dirty,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         final discard = await _confirm(
           'Discard changes?',
-          'Your edits to the timeline haven\'t been saved.',
+          'Your changes to books and rings haven\'t been saved.',
           'Discard',
         );
         if (discard && context.mounted) {
@@ -311,16 +130,8 @@ class _GraphEditorScreenState extends State<GraphEditorScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Edit timeline'),
+          title: const Text('Books & rings'),
           actions: [
-            PopupMenuButton<String>(
-              onSelected: (v) {
-                if (v == 'rebuild') _rebuildWithAi();
-              },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'rebuild', child: Text('Rebuild with AI')),
-              ],
-            ),
             TextButton(
               onPressed: _saving ? null : _save,
               child: const Text('Save'),
@@ -332,62 +143,45 @@ class _GraphEditorScreenState extends State<GraphEditorScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 48),
             children: [
-              _Section('Overview'),
-              TextFormField(
-                initialValue: _overview,
-                minLines: 2,
-                maxLines: 6,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'What this stretch of your life was about',
-                ),
-                onChanged: (v) => _change(() {
-                  _overview = v;
-                  _overviewEdited = true;
-                }),
+              Text(
+                'Chapters, themes and connections are written by the AI and '
+                'grow as you add events. Here you arrange chapters into your '
+                'own books and mark events with rings.',
+                style: theme.textTheme.bodySmall,
               ),
-              _Section(
-                '${groupingLabel}s',
-                hint:
-                    'Larger groupings that hold several chapters. Name them '
-                    'whatever you like.',
-              ),
-              for (final g in _groups)
+              const _Section('Books'),
+              for (final b in _books)
                 ListTile(
-                  key: ValueKey('group-${g.id}'),
+                  key: ValueKey('book-${b.id}'),
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.folder_outlined),
-                  title: Text(g.name),
+                  leading: const Icon(Icons.menu_book_outlined),
+                  title: Text(b.title),
                   subtitle: Text(
-                    '${_chapters.where((c) => c.groupId == g.id).length} chapters',
+                    '${_chapterBooks.values.where((id) => id == b.id).length} chapters',
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        tooltip: 'Rename',
+                        tooltip: 'Rename book',
                         icon: const Icon(Icons.edit_outlined),
                         onPressed: () async {
-                          final name = await _askText(
-                            'Rename ${groupingLabel.toLowerCase()}',
-                            g.name,
-                          );
-                          if (name == null) return;
+                          final title = await _askTitle('Rename book', b.title);
+                          if (title == null) return;
                           _change(() {
-                            final i = _groups.indexWhere((x) => x.id == g.id);
-                            if (i >= 0) _groups[i] = g.copyWith(name: name);
+                            final i = _books.indexWhere((x) => x.id == b.id);
+                            if (i >= 0) _books[i] = b.copyWith(title: title);
                           });
                         },
                       ),
                       IconButton(
-                        tooltip: 'Delete',
+                        tooltip: 'Delete book',
                         icon: const Icon(Icons.delete_outline),
                         onPressed: () => _change(() {
-                          _groups.removeWhere((x) => x.id == g.id);
-                          for (final c in _chapters) {
-                            if (c.groupId == g.id) c.groupId = null;
-                          }
+                          _books.removeWhere((x) => x.id == b.id);
+                          _chapterBooks.updateAll(
+                            (_, id) => id == b.id ? null : id,
+                          );
                         }),
                       ),
                     ],
@@ -396,381 +190,226 @@ class _GraphEditorScreenState extends State<GraphEditorScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
-                  onPressed: () => _change(
-                    () => _groups.add(
-                      ChapterGroup(
-                        id: const Uuid().v4(),
-                        name: untitledGroupName,
-                      ),
-                    ),
-                  ),
-                  icon: const Icon(Icons.create_new_folder_outlined),
-                  label: Text('Add ${groupingLabel.toLowerCase()}'),
+                  onPressed: () async {
+                    final title = await _askTitle('New book', '');
+                    if (title == null) return;
+                    _change(
+                      () =>
+                          _books.add(Book(id: const Uuid().v4(), title: title)),
+                    );
+                  },
+                  icon: const Icon(Icons.library_add_outlined),
+                  label: const Text('Add book'),
                 ),
               ),
-              _Section('Chapters'),
-              for (var i = 0; i < _chapters.length; i++) _chapterCard(i, theme),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () => _change(
-                    () => _chapters.add(
-                      _ChapterDraft(
-                        TimelineChapter(
-                          id: const Uuid().v4(),
-                          title: 'New chapter',
-                          summary: '',
-                          eventIds: const [],
-                          edited: true,
-                        ),
-                      ),
-                    ),
-                  ),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add chapter'),
-                ),
-              ),
-              _Section('Themes'),
-              for (final t in _themes) _themeCard(t),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () => _change(
-                    () => _themes.add(
-                      _ThemeDraft(
-                        const StoryTheme(
-                          name: 'New theme',
-                          description: '',
-                          eventIds: [],
-                          manual: true,
-                        ),
-                      ),
-                    ),
-                  ),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add theme'),
-                ),
-              ),
-              _Section(
-                'Connections',
-                hint: 'Links between two events, drawn in purple on the graph.',
-              ),
-              for (final l in _links) _linkCard(l),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: _events.length < 2
-                      ? null
-                      : () => _change(
-                          () => _links.add(
-                            _LinkDraft(
-                              EventLink(
-                                fromEventId: _events.first.id,
-                                toEventId: _events.last.id,
-                                relation: '',
-                                manual: true,
-                              ),
+              const _Section('Chapters'),
+              if (_chapters.isEmpty)
+                Text('No chapters yet.', style: theme.textTheme.bodySmall),
+              for (var i = 0; i < _chapters.length; i++)
+                Card(
+                  key: ValueKey('chapter-${_chapters[i].id}'),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Chapter ${i + 1}',
+                              style: theme.textTheme.labelMedium,
                             ),
-                          ),
+                            const Spacer(),
+                            Icon(
+                              Icons.lock_outline,
+                              size: 14,
+                              color: theme.colorScheme.outline,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Written by the AI',
+                              style: theme.textTheme.labelSmall,
+                            ),
+                          ],
                         ),
-                  icon: const Icon(Icons.add_link),
-                  label: const Text('Add connection'),
+                        Text(
+                          _chapters[i].title,
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        Text(
+                          _chapters[i].eventIds.map(_eventTitle).join(' · '),
+                          style: theme.textTheme.bodySmall,
+                        ),
+                        DropdownButtonFormField<String?>(
+                          key: ValueKey(
+                            'chapter-book-${_chapters[i].id}-${_books.length}',
+                          ),
+                          initialValue:
+                              _books.any(
+                                (b) => b.id == _chapterBooks[_chapters[i].id],
+                              )
+                              ? _chapterBooks[_chapters[i].id]
+                              : null,
+                          decoration: const InputDecoration(labelText: 'Book'),
+                          items: [
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text('Not in a book'),
+                            ),
+                            for (final b in _books)
+                              DropdownMenuItem<String?>(
+                                value: b.id,
+                                child: Text(b.title),
+                              ),
+                          ],
+                          onChanged: (v) =>
+                              _change(() => _chapterBooks[_chapters[i].id] = v),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
+              _Section(
+                'Rings',
+                hint:
+                    'Mark events with a coloured ring in the graph. '
+                    '${unlocks.unlockedCount} of ${ringPalette.length} '
+                    'colours unlocked.',
               ),
+              for (final e in _events)
+                Padding(
+                  key: ValueKey('ring-${e.id}'),
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        e.title.isEmpty ? 'Untitled' : e.title,
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      Text(
+                        DateFormat.yMMMd().format(e.occurredAt),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _RingDot(
+                            color: null,
+                            selected: _rings[e.id] == null,
+                            onTap: () => _change(() => _rings.remove(e.id)),
+                          ),
+                          for (var i = 0; i < ringPalette.length; i++)
+                            _RingDot(
+                              color: ringPalette[i],
+                              selected: _rings[e.id] == i,
+                              locked: !unlocks.isUnlocked(i),
+                              onTap: unlocks.isUnlocked(i)
+                                  ? () => _change(() => _rings[e.id] = i)
+                                  : () => _showUnlock(i),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _eventChips(List<String> ids, void Function(String) onRemove) => Wrap(
-    spacing: 6,
-    runSpacing: 6,
-    children: [
-      for (final id in ids)
-        InputChip(label: Text(_eventTitle(id)), onDeleted: () => onRemove(id)),
-    ],
-  );
+/// Explains how a locked colour unlocks and plays the rewarded videos.
+class _UnlockSheet extends StatelessWidget {
+  final int index;
 
-  Widget _chapterCard(int index, ThemeData theme) {
-    final c = _chapters[index];
-    return Card(
-      key: ValueKey('chapter-${c.id}'),
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text('Chapter ${index + 1}', style: theme.textTheme.labelLarge),
-                const Spacer(),
-                IconButton(
-                  tooltip: 'Move up',
-                  icon: const Icon(Icons.arrow_upward),
-                  onPressed: index == 0
-                      ? null
-                      : () => _change(() {
-                          _chapters.insert(
-                            index - 1,
-                            _chapters.removeAt(index),
-                          );
-                        }),
-                ),
-                IconButton(
-                  tooltip: 'Move down',
-                  icon: const Icon(Icons.arrow_downward),
-                  onPressed: index == _chapters.length - 1
-                      ? null
-                      : () => _change(() {
-                          _chapters.insert(
-                            index + 1,
-                            _chapters.removeAt(index),
-                          );
-                        }),
-                ),
-                IconButton(
-                  tooltip: 'Delete chapter',
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () => _change(() => _chapters.removeAt(index)),
-                ),
-              ],
-            ),
-            TextFormField(
-              key: ValueKey('chapter-title-${c.id}'),
-              initialValue: c.title,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(labelText: 'Title'),
-              onChanged: (v) => _change(() {
-                c.title = v;
-                c.edited = true;
-              }),
-            ),
-            TextFormField(
-              key: ValueKey('chapter-summary-${c.id}'),
-              initialValue: c.summary,
-              minLines: 1,
-              maxLines: 4,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(labelText: 'Summary'),
-              onChanged: (v) => _change(() {
-                c.summary = v;
-                c.edited = true;
-              }),
-            ),
-            const SizedBox(height: 12),
-            Text('Colour', style: theme.textTheme.labelMedium),
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _ColourDot(
-                  color: null,
-                  selected: c.color == null,
-                  onTap: () => _change(() => c.color = null),
-                ),
-                for (final colour in chapterColors)
-                  _ColourDot(
-                    color: colour,
-                    selected: c.color == colour,
-                    onTap: () => _change(() => c.color = colour),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String?>(
-              key: ValueKey('chapter-group-${c.id}-${_groups.length}'),
-              initialValue: _groups.any((g) => g.id == c.groupId)
-                  ? c.groupId
-                  : null,
-              decoration: InputDecoration(labelText: groupingLabel),
-              items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('None'),
-                ),
-                for (final g in _groups)
-                  DropdownMenuItem<String?>(value: g.id, child: Text(g.name)),
-              ],
-              onChanged: (v) => _change(() => c.groupId = v),
-            ),
-            const SizedBox(height: 12),
-            Text('Events', style: theme.textTheme.labelMedium),
-            const SizedBox(height: 4),
-            _eventChips(
-              c.eventIds,
-              (id) => _change(() => c.eventIds.remove(id)),
-            ),
-            TextButton.icon(
-              onPressed: () async {
-                final picked = await _pickEvents(
-                  'Events in this chapter',
-                  c.eventIds,
-                );
-                if (picked == null) return;
-                _change(() {
-                  // An event belongs to one chapter: move it here.
-                  for (final other in _chapters) {
-                    if (other != c) {
-                      other.eventIds.removeWhere(picked.contains);
-                    }
-                  }
-                  c.eventIds = picked;
-                });
-              },
-              icon: const Icon(Icons.playlist_add),
-              label: const Text('Choose events'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  const _UnlockSheet({required this.index});
 
-  Widget _themeCard(_ThemeDraft t) {
-    return Card(
-      key: ValueKey('theme-${t.key}'),
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    initialValue: t.name,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(labelText: 'Theme'),
-                    onChanged: (v) => _change(() {
-                      t.name = v;
-                      t.manual = true;
-                    }),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Delete theme',
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () => _change(() => _themes.remove(t)),
-                ),
-              ],
-            ),
-            TextFormField(
-              initialValue: t.description,
-              maxLines: 3,
-              minLines: 1,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(labelText: 'Description'),
-              onChanged: (v) => _change(() {
-                t.description = v;
-                t.manual = true;
-              }),
-            ),
-            const SizedBox(height: 8),
-            _eventChips(
-              t.eventIds,
-              (id) => _change(() {
-                t.eventIds.remove(id);
-                t.manual = true;
-              }),
-            ),
-            TextButton.icon(
-              onPressed: () async {
-                final picked = await _pickEvents(
-                  'Events in this theme',
-                  t.eventIds,
-                );
-                if (picked == null) return;
-                _change(() {
-                  t.eventIds = picked;
-                  t.manual = true;
-                });
-              },
-              icon: const Icon(Icons.playlist_add),
-              label: const Text('Choose events'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _linkCard(_LinkDraft l) {
-    final ids = _events.map((e) => e.id).toSet();
-    DropdownButtonFormField<String> picker(
-      String label,
-      String value,
-      void Function(String) onPick,
-    ) => DropdownButtonFormField<String>(
-      initialValue: ids.contains(value) ? value : null,
-      isExpanded: true,
-      decoration: InputDecoration(labelText: label),
-      items: [
-        for (final e in _events)
-          DropdownMenuItem(
-            value: e.id,
-            child: Text(
-              e.title.isEmpty ? 'Untitled' : e.title,
-              overflow: TextOverflow.ellipsis,
-            ),
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final unlocks = context.watch<RingUnlocks>();
+    final next = unlocks.nextLocked;
+    final Widget body;
+    if (unlocks.isUnlocked(index)) {
+      body = const Text('Unlocked! Close this and pick the colour.');
+    } else if (next != index) {
+      body = Text(
+        'Colours unlock in order. Unlock the earlier colours first: the next '
+        'one to unlock needs ${unlocks.videosForNext} more '
+        'video${unlocks.videosForNext == 1 ? '' : 's'}.',
+      );
+    } else {
+      final cost = ringUnlockCost(index);
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Watch $cost short videos to unlock this colour. Each later colour '
+            'takes one more video.',
           ),
-      ],
-      onChanged: (v) {
-        if (v != null) _change(() => onPick(v));
-      },
-    );
-
-    return Card(
-      key: ValueKey('link-${l.key}'),
-      margin: const EdgeInsets.only(bottom: 12),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(value: unlocks.progress / cost),
+          const SizedBox(height: 4),
+          Text(
+            '${unlocks.progress} of $cost watched',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: unlocks.watching
+                ? null
+                : () async {
+                    final counted = await unlocks.watchVideo();
+                    if (!counted && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'The video didn\'t finish or couldn\'t load, so '
+                            'it wasn\'t counted. Try again.',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+            icon: unlocks.watching
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.play_circle_outline),
+            label: const Text('Watch a video'),
+          ),
+        ],
+      );
+    }
+    return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
+                _RingDot(color: ringPalette[index], selected: false),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: TextFormField(
-                    initialValue: l.relation,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(
-                      labelText: 'How they connect',
-                      hintText: 'e.g. same lake, one year later',
-                    ),
-                    onChanged: (v) => _change(() {
-                      l.relation = v;
-                      l.manual = true;
-                    }),
+                  child: Text(
+                    'Unlock this ring colour',
+                    style: theme.textTheme.titleLarge,
                   ),
-                ),
-                IconButton(
-                  tooltip: 'Delete connection',
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () => _change(() => _links.remove(l)),
                 ),
               ],
             ),
-            picker('From', l.from, (v) {
-              l.from = v;
-              l.manual = true;
-            }),
-            picker('To', l.to, (v) {
-              l.to = v;
-              l.manual = true;
-            }),
-            if (l.from == l.to)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Pick two different events. A connection from an event to '
-                  'itself is dropped when you save.',
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ),
+            const SizedBox(height: 16),
+            body,
           ],
         ),
       ),
@@ -800,43 +439,105 @@ class _Section extends StatelessWidget {
   }
 }
 
-class _ColourDot extends StatelessWidget {
+class _RingDot extends StatelessWidget {
   final int? color;
   final bool selected;
-  final VoidCallback onTap;
+  final bool locked;
+  final VoidCallback? onTap;
 
-  const _ColourDot({
+  const _RingDot({
     required this.color,
     required this.selected,
-    required this.onTap,
+    this.locked = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
-      button: true,
+      button: onTap != null,
       selected: selected,
-      label: color == null ? 'No colour' : 'Colour',
+      label: color == null
+          ? 'No ring'
+          : locked
+          ? 'Locked ring colour'
+          : 'Ring colour',
       child: InkResponse(
         onTap: onTap,
         radius: 22,
         child: Container(
-          width: 32,
-          height: 32,
+          width: 34,
+          height: 34,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: color == null ? scheme.surface : Color(color!),
             border: Border.all(
-              color: selected ? scheme.onSurface : scheme.outlineVariant,
-              width: selected ? 3 : 1,
+              color: color == null
+                  ? scheme.outlineVariant
+                  : Color(color!).withValues(alpha: locked ? 0.35 : 1),
+              width: 5,
             ),
           ),
+          foregroundDecoration: selected
+              ? BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: scheme.onSurface, width: 2),
+                )
+              : null,
           child: color == null
-              ? Icon(Icons.block, size: 16, color: scheme.outline)
+              ? Icon(Icons.block, size: 14, color: scheme.outline)
+              : locked
+              ? Icon(Icons.lock, size: 14, color: scheme.outline)
               : null,
         ),
       ),
+    );
+  }
+}
+
+/// Asks for a book title. Owns its text controller so it is only disposed
+/// after the dialog has fully closed.
+class _TitleDialog extends StatefulWidget {
+  final String title;
+  final String initial;
+
+  const _TitleDialog({required this.title, required this.initial});
+
+  @override
+  State<_TitleDialog> createState() => _TitleDialogState();
+}
+
+class _TitleDialogState extends State<_TitleDialog> {
+  late final _controller = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        maxLength: 80,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(labelText: 'Book title'),
+        onSubmitted: (v) => Navigator.pop(context, v),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _controller.text),
+          child: const Text('OK'),
+        ),
+      ],
     );
   }
 }

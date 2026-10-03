@@ -21,19 +21,22 @@ This is **stage 1**: an Android app built with Flutter, ready for Google Play.
 - AI account: a detailed first-person narrative, a short summary, and labels
   for people, places and tags. You can edit it, copy it or rewrite it.
 - Memory screen: add, edit and delete what the AI should always know.
-- Timeline graph: after every 10 photos in newly described events (Off, 5,
-  10, 20 or 50 in Settings), the AI organises the whole timeline into
-  chapters, links between related events, and recurring themes. A graph
-  view shows events left to right in time, connected to their people,
-  places, tags, themes and memories.
-- Edit timeline: every part of the organised timeline can be edited by
-  hand: overview, chapters (title, summary, order, events, colour),
-  larger groupings of chapters (working name "Group", set by
-  `groupingLabel` in `lib/models/memory_graph.dart`), themes, and
-  connections. Chapter colours are chosen by the user and ring that
-  chapter's events in the graph. Edits are repaired before saving so bad
-  input can't break the app, and AI rebuilds keep the user's groups,
-  colours, renamed chapters and own themes/connections.
+- Accounts: an account is required after the tutorial. Sign up with
+  email + password, phone + password (number confirmed by SMS), or Google;
+  optional fingerprint/face unlock each time the app opens. Accounts run on
+  Firebase Authentication. Test builds also offer "Continue as reviewer".
+- Timeline graph: the first 10 described photos turn the timeline into a
+  graph, once. From then on the AI builds on it as each event is described
+  (new chapters, connections and themes are added; what it already wrote
+  stays). The graph shows events left to right in time, connected to their
+  people, places, tags, themes and memories.
+- AI-owned content: chapter wording and membership, themes, connections and
+  the overview are written only by the AI and can't be edited.
+- Books & rings (the user's layer): gather chapters into titled Books, and
+  put coloured rings on events. One ring colour is free; the rest unlock in
+  order with rewarded videos (5, then 6, 7, …). The ring palette in
+  `lib/models/ring_palette.dart` is a placeholder until the brand palette
+  arrives.
 - Timeline grouped by month, plus full-text search across everything.
 - Settings: your own Anthropic API key (stored encrypted), the model
   (Claude Opus 5.5 by default, or Sonnet 5.5) and the thinking effort.
@@ -46,11 +49,15 @@ This is **stage 1**: an Android app built with Flutter, ready for Google Play.
 | Original photos | App-private storage on the device (`files/vault/`) |
 | Events, memories | SQLite database on the device |
 | API key | Android Keystore-backed encrypted storage |
+| Account | Firebase Authentication (email or phone, sign-in method) |
+| Ring unlock progress | On the device |
 
 Data leaves the phone only when an event is described. That request sends the
 event's photos (downscaled to 1568 px), its notes, summaries of the 15 most
 recent events and the saved memories to `api.anthropic.com` over HTTPS. Cloud
-backup is disabled for app data. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
+backup is disabled for app data. Signing in contacts Firebase (Google), and
+unlocking ring colours plays AdMob (Google) rewarded videos. See
+[PRIVACY_POLICY.md](PRIVACY_POLICY.md).
 
 ## Architecture
 
@@ -62,9 +69,11 @@ lib/
   graph/         Force-directed layout with events pinned to a time axis
   data/          SQLite schema, repositories, on-device image vault
   models/        LifeEvent, EventImage, MemoryItem
-  services/      Settings (secure API key, preferences)
+  services/      Settings, accounts (Firebase Auth + biometric lock),
+                 rewarded videos (AdMob behind a swappable interface)
   state/         AppState: the single ChangeNotifier the UI watches
-  screens/       Welcome, Home/timeline, New event, Event detail, Memory, Settings
+  screens/       Tutorial, Account, Home/timeline, New event, Event detail,
+                 Memory, Timeline graph, Books & rings, Settings
   widgets/       Shared image and status widgets
 test/            Unit, integration (real SQLite via FFI) and widget tests
 tool/            Icon and store-graphic generator
@@ -128,6 +137,11 @@ fine for testing but not accepted by Play. See [RELEASE.md](RELEASE.md).
 
 ## Roadmap ideas (stage 2+)
 
+- Paywall tier for editing AI-owned nodes (people, places, tags, themes,
+  memories) and adding your own connections and themes.
+- Store ring unlocks and the library with the account, so they survive a
+  reinstall or a new phone.
+- Passkeys (FIDO2) in addition to biometric unlock.
 - Optional sync to a self-hosted server (e.g. a Docker container on a home
   NAS), with the AI call moved server-side so the key never sits on the phone.
 - Export/import of the whole library (zip of photos + JSON).

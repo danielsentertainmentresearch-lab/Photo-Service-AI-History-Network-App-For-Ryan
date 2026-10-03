@@ -19,10 +19,14 @@ import 'package:eventlens/data/memory_repository.dart';
 import 'package:eventlens/models/event.dart';
 import 'package:eventlens/models/memory_graph.dart';
 import 'package:eventlens/screens/event_detail_screen.dart';
+import 'package:eventlens/screens/auth_screen.dart';
 import 'package:eventlens/screens/graph_editor_screen.dart';
 import 'package:eventlens/screens/graph_screen.dart';
 import 'package:eventlens/screens/home_screen.dart';
 import 'package:eventlens/screens/memory_screen.dart';
+import 'package:eventlens/screens/tutorial_screen.dart';
+import 'package:eventlens/services/auth_service.dart';
+import 'package:eventlens/services/rewards_service.dart';
 import 'package:eventlens/services/settings_service.dart';
 import 'package:eventlens/state/app_state.dart';
 import 'package:flutter/material.dart';
@@ -76,7 +80,8 @@ File _photo(Directory dir, String name, int c1, int c2) {
 
 Future<AppState> _sampleState(Directory tmp) async {
   sqfliteFfiInit();
-  SharedPreferences.setMockInitialValues({'onboarded': true});
+  // Two colours unlocked (the free one plus one), so rings show variety.
+  SharedPreferences.setMockInitialValues({'ring_unlocked_count': 2});
   FlutterSecureStorage.setMockInitialValues({
     'anthropic_api_key': 'sk-ant-sample',
   });
@@ -201,20 +206,19 @@ Future<AppState> _sampleState(Directory tmp) async {
           'An early summer built around Sam: a dare at the lake, his band\'s '
           'breakthrough night, and a return to the same shore a month later, '
           'with a quiet morning with Mum in between.',
-      groups: const [ChapterGroup(id: 'g1', name: untitledGroupName)],
+      books: const [Book(id: 'b1', title: 'Summer 2026')],
+      rings: {ids[0]: 0, ids[3]: 1},
       chapters: [
         TimelineChapter(
           id: 'c1',
-          color: chapterColors[4],
-          groupId: 'g1',
+          bookId: 'b1',
           title: 'First weeks of summer',
           summary: 'The lake and the market: slow weekends with family.',
           eventIds: ids.sublist(0, 2),
         ),
         TimelineChapter(
           id: 'c2',
-          color: chapterColors[6],
-          groupId: 'g1',
+          bookId: 'b1',
           title: 'Lowtide\'s summer',
           summary: 'Sam\'s band takes off and the lake becomes a tradition.',
           eventIds: ids.sublist(2),
@@ -251,6 +255,24 @@ Future<AppState> _sampleState(Directory tmp) async {
   return state;
 }
 
+late SharedPreferences prefs;
+
+/// Signed-in stand-in for the screenshots.
+class _ShotAuth extends LocalReviewAuthService {
+  _ShotAuth() : super(prefs);
+
+  @override
+  AppUser? get user => const AppUser(uid: 'u', label: 'sam@example.com');
+
+  @override
+  bool get available => true;
+}
+
+class _NoVideos implements RewardedVideoProvider {
+  @override
+  Future<bool> showRewardedVideo() async => false;
+}
+
 void main() {
   final out = Directory('store/screenshots')..createSync(recursive: true);
   late Directory tmp;
@@ -274,8 +296,15 @@ void main() {
     await tester.pumpWidget(
       RepaintBoundary(
         key: key,
-        child: ChangeNotifierProvider.value(
-          value: state,
+        child: MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: state),
+            ChangeNotifierProvider<AuthService>.value(value: _ShotAuth()),
+            ChangeNotifierProvider(create: (_) => BiometricLock(prefs)),
+            ChangeNotifierProvider(
+              create: (_) => RingUnlocks(prefs, _NoVideos()),
+            ),
+          ],
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
             theme: ThemeData(
@@ -322,7 +351,10 @@ void main() {
     debugDisableShadows = false;
     await tester.runAsync(_loadFonts);
     state = (await tester.runAsync(() => _sampleState(tmp)))!;
+    prefs = (await tester.runAsync(SharedPreferences.getInstance))!;
 
+    await shoot(tester, '0_tutorial', const TutorialScreen());
+    await shoot(tester, '0_account', const AuthScreen());
     await shoot(tester, '1_timeline', const HomeScreen());
     final gig = state.allEvents.firstWhere((e) => e.title.contains('Lowtide'));
     await shoot(tester, '2_event', EventDetailScreen(eventId: gig.id));
@@ -336,7 +368,18 @@ void main() {
       },
     );
     await shoot(tester, '5_memory', const MemoryScreen());
-    await shoot(tester, '6_editor', const GraphEditorScreen());
+    await shoot(tester, '6_books_and_rings', const GraphEditorScreen());
+    await shoot(
+      tester,
+      '7_unlock_colour',
+      const GraphEditorScreen(),
+      before: () async {
+        final locked = find.bySemanticsLabel('Locked ring colour').first;
+        await tester.ensureVisible(locked);
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(locked);
+      },
+    );
     debugDisableShadows = true;
   });
 }

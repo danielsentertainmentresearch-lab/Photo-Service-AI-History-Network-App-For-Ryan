@@ -84,7 +84,6 @@ class AppState extends ChangeNotifier {
   GraphSnapshot? get graphSnapshot => _graph;
   bool get graphBuilding => _graphBuilding;
   String? get graphError => _graphError;
-  int get graphEvery => settings.graphEvery;
   int get describedCount => _events.where((e) => e.hasAccount).length;
 
   /// The knowledge graph of everything recorded so far.
@@ -93,13 +92,17 @@ class AppState extends ChangeNotifier {
 
   int get describedPhotos => describedPhotoCount(_events);
 
-  /// Photos in newly described events still needed before the AI next
-  /// rebuilds the timeline automatically, or null when that's turned off.
-  int? get photosUntilNextGraph {
-    if (graphEvery == 0) return null;
-    final since = describedPhotos - (_graph?.photoCount ?? 0);
-    return max(graphEvery - since, 0);
-  }
+  /// True once the first [graphUnlockPhotos] described photos have turned
+  /// the timeline into a graph. It stays a graph from then on.
+  bool get graphUnlocked => _graph != null;
+
+  /// Described photos still needed to unlock the graph (0 once unlocked).
+  int get photosUntilUnlock =>
+      graphUnlocked ? 0 : max(graphUnlockPhotos - describedPhotos, 0);
+
+  /// Described events the AI hasn't added to the graph yet.
+  int get eventsAwaitingGraph =>
+      _graph == null ? 0 : GraphBuilder.pending(_events, _graph!).length;
 
   LifeEvent? eventById(String id) {
     for (final e in _events) {
@@ -264,23 +267,27 @@ class AppState extends ChangeNotifier {
       );
     }
     await _reload();
-    if (eventById(eventId)?.status == EventStatus.described &&
-        photosUntilNextGraph == 0 &&
-        describedCount >= 2) {
-      await buildGraphNow();
+    if (eventById(eventId)?.status == EventStatus.described) {
+      await advanceGraph();
     }
   }
 
-  /// Asks the AI to organise all described events into chapters, links and
-  /// themes. Runs automatically every [graphEvery] described photos, or on
-  /// demand from the graph screen.
-  Future<void> buildGraphNow() async {
+  List<MemorySuggestion> _withoutKnown(List<MemorySuggestion> suggestions) {
+    final known = _memories.map((m) => m.content.toLowerCase().trim()).toSet();
+    return suggestions
+        .where((s) => !known.contains(s.content.toLowerCase().trim()))
+        .toList();
+  }
+
+  /// Moves the graph forward. The first time enough photos are described,
+  /// the AI turns the timeline into a graph; after that it adds any newly
+  /// described events to it, building on what it already wrote. Also used
+  /// to retry after a failure. Never rewrites the existing graph.
+  Future<void> advanceGraph() async {
     if (_graphBuilding) return;
-    if (describedCount < 2) {
-      _graphError = 'Describe at least two events first.';
-      notifyListeners();
-      return;
-    }
+    final current = _graph;
+    if (current == null && describedPhotos < graphUnlockPhotos) return;
+    if (current != null && eventsAwaitingGraph == 0) return;
     final apiKey = await settings.readApiKey();
     if (apiKey == null || apiKey.isEmpty) {
       _graphError = 'Add your Anthropic API key in Settings first.';
@@ -296,29 +303,47 @@ class AppState extends ChangeNotifier {
         settings.model,
         settings.effort,
       );
-      final fresh = await builder.build(_events, _memories);
-      // Keep the user's groups, colours, edited wording and own links/themes.
-      final merged = GraphSnapshot.mergeRebuild(
-        _graph,
-        fresh,
-      ).sanitized(_events.map((e) => e.id).toSet());
-      await graphRepo.replace(merged);
-      _graph = merged;
+      final next = current == null
+          ? await builder.build(_events, _memories)
+          : await builder.update(current, _events, _memories);
+      // The user's books and rings may have changed while the AI worked.
+      final latest = _graph;
+      final merged = latest == null
+          ? next
+          : next.withUserLayer(
+              books: latest.books,
+              chapterBooks: {for (final c in latest.chapters) c.id: c.bookId},
+              rings: latest.rings,
+            );
+      final clean = merged.sanitized(_events.map((e) => e.id).toSet());
+      await graphRepo.replace(clean);
+      _graph = clean;
     } catch (e) {
       _graphError = e is AnthropicException
           ? e.toString()
-          : 'Could not build the timeline: $e';
+          : 'Could not update the timeline graph: $e';
     } finally {
       _graphBuilding = false;
       notifyListeners();
     }
   }
 
-  List<MemorySuggestion> _withoutKnown(List<MemorySuggestion> suggestions) {
-    final known = _memories.map((m) => m.content.toLowerCase().trim()).toSet();
-    return suggestions
-        .where((s) => !known.contains(s.content.toLowerCase().trim()))
-        .toList();
+  /// Saves the user's own layer of the graph: books, which book each
+  /// chapter sits in, and rings on events. Everything the AI wrote is
+  /// taken from the stored graph, so it can't be changed from here.
+  Future<void> updateUserLayer({
+    required List<Book> books,
+    required Map<String, String?> chapterBooks,
+    required Map<String, int> rings,
+  }) async {
+    final current = _graph;
+    if (current == null) return;
+    final next = current
+        .withUserLayer(books: books, chapterBooks: chapterBooks, rings: rings)
+        .sanitized(_events.map((e) => e.id).toSet());
+    await graphRepo.replace(next);
+    _graph = next;
+    notifyListeners();
   }
 
   // ---- Memory ---------------------------------------------------------------
@@ -386,22 +411,6 @@ class AppState extends ChangeNotifier {
 
   Future<void> setModel(String value) async {
     await settings.setModel(value);
-    notifyListeners();
-  }
-
-  /// Saves the user's hand edits to the timeline graph. The snapshot is
-  /// repaired first (see [GraphSnapshot.sanitized]) so a bad edit can never
-  /// leave data the app can't display.
-  Future<void> saveGraph(GraphSnapshot edited) async {
-    final clean = edited.sanitized(_events.map((e) => e.id).toSet());
-    await graphRepo.replace(clean);
-    _graph = clean;
-    _graphError = null;
-    notifyListeners();
-  }
-
-  Future<void> setGraphEvery(int value) async {
-    await settings.setGraphEvery(value);
     notifyListeners();
   }
 
