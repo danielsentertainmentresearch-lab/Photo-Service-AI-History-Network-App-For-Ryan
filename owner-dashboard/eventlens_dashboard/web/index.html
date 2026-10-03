@@ -1,0 +1,449 @@
+<title>EventLens Owner Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: an operator console. Summary strip first, then funnels and trends,
+   then depth, features and stability; one column on phones. */
+:root {
+  --bg: #f3f4f8;
+  --surface: #fcfcfd;
+  --sunken: #eceef5;
+  --fg: #151827;
+  --fg-2: #4d5269;
+  --muted: #6c718a;
+  --line: #dde0eb;
+  --accent: #3f51b5;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --seq-low: #cde2fb;
+  --seq-high: #104281;
+  --good: #0ca30c;
+  --warning: #fab219;
+  --critical: #d03b3b;
+  --good-ink: #006300;
+  --warning-ink: #8a5a00;
+  --critical-ink: #a32424;
+  --font-ui: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1020; --surface: #161a2c; --sunken: #1d2238; --fg: #e8eaf4;
+    --fg-2: #b9bdd2; --muted: #8d92ad; --line: #2b3050; --accent: #8c9bff;
+    --series-1: #3987e5; --series-2: #d95926; --seq-low: #1d2238; --seq-high: #86b6ef;
+    --good-ink: #4cc38a; --warning-ink: #f0c25a; --critical-ink: #f08080;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1020; --surface: #161a2c; --sunken: #1d2238; --fg: #e8eaf4;
+  --fg-2: #b9bdd2; --muted: #8d92ad; --line: #2b3050; --accent: #8c9bff;
+  --series-1: #3987e5; --series-2: #d95926; --seq-low: #1d2238; --seq-high: #86b6ef;
+  --good-ink: #4cc38a; --warning-ink: #f0c25a; --critical-ink: #f08080;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 14px/1.5 var(--font-ui); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 0 48px; }
+header.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(6px); border-bottom: 1px solid var(--line);
+}
+.bar .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-block: 12px; }
+.brand { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
+.brand h1 { font-size: 17px; font-weight: 600; margin: 0; letter-spacing: 0.01em; }
+.brand small { color: var(--muted); font-family: var(--font-data); font-size: 12px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 500; border: 1px solid var(--line); background: var(--sunken); color: var(--fg-2); }
+.pill.demo { border-color: var(--warning); color: var(--warning-ink); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: none; color: var(--fg-2); padding: 6px 12px; font: 500 13px var(--font-ui); cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 8px;
+  padding: 6px 12px; font: 500 13px var(--font-ui); cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.meters-panel { margin-top: 12px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.meters-panel ul { list-style: none; padding: 0; margin: 8px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 16px; }
+.meters-panel label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.notice { margin-top: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--sunken); color: var(--fg-2); }
+.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.panel { grid-column: span 12; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+@media (min-width: 900px) { .half { grid-column: span 6; } .wide { grid-column: span 7; } .narrow { grid-column: span 5; } }
+.panel h2 { font-size: 15px; font-weight: 600; margin: 0; text-wrap: balance; }
+.panel .def { color: var(--muted); font-size: 12.5px; margin: 2px 0 12px; max-width: 70ch; }
+.panel-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.hide-btn { border: 0; background: none; color: var(--muted); font: 12px var(--font-ui); cursor: pointer; padding: 2px 4px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.kpi { padding: 12px; border-radius: 10px; background: var(--sunken); min-width: 0; }
+.kpi .label { font-size: 12px; color: var(--fg-2); text-transform: uppercase; letter-spacing: 0.06em; }
+.kpi .value { font: 500 26px/1.2 var(--font-data); font-variant-numeric: tabular-nums; margin-top: 4px; }
+.kpi .sub { font-size: 12px; color: var(--muted); }
+.state { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; margin-top: 6px; }
+.state::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.state.good { color: var(--good-ink); } .state.warning { color: var(--warning-ink); } .state.critical { color: var(--critical-ink); }
+.funnel { display: grid; gap: 8px; }
+.step { display: grid; grid-template-columns: minmax(96px, 34%) minmax(60px, 1fr) 4.5em; gap: 10px; align-items: center; }
+.step .name { font-size: 13px; min-width: 0; }
+.track { height: 22px; background: var(--sunken); border-radius: 4px; position: relative; }
+.fill { position: absolute; inset: 0 auto 0 0; border-radius: 0 4px 4px 0; background: var(--series-1); min-width: 2px; }
+.step .nums { font: 13px var(--font-data); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.step .nums small { color: var(--muted); display: block; font-size: 11px; }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { fill: var(--muted); font: 11px var(--font-data); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: var(--fg-2); margin-bottom: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--fg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 6px 10px; font: 12px var(--font-data); box-shadow: 0 4px 16px rgb(0 0 0 / 0.12); white-space: nowrap; z-index: 2; }
+.table-box { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-weight: 500; color: var(--fg-2); font-size: 12px; }
+td.n, th.n { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+td.sig { white-space: normal; min-width: 260px; font-family: var(--font-data); font-size: 12px; }
+.heat td.cell { text-align: center; font-family: var(--font-data); font-variant-numeric: tabular-nums; min-width: 56px; }
+details { margin-top: 10px; } summary { cursor: pointer; color: var(--fg-2); font-size: 12.5px; }
+.methods { display: flex; height: 14px; border-radius: 4px; overflow: hidden; gap: 2px; background: var(--surface); margin: 6px 0 8px; }
+.methods div { height: 100%; }
+.lifetime { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.lifetime div { border-left: 2px solid var(--line); padding-left: 10px; }
+.lifetime b { display: block; font: 500 20px var(--font-data); font-variant-numeric: tabular-nums; }
+.lifetime span { font-size: 12px; color: var(--muted); }
+footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+@media (prefers-reduced-motion: no-preference) { .fill { transition: width 0.35s ease; } }
+</style>
+
+<header class="bar">
+  <div class="wrap">
+    <div class="brand">
+      <h1>EventLens Owner Dashboard</h1>
+      <small id="asof">Loading…</small>
+    </div>
+    <span class="pill demo" id="source-pill" hidden>Demo data</span>
+    <div class="seg" role="group" aria-label="Time window" id="windows">
+      <button type="button" data-window="7">7 days</button>
+      <button type="button" data-window="30" aria-pressed="true">30 days</button>
+      <button type="button" data-window="90">90 days</button>
+      <button type="button" data-window="all">All time</button>
+    </div>
+    <button type="button" class="btn" id="meters-btn" aria-expanded="false">Meters</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="meters-panel" id="meters" hidden>
+    <strong>Show or hide meters</strong>
+    <div class="def">Hidden meters come back any time from here. This choice is kept in this browser only.</div>
+    <ul id="meter-list"></ul>
+  </div>
+  <div class="notice" id="error" hidden></div>
+
+  <div class="grid" id="grid">
+    <section class="panel" data-panel="summary" data-title="Utilization summary">
+      <div class="panel-head"><h2>Utilization summary</h2><button class="hide-btn" type="button">Hide</button></div>
+      <p class="def">Utilization rate is the share of live accounts that opened the app in the selected window. Stickiness is today's active accounts divided by the last 30 days'.</p>
+      <div class="kpis" id="kpis"></div>
+    </section>
+
+    <section class="panel wide" data-panel="reach" data-title="Reach vs utilization">
+      <div class="panel-head"><h2>Reach vs utilization</h2><button class="hide-btn" type="button">Hide</button></div>
+      <p class="def">Installs first seen in the window, and how far they went. The small figure is the share that went on from the step above.</p>
+      <div class="funnel" id="reach"></div>
+    </section>
+
+    <section class="panel narrow" data-panel="signup" data-title="Sign-up funnel">
+      <div class="panel-head"><h2>Sign-up funnel</h2><button class="hide-btn" type="button">Hide</button></div>
+      <p class="def">From opening the tutorial to a finished account, then how new accounts signed up.</p>
+      <div class="funnel" id="signup"></div>
+      <div class="methods" id="methods-bar" aria-hidden="true"></div>
+      <div class="table-box"><table id="methods"></table></div>
+    </section>
+
+    <section class="panel" data-panel="activity" data-title="New and active accounts">
+      <div class="panel-head"><h2>New and active accounts</h2><button class="hide-btn" type="button">Hide</button></div>
+      <p class="def" id="activity-def">Accounts created, and accounts that opened the app, per day.</p>
+      <div class="legend" id="activity-legend"></div>
+      <div class="chart" id="activity"></div>
+      <details><summary>Show as a table</summary><div class="table-box"><table id="activity-table"></table></div></details>
+    </section>
+
+    <section class="panel half" data-panel="retention" data-title="Weekly retention">
+      <div class="panel-head"><h2>Weekly retention</h2><button class="hide-btn" type="button">Hide</button></div>
+      <p class="def">Accounts grouped by sign-up week; each cell is the share that came back in that later week. Blank cells are weeks not finished yet.</p>
+      <div class="table-box"><table class="heat" id="retention"></table></div>
+    </section>
+
+    <section class="panel half" data-panel="depth" data-title="Utilization depth">
+      <div class="panel-head"><h2>Utilization depth</h2><button class="hide-btn" type="button">Hide</button></div>
+      <p class="def">Live accounts by how many events each has recorded, all time. 100+ is where the full export unlocks.</p>
+      <div class="funnel" id="depth"></div>
+    </section>
+
+    <section class="panel half" data-panel="features" data-title="Feature use">
+      <div class="panel-head"><h2>Feature use</h2><button class="hide-btn" type="button">Hide</button></div>
+      <p class="def">Totals in the window, and the share of active accounts that used each feature.</p>
+      <div class="table-box"><table id="features"></table></div>
+    </section>
+
+    <section class="panel half" data-panel="crashes" data-title="Stability">
+      <div class="panel-head"><h2>Stability</h2><button class="hide-btn" type="button">Hide</button></div>
+      <p class="def">Crash-free sessions by app version, then the most frequent crashes in the window.</p>
+      <div class="table-box"><table id="versions"></table></div>
+      <div class="table-box" style="margin-top:12px"><table id="top-crashes"></table></div>
+    </section>
+
+    <section class="panel" data-panel="lifetime" data-title="Lifetime totals">
+      <div class="panel-head"><h2>Lifetime totals</h2><button class="hide-btn" type="button">Hide</button></div>
+      <p class="def">Everything since the first install, regardless of the selected window.</p>
+      <div class="lifetime" id="lifetime"></div>
+    </section>
+  </div>
+  <footer id="footer">Hosted on this computer only (127.0.0.1). EventLens owner use; share only with approved integration partners.</footer>
+</main>
+
+<script id="embedded-metrics" type="application/json">null</script>
+<script>
+(function () {
+  "use strict";
+  var embedded = null;
+  try { embedded = JSON.parse(document.getElementById("embedded-metrics").textContent); } catch (e) { embedded = null; }
+  var state = { window: "30", hidden: {} };
+  var STORE = "eventlens-dashboard";
+  try { var saved = JSON.parse(localStorage.getItem(STORE) || "{}"); if (saved.window) state.window = saved.window; state.hidden = saved.hidden || {}; } catch (e) {}
+  function persist() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {} }
+
+  var nf = new Intl.NumberFormat("en-US");
+  function n(v) { return nf.format(v); }
+  function pct(v, digits) { return (v * 100).toFixed(digits == null ? 1 : digits) + "%"; }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function $(id) { return document.getElementById(id); }
+
+  function status(value, good, warn, higherIsBetter) {
+    var ok = higherIsBetter ? value >= good : value <= good;
+    var meh = higherIsBetter ? value >= warn : value <= warn;
+    if (ok) return '<span class="state good">Healthy</span>';
+    if (meh) return '<span class="state warning">Watch</span>';
+    return '<span class="state critical">Needs attention</span>';
+  }
+
+  function renderKpis(m) {
+    var s = m.summary;
+    var items = [
+      ["Accounts created", n(s.accounts_total), n(s.accounts_new) + " new in this window", ""],
+      ["Active accounts", n(s.accounts_active), "opened the app in this window", ""],
+      ["Utilization rate", pct(s.utilization_rate), "of " + n(s.accounts_live) + " live accounts", status(s.utilization_rate, 0.4, 0.2, true)],
+      ["Stickiness", pct(s.stickiness), "DAU " + n(s.dau) + " / MAU " + n(s.mau), status(s.stickiness, 0.2, 0.1, true)],
+      ["Sessions per active", String(s.sessions_per_active), n(s.sessions) + " sessions", ""],
+      ["Median session", s.median_session_minutes + " min", "time in app per visit", ""],
+      ["Crash-free sessions", pct(s.crash_free_sessions, 2), "share of sessions without a crash", status(s.crash_free_sessions, 0.995, 0.99, true)]
+    ];
+    $("kpis").innerHTML = items.map(function (k) {
+      return '<div class="kpi"><div class="label">' + k[0] + '</div><div class="value">' + k[1] +
+        '</div><div class="sub">' + k[2] + '</div>' + k[3] + '</div>';
+    }).join("");
+  }
+
+  function bars(el, rows, getLabel, getValue, getNums, max) {
+    max = max || Math.max.apply(null, rows.map(getValue).concat([1]));
+    el.innerHTML = rows.map(function (r) {
+      var w = Math.max(0, Math.min(100, getValue(r) / max * 100));
+      return '<div class="step"><div class="name">' + esc(getLabel(r)) + '</div>' +
+        '<div class="track" title="' + esc(getLabel(r)) + ': ' + n(getValue(r)) + '"><div class="fill" style="width:' + w.toFixed(2) + '%"></div></div>' +
+        '<div class="nums">' + getNums(r) + '</div></div>';
+    }).join("");
+  }
+
+  function renderReach(m) {
+    bars($("reach"), m.reach, function (r) { return r.label; }, function (r) { return r.count; },
+      function (r, i) { return n(r.count) + "<small>" + (r.key === "installs" ? "100%" : pct(r.from_previous)) + "</small>"; },
+      m.reach[0] ? m.reach[0].count : 1);
+  }
+
+  function renderSignup(m) {
+    bars($("signup"), m.signup, function (r) { return r.label; }, function (r) { return r.count; },
+      function (r) { return n(r.count) + "<small>" + pct(r.from_previous) + "</small>"; },
+      m.signup[0] ? m.signup[0].count : 1);
+    var colors = ["--series-1", "--series-2", "--accent", "--muted"];
+    var names = { email: "Email", phone: "Phone", google: "Google", web3: "Web3 identity" };
+    $("methods-bar").innerHTML = m.signup_methods.filter(function (x) { return x.count > 0; }).map(function (x) {
+      var i = m.signup_methods.indexOf(x);
+      return '<div style="flex:' + x.count + ';background:var(' + colors[i] + ')" title="' + names[x.method] + '"></div>';
+    }).join("");
+    $("methods").innerHTML = "<tr><th>New accounts by method</th><th class=n>Accounts</th><th class=n>Share</th></tr>" +
+      m.signup_methods.map(function (x, i) {
+        return '<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;background:var(' +
+          colors[i] + ')"></span>' + names[x.method] + '</td><td class=n>' + n(x.count) + '</td><td class=n>' + pct(x.share) + '</td></tr>';
+      }).join("");
+  }
+
+  function renderActivity(m) {
+    var data = m.daily;
+    var step = m.daily_step_days;
+    $("activity-def").textContent = "Accounts created, and accounts that opened the app, per " + (step === 1 ? "day." : "week.");
+    var c1 = "var(--series-1)", c2 = "var(--series-2)";
+    $("activity-legend").innerHTML = '<span><i style="background:' + c1 + '"></i>Active accounts</span><span><i style="background:' + c2 + '"></i>New accounts</span>';
+    var box = $("activity");
+    var W = Math.max(300, Math.round(box.clientWidth || 960)), H = W < 600 ? 220 : 260, L = 40, R = 12, T = 12, B = 28;
+    var max = Math.max(1, Math.max.apply(null, data.map(function (d) { return Math.max(d.active, d.new); })));
+    var tick = Math.pow(10, Math.floor(Math.log10(max)));
+    var nice = [1, 2, 5, 10].map(function (k) { return k * tick; }).filter(function (v) { return max / v <= 5; })[0] || tick;
+    var top = Math.ceil(max / nice) * nice;
+    function x(i) { return L + (data.length < 2 ? 0 : i * (W - L - R) / (data.length - 1)); }
+    function y(v) { return T + (H - T - B) * (1 - v / top); }
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="New and active accounts over time">';
+    for (var v = 0; v <= top; v += nice) {
+      svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" style="stroke:var(--line)" stroke-width="1"/>' +
+        '<text x="' + (L - 6) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + n(v) + '</text>';
+    }
+    var every = Math.max(1, Math.ceil(data.length / Math.max(2, Math.floor((W - L - R) / 70))));
+    data.forEach(function (d, i) {
+      if (i % every === 0 || i === data.length - 1) {
+        if (i !== data.length - 1 && data.length - 1 - i < every / 2) return;
+        svg += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + d.date.slice(5) + '</text>';
+      }
+    });
+    function path(key) { return data.map(function (d, i) { return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(d[key]).toFixed(1); }).join(" "); }
+    if (data.length) {
+      svg += '<path d="' + path("active") + ' L' + x(data.length - 1) + ' ' + y(0) + ' L' + x(0) + ' ' + y(0) + ' Z" style="fill:var(--series-1);fill-opacity:0.10"/>';
+      svg += '<path d="' + path("active") + '" style="fill:none;stroke:var(--series-1)" stroke-width="2" stroke-linejoin="round"/>';
+      svg += '<path d="' + path("new") + '" style="fill:none;stroke:var(--series-2)" stroke-width="2" stroke-linejoin="round"/>';
+      var last = data[data.length - 1];
+      svg += '<circle cx="' + x(data.length - 1) + '" cy="' + y(last.active) + '" r="4" style="fill:var(--series-1);stroke:var(--surface)" stroke-width="2"/>';
+      svg += '<circle cx="' + x(data.length - 1) + '" cy="' + y(last.new) + '" r="4" style="fill:var(--series-2);stroke:var(--surface)" stroke-width="2"/>';
+    }
+    svg += '<line id="cross" x1="0" x2="0" y1="' + T + '" y2="' + (H - B) + '" style="stroke:var(--muted)" stroke-dasharray="3 3" visibility="hidden"/>';
+    svg += '<rect x="' + L + '" y="' + T + '" width="' + (W - L - R) + '" height="' + (H - T - B) + '" fill="transparent" id="hit"/>';
+    svg += '</svg><div class="tip" id="tip" hidden></div>';
+    box.innerHTML = svg;
+    var hit = box.querySelector("#hit"), cross = box.querySelector("#cross"), tip = box.querySelector("#tip");
+    function show(evt) {
+      var rect = box.querySelector("svg").getBoundingClientRect();
+      var px = (evt.clientX - rect.left) / rect.width * W;
+      var i = Math.round((px - L) / ((W - L - R) / Math.max(1, data.length - 1)));
+      i = Math.max(0, Math.min(data.length - 1, i));
+      var d = data[i];
+      cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("visibility", "visible");
+      tip.hidden = false;
+      tip.innerHTML = esc(d.date) + (step > 1 ? " (week)" : "") + "<br>Active " + n(d.active) + "<br>New " + n(d.new);
+      var left = x(i) / W * rect.width;
+      tip.style.left = Math.min(rect.width - 150, Math.max(0, left + 10)) + "px";
+      tip.style.top = "8px";
+    }
+    hit.addEventListener("pointermove", show);
+    hit.addEventListener("pointerdown", show);
+    hit.addEventListener("pointerleave", function () { tip.hidden = true; cross.setAttribute("visibility", "hidden"); });
+    $("activity-table").innerHTML = "<tr><th>" + (step === 1 ? "Day" : "Week of") + "</th><th class=n>Active</th><th class=n>New</th></tr>" +
+      data.slice().reverse().map(function (d) { return "<tr><td>" + d.date + "</td><td class=n>" + n(d.active) + "</td><td class=n>" + n(d.new) + "</td></tr>"; }).join("");
+  }
+
+  function renderRetention(m) {
+    var head = "<tr><th>Sign-up week</th><th class=n>Accounts</th>" + [1, 2, 3, 4, 5, 6].map(function (w) { return "<th class=n>Week " + w + "</th>"; }).join("") + "</tr>";
+    $("retention").innerHTML = head + m.retention.map(function (r) {
+      return "<tr><td>" + r.week + "</td><td class=n>" + n(r.size) + "</td>" + r.weeks.map(function (v) {
+        if (v === null) return '<td class="cell"></td>';
+        var strength = Math.round(v * 100);
+        var ink = v >= 0.5 ? "var(--surface)" : "var(--fg)";
+        return '<td class="cell" style="background:color-mix(in srgb, var(--seq-high) ' + strength + '%, var(--seq-low));color:' + ink + '">' + pct(v, 0) + "</td>";
+      }).join("") + "</tr>";
+    }).join("");
+  }
+
+  function renderDepth(m) {
+    bars($("depth"), m.depth, function (r) { return r.label; }, function (r) { return r.count; },
+      function (r) { return n(r.count) + "<small>" + pct(r.share) + "</small>"; });
+  }
+
+  function renderFeatures(m) {
+    $("features").innerHTML = "<tr><th>Feature</th><th class=n>Total</th><th class=n>Accounts</th><th class=n>Of active</th></tr>" +
+      m.features.map(function (f) {
+        return "<tr><td>" + esc(f.label) + "</td><td class=n>" + n(f.total) + "</td><td class=n>" + n(f.accounts) + "</td><td class=n>" + pct(f.share_of_active) + "</td></tr>";
+      }).join("");
+  }
+
+  function renderCrashes(m) {
+    $("versions").innerHTML = "<tr><th>App version</th><th class=n>Sessions</th><th class=n>Crashes</th><th class=n>Crash-free</th><th>State</th></tr>" +
+      (m.crashes.by_version.length ? m.crashes.by_version.map(function (v) {
+        return "<tr><td>" + esc(v.version) + "</td><td class=n>" + n(v.sessions) + "</td><td class=n>" + n(v.crashes) + "</td><td class=n>" + pct(v.crash_free, 2) + "</td><td>" + status(v.crash_free, 0.995, 0.99, true) + "</td></tr>";
+      }).join("") : '<tr><td colspan="5">No sessions in this window.</td></tr>');
+    $("top-crashes").innerHTML = "<tr><th>Most frequent crashes</th><th class=n>Count</th><th class=n>Accounts</th><th>Last seen</th></tr>" +
+      (m.crashes.top.length ? m.crashes.top.map(function (c) {
+        return '<tr><td class="sig">' + esc(c.signature) + "</td><td class=n>" + n(c.count) + "</td><td class=n>" + n(c.accounts) + "</td><td>" + esc(c.last_seen.slice(0, 10)) + "</td></tr>";
+      }).join("") : '<tr><td colspan="4">No crashes in this window.</td></tr>');
+  }
+
+  function renderLifetime(m) {
+    var l = m.lifetime;
+    var items = [["Installs", l.installs], ["Accounts created", l.accounts], ["Accounts deleted", l.accounts_deleted],
+      ["Events recorded", l.events], ["AI accounts written", l.ai_accounts], ["Photos added", l.photos],
+      ["Sessions", l.sessions], ["Hours in the app", l.hours_in_app], ["Rewarded videos", l.rewarded_videos]];
+    $("lifetime").innerHTML = items.map(function (i) { return "<div><b>" + n(i[1]) + "</b><span>" + i[0] + "</span></div>"; }).join("");
+  }
+
+  function render(m) {
+    var labels = { "7": "last 7 days", "30": "last 30 days", "90": "last 90 days", "365": "last 365 days", "all": "all time" };
+    $("asof").textContent = "As of " + m.as_of.replace("T", " ").slice(0, 16) + " UTC · " + labels[m.window];
+    $("source-pill").hidden = m.source !== "demo";
+    if (m.source === "demo") $("source-pill").title = "Example data generated for review. Not real users.";
+    renderKpis(m); renderReach(m); renderSignup(m); renderActivity(m); renderRetention(m);
+    renderDepth(m); renderFeatures(m); renderCrashes(m); renderLifetime(m);
+  }
+
+  function load() {
+    Array.prototype.forEach.call(document.querySelectorAll("#windows button"), function (b) {
+      b.setAttribute("aria-pressed", b.dataset.window === state.window ? "true" : "false");
+    });
+    $("error").hidden = true;
+    if (embedded) {
+      var m = embedded[state.window] || embedded["30"];
+      render(m);
+      return;
+    }
+    fetch("/api/metrics?window=" + encodeURIComponent(state.window), { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error("The server answered " + r.status + "."); return r.json(); })
+      .then(render)
+      .catch(function (e) {
+        $("error").hidden = false;
+        $("error").textContent = "Couldn't load metrics: " + e.message + " Check that the dashboard is still running (python -m eventlens_dashboard status), then refresh.";
+      });
+  }
+
+  function applyHidden() {
+    var panels = document.querySelectorAll("[data-panel]");
+    Array.prototype.forEach.call(panels, function (p) { p.hidden = !!state.hidden[p.dataset.panel]; });
+    $("meter-list").innerHTML = Array.prototype.map.call(panels, function (p) {
+      var id = "meter-" + p.dataset.panel;
+      return '<li><label for="' + id + '"><input type="checkbox" id="' + id + '" data-panel-toggle="' + p.dataset.panel + '"' +
+        (state.hidden[p.dataset.panel] ? "" : " checked") + "> " + esc(p.dataset.title) + "</label></li>";
+    }).join("");
+    var count = Object.keys(state.hidden).filter(function (k) { return state.hidden[k]; }).length;
+    $("meters-btn").textContent = count ? "Meters (" + count + " hidden)" : "Meters";
+  }
+
+  document.addEventListener("click", function (e) {
+    var t = e.target;
+    if (t.matches("#windows button")) { state.window = t.dataset.window; persist(); load(); }
+    else if (t.matches(".hide-btn")) { state.hidden[t.closest("[data-panel]").dataset.panel] = true; persist(); applyHidden(); }
+    else if (t.id === "meters-btn") { var open = $("meters").hidden; $("meters").hidden = !open; t.setAttribute("aria-expanded", String(open)); }
+  });
+  document.addEventListener("change", function (e) {
+    var key = e.target.dataset.panelToggle;
+    if (key) { state.hidden[key] = !e.target.checked; persist(); applyHidden(); }
+  });
+  if (embedded) $("footer").textContent = "Shareable demo: example data generated for review, not real users. The real dashboard runs only on the owner's computer.";
+  var lastWidth = 0, resizeTimer = null;
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      var w = $("activity").clientWidth;
+      if (Math.abs(w - lastWidth) > 40) { lastWidth = w; load(); }
+    }, 200);
+  });
+  applyHidden();
+  load();
+  lastWidth = $("activity").clientWidth;
+})();
+</script>

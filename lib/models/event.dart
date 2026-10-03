@@ -186,6 +186,8 @@ class LifeEvent {
     double? longitude,
     EventWeather? weather,
     List<EventImage>? images,
+    bool clearCoordinates = false,
+    bool clearWeather = false,
   }) {
     return LifeEvent(
       id: id,
@@ -204,9 +206,9 @@ class LifeEvent {
       status: status ?? this.status,
       error: clearError ? null : (error ?? this.error),
       model: model ?? this.model,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-      weather: weather ?? this.weather,
+      latitude: clearCoordinates ? null : (latitude ?? this.latitude),
+      longitude: clearCoordinates ? null : (longitude ?? this.longitude),
+      weather: clearWeather ? null : (weather ?? this.weather),
       images: images ?? this.images,
     );
   }

@@ -40,35 +40,66 @@ class _EventLensAppState extends State<EventLensApp>
     super.dispose();
   }
 
+  /// Time away before the fingerprint/face lock is asked for again. Short
+  /// trips (the camera, the share sheet, a rewarded video) don't relock;
+  /// the app is hidden from the recent-apps screen meanwhile.
+  static const relockAfter = Duration(seconds: 30);
+
+  DateTime? _pausedAt;
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Lock again when the app goes to the background.
     if (state == AppLifecycleState.paused) {
-      context.read<BiometricLock>().lockAgain();
+      _pausedAt ??= DateTime.now();
+    } else if (state == AppLifecycleState.resumed) {
+      final away = _pausedAt;
+      _pausedAt = null;
+      if (away != null && DateTime.now().difference(away) >= relockAfter) {
+        context.read<BiometricLock>().lockAgain();
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final uid = context.select<AuthService, String?>((a) => a.user?.uid);
-    final signedIn = uid != null;
-    final unlocked = context.select<BiometricLock, bool>((l) => l.unlocked);
+    final locked = !context.select<BiometricLock, bool>((l) => l.unlocked);
     return MaterialApp(
+      // A different account starts from a clean screen stack, so no screen
+      // from the last person's library stays open.
+      key: ValueKey(uid),
       title: appName,
       debugShowCheckedModeBanner: false,
       theme: EventLensApp._theme(Brightness.light),
       darkTheme: EventLensApp._theme(Brightness.dark),
-      home: !signedIn
-          ? const TutorialScreen()
-          : !unlocked
-          ? const LockScreen()
-          // Each account opens its own library; a new key reopens it when
-          // a different person signs in.
-          : LibraryScope(
-              key: ValueKey(uid),
-              uid: uid,
-              child: const HomeScreen(),
-            ),
+      home: uid == null ? const TutorialScreen() : const HomeScreen(),
+      // The account's library sits above the navigator so every screen
+      // pushed from Home can reach it. Locking covers the screens instead
+      // of closing the library, so work in progress (an AI description,
+      // a camera trip) carries on behind the lock.
+      builder: (context, navigator) {
+        if (uid == null || navigator == null) {
+          return navigator ?? const SizedBox.shrink();
+        }
+        return LibraryScope(
+          uid: uid,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ExcludeSemantics(
+                excluding: locked,
+                child: AbsorbPointer(absorbing: locked, child: navigator),
+              ),
+              if (locked)
+                Overlay(
+                  initialEntries: [
+                    OverlayEntry(builder: (_) => const LockScreen()),
+                  ],
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

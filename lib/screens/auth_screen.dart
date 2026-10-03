@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../services/auth_service.dart';
+import '../services/web3_identity.dart';
 
 /// Create an account or sign in: email + password, phone + password (the
 /// number is confirmed by SMS when signing up), or Google.
@@ -287,6 +288,11 @@ class _AuthScreenState extends State<AuthScreen> {
               icon: const Icon(Icons.account_circle_outlined),
               label: const Text('Continue with Google'),
             ),
+            const SizedBox(height: 16),
+            _Web3Section(
+              busy: _busy,
+              onPick: (identity) => _run((a) => a.signInWithWeb3(identity)),
+            ),
             if (auth.isReviewBuild) ...[
               const SizedBox(height: 8),
               OutlinedButton.icon(
@@ -311,6 +317,116 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 }
+
+/// Sign-in with a Web3 identity (crypto wallet or Farcaster), with a note
+/// saying what these are and a plain-language explanation.
+class _Web3Section extends StatelessWidget {
+  final bool busy;
+  final ValueChanged<Web3Identity> onPick;
+
+  const _Web3Section({required this.busy, required this.onPick});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: EdgeInsets.zero,
+      color: theme.colorScheme.surfaceContainerLow,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.wallet_outlined, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'These are Web3 identities',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => showWeb3Explainer(context),
+                  child: const Text('What is this?'),
+                ),
+              ],
+            ),
+            Text(
+              'Sign in with a crypto wallet or Farcaster account you already '
+              'have. Free, and never a payment.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            for (final identity in web3Identities)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: OutlinedButton(
+                  onPressed: busy ? null : () => onPick(identity),
+                  style: OutlinedButton.styleFrom(
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Continue with ${identity.name}'),
+                      Text(
+                        identity.examples.join(', '),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The "What is this?" explanation of Web3 identities.
+Future<void> showWeb3Explainer(BuildContext context) =>
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.75,
+          maxChildSize: 0.95,
+          builder: (context, controller) => ListView(
+            controller: controller,
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            children: [
+              Text('Web3 identities', style: theme.textTheme.titleLarge),
+              const SizedBox(height: 12),
+              for (final (title, body) in web3Explainer) ...[
+                Text(title, style: theme.textTheme.titleSmall),
+                const SizedBox(height: 4),
+                Text(body),
+                const SizedBox(height: 14),
+              ],
+              Text('Names we can show', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 4),
+              for (final name in web3NameServices) Text('• $name'),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Got it'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
 
 /// Asks for fingerprint, face or screen lock before showing the app.
 class LockScreen extends StatefulWidget {

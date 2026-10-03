@@ -16,6 +16,15 @@ are confirmed with an SMS code. If you turn on fingerprint or face
 unlock, the check happens on your phone; no biometric data leaves the
 device. Firebase's privacy information: <https://firebase.google.com/support/privacy>.
 
+You can also sign in with a **Web3 identity**: a crypto wallet (such as
+MetaMask or Phantom) or a Farcaster account. Your wallet signs a short
+sign-in message; this is free and is not a payment or transaction. The
+accounts service then stores your public wallet address (and a linked name
+such as sam.eth, if you have one) as your account identifier. EventLens
+never asks for, sees or stores your wallet's private key or recovery
+phrase. Wallets connect through WalletConnect (Reown), which relays the
+sign-in request between EventLens and your wallet app.
+
 ## Ads
 
 Extra ring colours, and daily weather lookups, can be unlocked by watching
@@ -69,11 +78,17 @@ The weather and location of an event are never sent to Anthropic.
 
 No account details, photos or notes are sent to either service.
 
-### Export
+### Your data and export
 
-Settings → Export creates a zip of your library (an Obsidian-compatible
-folder of notes, your photos, and a data file) on your phone. Where it goes
-next is up to you, through your phone's share sheet.
+The Your data screen measures your library on your phone; nothing about it
+is sent anywhere. Its exports (a spreadsheet file, and once you reach 100
+events a zip with your photos, notes and data files) are created on your
+phone, and where they go next is up to you, through your phone's share
+sheet.
+
+The "Explore your data" guide asks Anthropic which Python tools suit the
+analysis file. That request sends only the file's column names and
+descriptions, never your events, and uses your own API key.
 
 Apart from Firebase (accounts), AdMob (optional rewarded videos),
 OpenStreetMap and Open-Meteo described above, the app contains no analytics or tracking SDKs and shares

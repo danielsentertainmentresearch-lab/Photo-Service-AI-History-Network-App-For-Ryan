@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'web3_identity.dart';
 
 /// The signed-in person, as far as the app needs to know.
 class AppUser {
@@ -53,6 +54,18 @@ abstract class AuthService extends ChangeNotifier {
   Future<void> signInWithPhone(String phone, String password);
 
   Future<void> signInWithGoogle();
+
+  /// True once Web3 sign-in is connected (accounts backend + WalletConnect).
+  bool get web3Available => false;
+
+  /// Signs in with a wallet or Farcaster account (see web3_identity.dart).
+  Future<void> signInWithWeb3(Web3Identity identity) => Future.error(
+    const AuthException(
+      'Web3 sign-in is built in but isn\'t connected in this build yet. It '
+      'switches on with the accounts service.',
+    ),
+  );
+
   Future<void> sendPasswordReset(String email);
   Future<void> signInAsReviewer() =>
       Future.error(const AuthException('Not available in this build.'));

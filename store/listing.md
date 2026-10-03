@@ -39,7 +39,11 @@ FEATURES
 • Dates and places filled in from your photos automatically
 • "On this day": events from this date in earlier years
 • Optional weather for any event, kept separate from the AI's account
-• Export everything as a zip, including an Obsidian-ready vault
+• Your data: meters for your whole library, and a free spreadsheet export
+• At 100 events, a full export: photos, an Obsidian-ready vault and an
+  analysis file for Python and Jupyter notebooks
+• Sign in with email, phone, Google or a Web3 identity (crypto wallet or
+  Farcaster)
 • Timeline of events grouped by month
 • Full-text search across titles, notes, accounts, people, places and tags
 • Edit, copy or rewrite any account
@@ -78,7 +82,9 @@ actually does:
     photos.
   - Personal info → Email address and/or Phone number: *collected* for
     account management (Firebase Authentication). Required.
-  - Personal info → User IDs: *collected* for account management.
+  - Personal info → User IDs: *collected* for account management
+    (includes the public wallet address when signing in with a Web3
+    identity).
   - Device or other IDs (advertising ID): *collected and shared* by the
     AdMob SDK for advertising. Optional (only when a video is watched).
   - App activity → App interactions, and App info and performance →

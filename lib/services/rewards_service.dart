@@ -52,18 +52,32 @@ class AdMobRewardedProvider implements RewardedVideoProvider {
     if (ad == null) return false;
 
     final done = Completer<bool>();
-    var earned = false;
+    var earned = false, dismissed = false;
     ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
-        if (!done.isCompleted) done.complete(earned);
+        dismissed = true;
+        // Some ad networks report the reward just after the ad closes, so
+        // give it a moment before deciding the video didn't count.
+        if (earned) {
+          if (!done.isCompleted) done.complete(true);
+        } else {
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            if (!done.isCompleted) done.complete(earned);
+          });
+        }
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
         ad.dispose();
         if (!done.isCompleted) done.complete(false);
       },
     );
-    await ad.show(onUserEarnedReward: (_, _) => earned = true);
+    await ad.show(
+      onUserEarnedReward: (_, _) {
+        earned = true;
+        if (dismissed && !done.isCompleted) done.complete(true);
+      },
+    );
     return done.future;
   }
 }
@@ -140,8 +154,10 @@ const weatherVideosPerDay = 3;
 /// noon at or before it.
 DateTime dailyWindowStart(DateTime now) {
   final todayNoon = DateTime(now.year, now.month, now.day, dailyRefreshHour);
+  // Calendar arithmetic (not 24-hour durations) keeps noon at noon on
+  // daylight-saving change days.
   return now.isBefore(todayNoon)
-      ? todayNoon.subtract(const Duration(days: 1))
+      ? DateTime(now.year, now.month, now.day - 1, dailyRefreshHour)
       : todayNoon;
 }
 
@@ -179,8 +195,10 @@ class WeatherPass extends ChangeNotifier {
   bool get watching => _watching;
 
   /// When the current unlock (or progress) resets.
-  DateTime get resetsAt =>
-      dailyWindowStart(_now()).add(const Duration(days: 1));
+  DateTime get resetsAt {
+    final start = dailyWindowStart(_now());
+    return DateTime(start.year, start.month, start.day + 1, dailyRefreshHour);
+  }
 
   /// Plays one rewarded video; returns true if it counted.
   Future<bool> watchVideo() async {

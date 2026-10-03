@@ -6,6 +6,7 @@ import '../app.dart';
 import '../models/event.dart';
 import '../state/app_state.dart';
 import '../widgets/common.dart';
+import 'data_screen.dart';
 import 'event_detail_screen.dart';
 import 'graph_screen.dart';
 import 'memory_screen.dart';
@@ -35,6 +36,11 @@ class HomeScreen extends StatelessWidget {
             tooltip: 'Timeline graph',
             icon: const Icon(Icons.hub_outlined),
             onPressed: () => _push(context, const GraphScreen()),
+          ),
+          IconButton(
+            tooltip: 'Your data',
+            icon: const Icon(Icons.insights_outlined),
+            onPressed: () => _push(context, const DataScreen()),
           ),
           IconButton(
             tooltip: 'Memory',

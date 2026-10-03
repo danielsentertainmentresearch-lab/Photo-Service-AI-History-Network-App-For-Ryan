@@ -26,6 +26,21 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 
+  dashboard:
+    name: Owner dashboard tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Oldest supported and current Python.
+        python: ['3.9', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m unittest discover -s tests -v
+        working-directory: owner-dashboard
+
   build:
     name: Build Android app
     needs: check

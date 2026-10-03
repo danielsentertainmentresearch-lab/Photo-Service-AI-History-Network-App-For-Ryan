@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
 import '../ai/anthropic_client.dart';
+import '../ai/data_platform_advisor.dart';
 import '../ai/event_describer.dart';
 import '../ai/graph_builder.dart';
 import '../data/event_repository.dart';
@@ -15,6 +16,7 @@ import '../data/memory_repository.dart';
 import '../models/event.dart';
 import '../models/memory_graph.dart';
 import '../models/memory_item.dart';
+import '../services/data_files.dart';
 import '../services/places_service.dart';
 import '../services/settings_service.dart';
 
@@ -44,6 +46,14 @@ EventDescriber _defaultDescriber(String apiKey, String model, String effort) =>
       effort: effort,
     );
 
+typedef PlatformAdvisorFactory = DataPlatformAdvisor Function(
+  String apiKey,
+  String model,
+);
+
+DataPlatformAdvisor _defaultAdvisor(String apiKey, String model) =>
+    DataPlatformAdvisor(client: AnthropicClient(apiKey: apiKey), model: model);
+
 /// Single source of truth for the UI.
 class AppState extends ChangeNotifier {
   final EventRepository events;
@@ -54,6 +64,7 @@ class AppState extends ChangeNotifier {
   final DescriberFactory describerFactory;
   final GraphBuilderFactory graphBuilderFactory;
   final PlacesService places;
+  final PlatformAdvisorFactory advisorFactory;
   final Uuid _uuid = const Uuid();
 
   AppState({
@@ -65,6 +76,7 @@ class AppState extends ChangeNotifier {
     this.describerFactory = _defaultDescriber,
     this.graphBuilderFactory = _defaultGraphBuilder,
     PlacesService? places,
+    this.advisorFactory = _defaultAdvisor,
   }) : places = places ?? PlacesService();
 
   static const int maxPhotosPerEvent = 10;
@@ -126,7 +138,48 @@ class AppState extends ChangeNotifier {
   Future<void> _reload() async {
     _events = await events.all();
     _memories = await memoryRepo.all();
+    if (_events.length >= exportUnlockEvents && !settings.exportUnlocked) {
+      await settings.setExportUnlocked();
+    }
     notifyListeners();
+  }
+
+  // ---- Your data --------------------------------------------------------------
+
+  /// The full export (zip and analysis file) unlocks once the library
+  /// reaches [exportUnlockEvents] events and stays unlocked after that.
+  bool get exportUnlocked =>
+      settings.exportUnlocked || _events.length >= exportUnlockEvents;
+
+  int get eventsUntilExport =>
+      exportUnlocked ? 0 : exportUnlockEvents - _events.length;
+
+  Set<String> get hiddenMeters => settings.hiddenMeters;
+
+  Future<void> setMeterHidden(String id, bool hidden) async {
+    final next = {...settings.hiddenMeters};
+    hidden ? next.add(id) : next.remove(id);
+    await settings.setHiddenMeters(next);
+    notifyListeners();
+  }
+
+  /// Python data platforms that suit the analysis file. Asks the AI once
+  /// (only column names are sent) and keeps the answer; without a key or a
+  /// connection it returns [PlatformAdvice.fallback], which isn't kept.
+  Future<PlatformAdvice> dataPlatforms({bool refresh = false}) async {
+    if (!refresh) {
+      final cached = PlatformAdvice.fromJsonString(settings.platformAdvice);
+      if (cached != null) return cached;
+    }
+    final apiKey = await settings.readApiKey();
+    if (apiKey == null || apiKey.isEmpty) return PlatformAdvice.fallback;
+    try {
+      final advice = await advisorFactory(apiKey, settings.model).suggest();
+      await settings.setPlatformAdvice(advice.toJsonString());
+      return advice;
+    } catch (_) {
+      return PlatformAdvice.fallback;
+    }
   }
 
   // ---- Events ---------------------------------------------------------------
@@ -181,21 +234,34 @@ class AppState extends ChangeNotifier {
     String? location,
     DateTime? occurredAt,
   }) async {
+    // Re-read so an AI account or weather saved while the edit sheet was
+    // open isn't overwritten with the older copy.
+    final current = await events.byId(event.id);
+    if (current == null) return;
+    final place = location?.trim();
+    final placeChanged = place != null && place != current.location;
+    final timeChanged = occurredAt != null && occurredAt != current.occurredAt;
     await events.update(
-      event.copyWith(
+      current.copyWith(
         title: title?.trim(),
         notes: notes?.trim(),
-        location: location?.trim(),
+        location: place,
         occurredAt: occurredAt,
         updatedAt: DateTime.now(),
+        // A new place or time means the old map position and weather no
+        // longer belong to this event.
+        clearCoordinates: placeChanged,
+        clearWeather: placeChanged || timeChanged,
       ),
     );
     await _reload();
   }
 
   Future<void> updateDescription(LifeEvent event, String description) async {
+    final current = await events.byId(event.id);
+    if (current == null) return;
     await events.update(
-      event.copyWith(
+      current.copyWith(
         description: description.trim(),
         updatedAt: DateTime.now(),
       ),
@@ -214,6 +280,18 @@ class AppState extends ChangeNotifier {
   /// Asks the AI for the event's account. Progress and failures are stored
   /// on the event itself, so the UI just watches its status.
   Future<void> describeEvent(String eventId) async {
+    // Guards against a double tap starting two paid requests.
+    if (!_describing.add(eventId)) return;
+    try {
+      await _describe(eventId);
+    } finally {
+      _describing.remove(eventId);
+    }
+  }
+
+  final Set<String> _describing = {};
+
+  Future<void> _describe(String eventId) async {
     final event = await events.byId(eventId);
     if (event == null || event.status == EventStatus.describing) return;
 
@@ -250,9 +328,13 @@ class AppState extends ChangeNotifier {
         memories: _memories,
         history: _events,
       );
+      // Write onto the latest copy, keeping edits and weather saved while
+      // the AI was working.
+      final latest = await events.byId(eventId);
+      if (latest == null) return;
       await events.update(
-        event.copyWith(
-          title: event.title.isEmpty ? account.title : event.title,
+        latest.copyWith(
+          title: latest.title.isEmpty ? account.title : latest.title,
           summary: account.summary,
           description: account.description,
           people: account.people,
@@ -269,9 +351,12 @@ class AppState extends ChangeNotifier {
       final message = e is AnthropicException || e is FormatException
           ? e.toString()
           : 'Something went wrong: $e';
-      await events.update(
-        event.copyWith(status: EventStatus.failed, error: message),
-      );
+      final latest = await events.byId(eventId);
+      if (latest != null) {
+        await events.update(
+          latest.copyWith(status: EventStatus.failed, error: message),
+        );
+      }
     }
     await _reload();
     if (eventById(eventId)?.status == EventStatus.described) {

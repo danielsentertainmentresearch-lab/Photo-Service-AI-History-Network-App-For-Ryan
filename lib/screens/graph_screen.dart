@@ -244,9 +244,13 @@ class _GraphViewState extends State<_GraphView>
   @override
   bool get wantKeepAlive => true;
 
+  int _layoutRun = 0;
+
   Future<void> _relayout(GraphData graph) async {
+    final run = ++_layoutRun;
     final positions = await compute(forceLayout, LayoutInput.fromGraph(graph));
-    if (!mounted) return;
+    // A newer layout started meanwhile; keep only the latest result.
+    if (!mounted || run != _layoutRun) return;
     setState(() {
       _graph = graph;
       _positions = positions;

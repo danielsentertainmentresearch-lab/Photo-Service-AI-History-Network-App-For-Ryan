@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:archive/archive.dart';
 import 'package:intl/intl.dart';
@@ -10,10 +11,13 @@ import '../models/event.dart';
 import '../models/memory_graph.dart';
 import '../models/memory_item.dart';
 import '../models/ring_palette.dart';
+import 'data_files.dart';
 
 /// Builds a zip of the whole library:
 ///
 /// * `EventLens/data.json`: everything, for re-import or other tools.
+/// * `EventLens/eventlens-basic.csv` and `eventlens-analysis.csv` (with its
+///   column guide), the same files offered on their own in Your data.
 /// * `EventLens/Vault/`: an Obsidian-compatible vault. One note per event,
 ///   with [[links]] to notes for each person, place, tag, chapter, book and
 ///   theme, so the vault's graph view mirrors the app's graph. Photos sit in
@@ -64,14 +68,42 @@ class LibraryExporter {
       eventNote[e.id] = name;
     }
 
-    // Backlinks for the people/place/tag/chapter/book/theme notes.
+    // Note names per folder. Names are compared ignoring case, because
+    // "Sam.md" and "sam.md" are the same file on Windows, macOS and
+    // Android storage. People, places, tags and themes with the same name
+    // share a note; chapters and books are separate even with equal titles.
+    final taken = <String, Set<String>>{};
+    String unique(String folder, String name) {
+      final used = taken.putIfAbsent(folder, () => <String>{});
+      final base = safeName(name);
+      var candidate = base;
+      for (var n = 2; used.contains(candidate.toLowerCase()); n++) {
+        candidate = '$base ($n)';
+      }
+      used.add(candidate.toLowerCase());
+      return candidate;
+    }
+
+    final sharedNames = <String, String>{};
+    String named(String folder, String name) => sharedNames.putIfAbsent(
+      '$folder/${safeName(name).toLowerCase()}',
+      () => unique(folder, name),
+    );
+
+    final chapterNote = {
+      for (final c in graph?.chapters ?? <TimelineChapter>[])
+        c.id: unique('Chapters', c.title),
+    };
+    final bookNote = {
+      for (final b in graph?.books ?? <Book>[]) b.id: unique('Books', b.title),
+    };
+
+    // Backlinks: note path -> events that link to it.
     final backlinks = <String, Set<String>>{};
-    void link(String folder, String name, String eventId) => backlinks
-        .putIfAbsent('$folder/${safeName(name)}', () => <String>{})
-        .add(eventId);
+    void link(String path, String eventId) =>
+        backlinks.putIfAbsent(path, () => <String>{}).add(eventId);
 
     final chapterOf = <String, TimelineChapter>{};
-    final bookTitle = {for (final b in graph?.books ?? <Book>[]) b.id: b.title};
     for (final c in graph?.chapters ?? <TimelineChapter>[]) {
       for (final id in c.eventIds) {
         chapterOf[id] = c;
@@ -106,12 +138,17 @@ class LibraryExporter {
       note.writeln('---\n\n# ${e.title.isEmpty ? 'Untitled event' : e.title}\n');
 
       final chapter = chapterOf[e.id];
+      final chapterPath = chapter == null
+          ? null
+          : 'Chapters/${chapterNote[chapter.id]}';
+      final bookPath = chapter?.bookId == null || bookNote[chapter!.bookId] == null
+          ? null
+          : 'Books/${bookNote[chapter.bookId]}';
       final links = <String>[
-        if (chapter != null) '[[Chapters/${safeName(chapter.title)}]]',
-        if (chapter?.bookId != null && bookTitle[chapter!.bookId] != null)
-          '[[Books/${safeName(bookTitle[chapter.bookId]!)}]]',
-        for (final person in e.people) '[[People/${safeName(person)}]]',
-        for (final place in e.places) '[[Places/${safeName(place)}]]',
+        if (chapterPath != null) '[[$chapterPath]]',
+        if (bookPath != null) '[[$bookPath]]',
+        for (final person in e.people) '[[People/${named('People', person)}]]',
+        for (final place in e.places) '[[Places/${named('Places', place)}]]',
       ];
       if (links.isNotEmpty) note.writeln('${links.join(' · ')}\n');
       if (e.description.isNotEmpty) note.writeln('${e.description}\n');
@@ -121,9 +158,13 @@ class LibraryExporter {
       for (final image in e.images) {
         final file = vault.fileFor(image.fileName);
         if (await file.exists()) {
-          final bytes = await file.readAsBytes();
+          // Streamed from disk when the zip is written, so a large library
+          // never has to fit in memory. JPEGs are already compressed.
           archive.addFile(
-            ArchiveFile.bytes('$_vaultDir/attachments/${image.fileName}', bytes),
+            ArchiveFile.stream(
+              '$_vaultDir/attachments/${image.fileName}',
+              InputFileStream(file.path),
+            )..compression = CompressionType.none,
           );
           note.writeln('![[${image.fileName}]]');
         }
@@ -135,31 +176,31 @@ class LibraryExporter {
         ),
       );
 
-      if (chapter != null) link('Chapters', chapter.title, e.id);
-      if (chapter?.bookId != null && bookTitle[chapter!.bookId] != null) {
-        link('Books', bookTitle[chapter.bookId]!, e.id);
-      }
+      if (chapterPath != null) link(chapterPath, e.id);
+      if (bookPath != null) link(bookPath, e.id);
       for (final person in e.people) {
-        link('People', person, e.id);
+        link('People/${named('People', person)}', e.id);
       }
       for (final place in e.places) {
-        link('Places', place, e.id);
+        link('Places/${named('Places', place)}', e.id);
       }
       for (final tag in e.tags) {
-        link('Tags', tag, e.id);
+        link('Tags/${named('Tags', tag)}', e.id);
       }
     }
     for (final t in graph?.themes ?? <StoryTheme>[]) {
       for (final id in t.eventIds) {
-        if (eventNote.containsKey(id)) link('Themes', t.name, id);
+        if (eventNote.containsKey(id)) {
+          link('Themes/${named('Themes', t.name)}', id);
+        }
       }
     }
 
     final descriptions = <String, String>{
       for (final c in graph?.chapters ?? <TimelineChapter>[])
-        'Chapters/${safeName(c.title)}': c.summary,
+        'Chapters/${chapterNote[c.id]}': c.summary,
       for (final t in graph?.themes ?? <StoryTheme>[])
-        'Themes/${safeName(t.name)}': t.description,
+        'Themes/${named('Themes', t.name)}': t.description,
     };
     for (final entry in backlinks.entries) {
       final title = entry.key.split('/').last;
@@ -211,15 +252,41 @@ class LibraryExporter {
       ),
     );
     archive.addFile(
+      ArchiveFile.string('$_root/$basicCsvName', withBom(basicCsv(ordered))),
+    );
+    archive.addFile(
+      ArchiveFile.string(
+        '$_root/$analysisCsvName',
+        analysisCsv(ordered, graph),
+      ),
+    );
+    archive.addFile(
+      ArchiveFile.string('$_root/$dictionaryName', analysisDictionary()),
+    );
+    archive.addFile(
       ArchiveFile.string(
         '$_root/README.txt',
         'EventLens export\n\n'
         'Vault/ opens in Obsidian (Open folder as vault). Its graph view\n'
         'shows events linked to their people, places, tags, chapters,\n'
-        'books and themes. data.json holds everything in one file.\n',
+        'books and themes. data.json holds everything in one file.\n'
+        '$basicCsvName opens in any spreadsheet app.\n'
+        '$analysisCsvName loads into Python tools such as pandas in a\n'
+        'Jupyter notebook; $dictionaryName explains each column.\n',
       ),
     );
     return archive;
+  }
+
+  static const basicCsvName = 'eventlens-basic.csv';
+  static const analysisCsvName = 'eventlens-analysis.csv';
+  static const dictionaryName = 'eventlens-analysis-columns.txt';
+
+  /// Writes a single text file (a CSV) to [directory] and returns it.
+  Future<File> writeText(String text, Directory directory, String name) async {
+    final file = File(p.join(directory.path, name));
+    await file.writeAsString(text, flush: true);
+    return file;
   }
 
   /// Writes the zip to [directory] and returns the file.
@@ -230,7 +297,33 @@ class LibraryExporter {
   }) async {
     final stamp = DateFormat('yyyy-MM-dd_HHmm').format(exportedAt ?? DateTime.now());
     final file = File(p.join(directory.path, 'EventLens-export-$stamp.zip'));
-    await file.writeAsBytes(ZipEncoder().encode(archive));
+    final output = OutputFileStream(file.path);
+    try {
+      ZipEncoder().encodeStream(archive, output, autoClose: true);
+    } finally {
+      await output.close();
+      await archive.clear();
+    }
     return file;
+  }
+
+  /// Builds and writes the full export on a background isolate, so the
+  /// screen stays responsive however large the library is.
+  Future<File> exportZip({
+    required List<LifeEvent> events,
+    required List<MemoryItem> memories,
+    required GraphSnapshot? graph,
+    required Directory directory,
+  }) {
+    final exporter = LibraryExporter(vault);
+    return Isolate.run(() async {
+      final archive = await exporter.build(
+        events: events,
+        memories: memories,
+        graph: graph,
+      );
+      final file = await exporter.writeZip(archive, directory);
+      return file.path;
+    }).then(File.new);
   }
 }
