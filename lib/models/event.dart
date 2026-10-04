@@ -139,6 +139,10 @@ class LifeEvent {
 
   final List<EventImage> images;
 
+  /// The person's own free write about their experience at the event.
+  /// Theirs alone: never sent to the AI and never changed by it.
+  final String experience;
+
   bool get hasCoordinates => latitude != null && longitude != null;
 
   const LifeEvent({
@@ -162,6 +166,7 @@ class LifeEvent {
     this.longitude,
     this.weather,
     this.images = const [],
+    this.experience = '',
   });
 
   bool get hasAccount => description.trim().isNotEmpty;
@@ -188,6 +193,7 @@ class LifeEvent {
     List<EventImage>? images,
     bool clearCoordinates = false,
     bool clearWeather = false,
+    String? experience,
   }) {
     return LifeEvent(
       id: id,
@@ -210,6 +216,7 @@ class LifeEvent {
       longitude: clearCoordinates ? null : (longitude ?? this.longitude),
       weather: clearWeather ? null : (weather ?? this.weather),
       images: images ?? this.images,
+      experience: experience ?? this.experience,
     );
   }
 
@@ -247,6 +254,7 @@ class LifeEvent {
           : EventWeather.fromJson(
               jsonDecode(row['weather'] as String) as Map<String, dynamic>),
       images: images,
+      experience: (row['experience'] as String?) ?? '',
     );
   }
 
@@ -270,5 +278,6 @@ class LifeEvent {
         'latitude': latitude,
         'longitude': longitude,
         'weather': weather == null ? null : jsonEncode(weather!.toJson()),
+        'experience': experience,
       };
 }

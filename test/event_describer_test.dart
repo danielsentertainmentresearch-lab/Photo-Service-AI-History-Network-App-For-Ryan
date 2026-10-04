@@ -48,6 +48,20 @@ void main() {
     ),
   ];
 
+  test('the free write never goes to the AI, and the account stays factual',
+      () {
+    const private = 'only mine to read';
+    final body = describer.buildRequest(
+      event: _event().copyWith(experience: private),
+      jpegs: [Uint8List.fromList([1])],
+      memories: memories,
+      history: [_event(id: 'e0').copyWith(experience: private, summary: 's')],
+    );
+    expect(jsonEncode(body), isNot(contains(private)));
+    expect(EventDescriber.instructions, contains('objective'));
+    expect(EventDescriber.instructions, isNot(contains('warm')));
+  });
+
   test('request carries photos, memory, fallbacks and structured output', () {
     final earlier = _event(id: 'e0').copyWith(
         title: 'First swim', summary: 'We swam at dawn.');

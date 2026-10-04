@@ -287,7 +287,9 @@ void main() {
     );
     // The mind map opens first; the graph is the second tab.
     await tester.tap(find.text('Graph'));
-    await tester.pumpAndSettle();
+    // Not pumpAndSettle: the graph shows a spinner until its layout is in.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     // Layout runs in a background isolate.
     await tester.runAsync(() => Future.delayed(const Duration(seconds: 2)));
     await tester.pump();

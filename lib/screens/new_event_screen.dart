@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../services/photo_metadata.dart';
 import '../state/app_state.dart';
+import '../widgets/free_write_box.dart';
 import 'event_detail_screen.dart';
 
 class NewEventScreen extends StatefulWidget {
@@ -22,6 +23,7 @@ class _NewEventScreenState extends State<NewEventScreen> {
   final _title = TextEditingController();
   final _location = TextEditingController();
   final _notes = TextEditingController();
+  final _experience = TextEditingController();
   final List<File> _photos = [];
   DateTime _occurredAt = DateTime.now();
   bool _saving = false;
@@ -37,6 +39,7 @@ class _NewEventScreenState extends State<NewEventScreen> {
     _title.dispose();
     _location.dispose();
     _notes.dispose();
+    _experience.dispose();
     super.dispose();
   }
 
@@ -117,7 +120,9 @@ class _NewEventScreenState extends State<NewEventScreen> {
   }
 
   Future<void> _save({required bool describe}) async {
-    if (_photos.isEmpty && _notes.text.trim().isEmpty) {
+    if (_photos.isEmpty &&
+        _notes.text.trim().isEmpty &&
+        _experience.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Add at least one photo or some notes.')));
       return;
@@ -133,6 +138,7 @@ class _NewEventScreenState extends State<NewEventScreen> {
         photos: _photos,
         latitude: _latitude,
         longitude: _longitude,
+        experience: _experience.text,
       );
       if (describe) {
         // Runs in the background; the detail screen shows its progress.
@@ -220,11 +226,13 @@ class _NewEventScreenState extends State<NewEventScreen> {
               decoration: const InputDecoration(
                 labelText: 'What\'s happening?',
                 alignLabelWithHint: true,
-                hintText: 'Who is here, what led up to this, how it feels, '
-                    'anything the photos can\'t show…',
+                hintText: 'Who is here, what led up to this, anything the '
+                    'photos can\'t show…',
                 border: OutlineInputBorder(),
               ),
             ),
+            const SizedBox(height: 16),
+            FreeWriteBox(controller: _experience),
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: _saving ? null : () => _save(describe: hasKey),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +12,7 @@ import '../services/places_service.dart';
 import '../services/rewards_service.dart';
 import '../state/app_state.dart';
 import '../widgets/common.dart';
+import '../widgets/free_write_box.dart';
 
 class EventDetailScreen extends StatelessWidget {
   final String eventId;
@@ -108,6 +111,8 @@ class EventDetailScreen extends StatelessWidget {
                 ],
                 if (event.suggestions.isNotEmpty)
                   _SuggestionsCard(event: event),
+                const SizedBox(height: 24),
+                _FreeWriteSection(event: event),
                 if (event.notes.isNotEmpty) ...[
                   const SizedBox(height: 24),
                   Text('Your notes at the time',
@@ -187,6 +192,74 @@ class EventDetailScreen extends StatelessWidget {
       builder: (_) => _TextEditorPage(initial: initial),
     ));
   }
+}
+
+/// The person's free write, saved as they type. Their text is never
+/// replaced while they are writing in it.
+class _FreeWriteSection extends StatefulWidget {
+  final LifeEvent event;
+
+  const _FreeWriteSection({required this.event});
+
+  @override
+  State<_FreeWriteSection> createState() => _FreeWriteSectionState();
+}
+
+class _FreeWriteSectionState extends State<_FreeWriteSection> {
+  late final _controller = TextEditingController(text: widget.event.experience);
+  final _focus = FocusNode();
+  late AppState _state;
+  Timer? _pending;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() {
+      if (!_focus.hasFocus && _pending != null) _saveNow();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _state = context.read<AppState>();
+  }
+
+  @override
+  void didUpdateWidget(_FreeWriteSection old) {
+    super.didUpdateWidget(old);
+    if (!_focus.hasFocus &&
+        _pending == null &&
+        widget.event.experience != _controller.text) {
+      _controller.text = widget.event.experience;
+    }
+  }
+
+  void _changed(String _) {
+    _pending?.cancel();
+    _pending = Timer(const Duration(milliseconds: 800), _saveNow);
+  }
+
+  void _saveNow() {
+    _pending?.cancel();
+    _pending = null;
+    _state.updateExperience(widget.event.id, _controller.text);
+  }
+
+  @override
+  void dispose() {
+    if (_pending != null) _saveNow();
+    _focus.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FreeWriteBox(
+        controller: _controller,
+        focusNode: _focus,
+        onChanged: _changed,
+      );
 }
 
 class _Gallery extends StatefulWidget {

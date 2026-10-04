@@ -193,6 +193,7 @@ class AppState extends ChangeNotifier {
     required List<File> photos,
     double? latitude,
     double? longitude,
+    String experience = '',
   }) async {
     final id = _uuid.v4();
     final images = <EventImage>[];
@@ -221,6 +222,7 @@ class AppState extends ChangeNotifier {
       latitude: latitude,
       longitude: longitude,
       images: images,
+      experience: experience,
     );
     await events.save(event);
     await _reload();
@@ -253,6 +255,17 @@ class AppState extends ChangeNotifier {
         clearCoordinates: placeChanged,
         clearWeather: placeChanged || timeChanged,
       ),
+    );
+    await _reload();
+  }
+
+  /// Saves the person's free write exactly as typed, onto the latest copy
+  /// of the event so an AI account arriving meanwhile is kept.
+  Future<void> updateExperience(String eventId, String text) async {
+    final current = await events.byId(eventId);
+    if (current == null || current.experience == text) return;
+    await events.update(
+      current.copyWith(experience: text, updatedAt: DateTime.now()),
     );
     await _reload();
   }

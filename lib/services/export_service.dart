@@ -155,6 +155,9 @@ class LibraryExporter {
       if (e.notes.isNotEmpty) {
         note.writeln('## My notes at the time\n\n${e.notes}\n');
       }
+      if (e.experience.trim().isNotEmpty) {
+        note.writeln('## My free write\n\n${e.experience.trim()}\n');
+      }
       for (final image in e.images) {
         final file = vault.fileFor(image.fileName);
         if (await file.exists()) {

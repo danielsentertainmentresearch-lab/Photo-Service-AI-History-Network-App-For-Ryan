@@ -249,6 +249,7 @@ class _EventSearch extends SearchDelegate<void> {
       return [
         e.title,
         e.notes,
+        e.experience,
         e.location,
         e.summary,
         e.description,

@@ -277,6 +277,55 @@ void main() {
     expect(find.text('First day at the new studio'), findsOneWidget);
   });
 
+  testWidgets('the free write is a blank box with no prompt; ? explains it', (
+    tester,
+  ) async {
+    await setUpState(tester);
+    await tester.pumpWidget(app(const NewEventScreen()));
+    final box = find.byKey(const ValueKey('free-write'));
+    final field = tester.widget<TextField>(box);
+    expect(field.decoration?.labelText, isNull);
+    expect(field.decoration?.hintText, isNull);
+    expect(field.decoration?.helperText, isNull);
+
+    await tester.tap(find.byTooltip('What is this box for?'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('This box is yours'), findsOneWidget);
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    // Writing only in the free write is enough to save an event.
+    await tester.enterText(box, 'In my own words.');
+    await tester.tap(find.text('Save'));
+    await settle(tester, () => state.allEvents.length == 3);
+    expect(
+      state.allEvents.where((e) => e.experience == 'In my own words.'),
+      hasLength(1),
+    );
+  });
+
+  testWidgets('the free write on an event saves as it is typed', (
+    tester,
+  ) async {
+    await setUpState(tester);
+    await tester.pumpWidget(app(const EventDetailScreen(eventId: 'lake')));
+    final box = find.byKey(const ValueKey('free-write'));
+    await tester.ensureVisible(box);
+    await tester.enterText(box, 'The cold took my breath.');
+    // Saved shortly after typing stops.
+    await tester.pump(const Duration(seconds: 1));
+    await settle(
+      tester,
+      () => state.eventById('lake')!.experience == 'The cold took my breath.',
+    );
+    expect(state.eventById('lake')!.experience, 'The cold took my breath.');
+    // The AI's account is untouched.
+    expect(
+      state.eventById('lake')!.description,
+      'The water was copper in the last light.',
+    );
+  });
+
   testWidgets('settings: save a key, pick a model, see the account, sign out', (
     tester,
   ) async {
