@@ -147,10 +147,11 @@ importance:
   The writing is treated as data, never as instructions, and is never
   changed. Effort is low (a classification task); the model is the one
   chosen in Settings.
-- **Where labels show**: only in Your data (the "Free-write labels" card
-  and two meters, "Events with a free write" and "Most common free-write
-  label") and in the analysis file, never on the event page, so they don't
-  steer what someone writes next.
+- **Where labels show**: only in Your data and the analysis file, never on
+  the event page, so they don't steer what someone writes next. In Your
+  data, the "Free-write labels" card comes first, above Export (owner's
+  choice, 4 Oct 2026), and two meters show "Events with a free write" and
+  "Most common free-write label".
 - **Fits / Doesn't fit / Label again**: tapping a label in Your data lists
   its events, each with its free write. "Fits" confirms the label;
   "Doesn't fit" removes it. Both are final: there is no undo in any form,

@@ -45,9 +45,9 @@ class DataScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          const _ExportCard(),
-          const SizedBox(height: 12),
           const _LabelsCard(),
+          const SizedBox(height: 12),
+          const _ExportCard(),
           const SizedBox(height: 20),
           Text(
             'Your library at a glance',
