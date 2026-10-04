@@ -89,7 +89,10 @@ importance:
 | 2 | Mind map view: a branching, explorable view of the existing graph, first tab on the graph screen | `f312968` |
 | 3 | Two parts to every event: the AI's account made factual and objective; the person's free write (database v4) | `28bf427` |
 | 4 | Owner dashboard follows the app: mind map and free-write use counted in Feature use and the demo data | `98f6c89` |
-| 5 | Free-write labels (annotated, checked by the app, reviewed by a second AI pass), confirm / reject / label again, no blanks in the analysis file, label quality on the dashboard | _this commit_ |
+| 5 | Free-write labels (annotated, checked by the app, reviewed by a second AI pass), confirm / reject / label again, no blanks in the analysis file, label quality on the dashboard | `3a1737e` |
+| 6 | Labels: no undo in any form, no notes in the flow, every pass a first pass | `086c9b6` |
+| 7 | Your data: the Free-write labels card above Export (owner's choice B) | `a041d90` |
+| 8 | Design Overhaul Cleanup, run 1 (see below) | `9c424bd`, `7be82a7` |
 
 ## Mechanisms, parts and features
 
@@ -181,13 +184,43 @@ importance:
   20%, Needs attention above), the signal to change the labelling
   instructions. Counts only, never content.
 
-## Next
+## Design Overhaul Cleanup
 
-- **Enterprise transform (owner dashboard)**: before any export or the
-  built-in notebook, missing values become explicit 1/0 flags, categories
-  become 1/0 columns, dates gain day, weekday and hour columns, and free
-  text becomes word counts and presence flags, so no cell is blank or
-  unusable.
+The cleanup of old UX and UI items before the design overhaul (process in
+the README). It removes what is stale; it does not restyle or restructure
+the app. Runs repeat ("Design Overhaul Cleanup 2" and so on) until the
+owner's manual review finds the cleanest version, or two full runs in a row
+come back with nothing to clean.
+
+### Run 1 (4 Oct 2026)
+
+In the order done:
+
+1. **Owner dashboard exports made analysis-ready** (`9c424bd`). Every
+   export (archive, feature, analysis kit) and the built-in notebook now
+   pass through `features.analysis_ready`: unknown numbers become -999 with
+   a `_known` 0/1 column, categories gain one 1/0 column per value, dates
+   gain `_known`, `_weekday` and `_hour` columns, and empty text becomes
+   "none". No exported cell is blank (new test). Free text such as review
+   comments stays as text for the owner to read.
+2. **Tutorial**: two stale lines removed: notes covering how it feels, and
+   the AI writing a narrative (it writes a factual account) (`7be82a7`).
+3. **Data guide**: the people example skips the "none" marker, so it no
+   longer counts "none" as a person (`7be82a7`).
+4. **Mind map**: the open/close badge on chapter and story pills sat over
+   the title; it now sits on the pill's corner (`7be82a7`).
+5. **Store screenshots** regenerated; the graph shot now shows the mind
+   map, the first tab (`7be82a7`).
+6. **README intro**: notes no longer said to cover how it feels
+   (`7be82a7`).
+
+Checked and clean: no TODO, placeholder or test text in the app; both icon
+assets are used.
+
+Seen but left for the owner's review (outside a cleanup of old items):
+the welcome line's "full story" wording, the store listing's marketing
+copy, the tutorial not yet mentioning the mind map or the free write, and
+the README architecture line that still says database v3 (it is v5).
 
 ## Not connected yet
 

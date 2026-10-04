@@ -204,6 +204,31 @@ It uses only Python's standard library. Setup, launch, and starting and
 ending each hosting are in [owner-dashboard/README.md](owner-dashboard/README.md).
 Until the app sends real metrics (final stage) it shows labelled demo data.
 
+## Design Overhaul Cleanup
+
+Before the design overhaul, each **Design Overhaul Cleanup** run removes old
+UX and UI items (stale text, outdated screens and graphics, leftovers)
+without restyling or restructuring the app. Each run is logged in
+[docs/BUILD_STAGE_2.md](docs/BUILD_STAGE_2.md). The owner's manual review
+decides whether another run is needed ("Design Overhaul Cleanup 2", then
+3, and so on). Runs continue until the owner's review reaches the cleanest
+version they can see, or until two full runs come back with nothing to
+clean.
+
+The UX edit itself is then done in this order:
+
+1. Claude creates **three unique UX overhauls**.
+2. The human reviewer transfers them to a **local configuration of the
+   Hermes agentic model**, which creates the UI addition from the sample
+   photos and the brand kit, using the dream files' specialized
+   expression. This is passed through three times, the same way each time.
+3. The full UI and UX combination is produced, using exactly the
+   brand-kit aspects needed.
+4. A final manual edit is made step by step with the **Cowork in-browser
+   extension**, using its cursor ability to dictate the final changes.
+5. Full alignment with the brand kit is ensured through the specialized
+   skill of **Dan's Hermes model**, run locally.
+
 ## Development
 
 Requires Flutter 3.47+ (stable) and Android Studio or the Android SDK.
@@ -263,5 +288,5 @@ fine for testing but not accepted by Play. See [RELEASE.md](RELEASE.md).
   higher tier for export and backup/sync.
 - Connect the chosen accounts backend (Supabase recommended), including Web3
   sign-in, and real rewarded ads.
-- Brand palette before the UI/UX phase.
+- Brand palette before the UI/UX phase (see Design Overhaul Cleanup).
 - Owner dashboard connected to real metrics: the final stage.
