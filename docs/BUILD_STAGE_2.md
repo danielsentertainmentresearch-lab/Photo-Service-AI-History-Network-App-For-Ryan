@@ -77,6 +77,12 @@ importance:
   app stores. The owner dashboard is the only enterprise-level part, issued
   by the owner personally. An enterprise version of the app may come later;
   none is planned.
+- **Stage plan** (4 Oct 2026). Stage 2 is the neural-network event
+  mapping described above, and the owner's full-app review happens during
+  stage 2, before it closes (checkpoint `710e751`). The stages after it, as
+  planned now: **stage 3** (likely) builds the parts and features that run
+  on the AI backbone; **stage 4** is the final LLM build. Each still starts
+  only on the owner's command.
 - **Launch checklist timing** (4 Oct 2026): work on the launch checklist
   (accounts, rewarded ads and the rest of `docs/LAUNCH_CHECKLIST.md`) begins
   after build stage 3 closes; slightly earlier is possible, but that is the

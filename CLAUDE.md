@@ -20,6 +20,11 @@
   `docs/BUILD_STAGE_2.md`. Later stages build from stage 1 and refer back to
   it only when its context is needed. Each stage starts only on the owner's
   command.
+- **Stage plan** (owner, 4 Oct 2026): stage 2 is the neural-network event
+  mapping (mind model first, then Obsidian functions); the owner's full-app
+  review happens during stage 2, before it closes. Stage 3 (likely): the
+  parts and features that run on the AI backbone. Stage 4: the final LLM
+  build. Launch checklist work starts after stage 3 closes.
 - **Brand artwork** (owner-approved Option A, "Core memory Polaroid"): the
   app icon, store graphics and launch title screen come from
   `tool/brand/brand.html` via `tool/brand/render.mjs`. The Scaffold logo is
