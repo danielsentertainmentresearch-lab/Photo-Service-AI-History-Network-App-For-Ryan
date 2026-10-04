@@ -248,8 +248,10 @@ the README architecture line that still says database v3 (it is v5).
 ## Checkpoint (night of 4 Oct 2026)
 
 Saved at the owner's request before the manual review of the full app.
-Everything to this point is on `main`, mirrored to `stage-2-mind-map`, and
-tagged `checkpoint-stage-2-2026-10-04`.
+Everything to this point is on `main`, mirrored to `stage-2-mind-map`; the
+checkpoint is the commit "Checkpoint: stage 2 state before the owner's
+full-app review" (`710e751`). Git tags can't be pushed from these sessions,
+so there is no tag.
 
 - **Built in stage 2 so far**: steps 1 to 9 above (mind map, the two parts
   of every event, free-write labels with Fits / Doesn't fit / Label again,
