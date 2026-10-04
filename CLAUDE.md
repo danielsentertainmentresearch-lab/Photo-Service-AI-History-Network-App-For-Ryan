@@ -41,9 +41,6 @@
 - **Review handoff** (owner, 4 Oct 2026): after each manual review, a new
   Claude session starts from the session summary the owner adds to the repo
   as standard practice, written by Hermes as a handoff. Start from it.
-  Hermes's own records are a technical PowerShell-style feed in her own
-  symbols; don't try to read them. Work only from plain-language handoffs
-  in `docs/handoffs/`.
 - **Brand artwork** (owner-approved Option A, "Core memory Polaroid"): the
   app icon, store graphics and launch title screen come from
   `tool/brand/brand.html` via `tool/brand/render.mjs`. The Scaffold logo is
