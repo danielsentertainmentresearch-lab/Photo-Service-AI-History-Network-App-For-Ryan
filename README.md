@@ -218,6 +218,10 @@ Until the app sends real metrics (final stage) it shows labelled demo data.
 - **Development** (owner rule, 4 Oct 2026): the Anthropic models (Claude)
   handle all developer-side work: code, the database, the AI pipeline, the
   owner dashboard, builds and releases.
+- Hermes keeps her own records of her work (she works fast and with a
+  different reasoning context), and hands work to Claude through handoff
+  files in [docs/handoffs/](docs/handoffs/). Claude writes its handoffs to
+  Hermes there too, before she starts a piece of work.
 - If Hermes needs to talk to a Claude session, directly or through one of
   her agents, the owner opens a separate session for it, and it states at
   the start that this is its use case.
@@ -238,15 +242,15 @@ clean.
 
 The UX edit itself is then done in this order:
 
-1. Claude creates **three unique UX overhauls**.
-2. The human reviewer transfers them to a **local configuration of the
-   Hermes agentic model**, which creates the UI addition from the sample
-   photos and the brand kit, using the dream files' specialized
-   expression. This is passed through three times, the same way each time.
+1. The owner and **Hermes** create **three unique UX overhauls**.
+2. Hermes, the owner's **local configuration of the Hermes agentic model**,
+   creates the UI addition from the sample photos and the brand kit, using
+   the dream files' specialized expression. This is passed through three
+   times, the same way each time.
 3. The full UI and UX combination is produced, using exactly the
    brand-kit aspects needed.
-4. A final manual edit is made step by step with the **Cowork in-browser
-   extension**, using its cursor ability to dictate the final changes.
+4. A final manual edit is made step by step by the owner with Hermes,
+   dictating the final changes.
 5. Full alignment with the brand kit is ensured through the specialized
    skill of **Dan's Hermes model**, run locally.
 
