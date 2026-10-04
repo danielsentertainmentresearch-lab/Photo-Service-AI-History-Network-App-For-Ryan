@@ -12,8 +12,8 @@
   connected, name the currently recommended platform for each (see
   `docs/LAUNCH_CHECKLIST.md`), add a line to its reminder log, and update
   the shared "EventLens Launch Checklist" page.
-- **Build stage 1 is complete**, pending the owner's sign-off (debrief:
-  `docs/BUILD_STAGE_1.md`). Later
+- **Build stage 1 has ended** (owner sign-off 4 Oct 2026, tag
+  `build-stage-1`; deliverable: `docs/BUILD_STAGE_1.md`). Later
   stages build from there and refer back to stage 1 only when its context
   is needed. Each stage starts only on the owner's command.
 - Export rules: basic CSV free for all; full export unlocks at 100 events

@@ -17,8 +17,8 @@ Android app built with Flutter, set up for Google Play.
 
 ## Status
 
-**Build stage 1 is complete and waiting for the owner's review.** Everything
-built in stage 1 is described in
+**Build stage 1 has ended** (signed off by the owner on 4 October 2026;
+git tag `build-stage-1`). Everything built in stage 1 is described in
 [docs/BUILD_STAGE_1.md](docs/BUILD_STAGE_1.md). Outside accounts and
 platforms still to connect are in
 [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md).
@@ -167,7 +167,10 @@ stored on the event with a readable message and a Retry button.
 
 `owner-dashboard/` is a separate, owner-only program that runs on the
 owner's computer at `http://127.0.0.1:8787/` and shows account utilization,
-reach vs utilization, the sign-up funnel, retention, feature use and crashes.
+reach vs utilization, the sign-up funnel, retention, feature use, crashes,
+and the feature-test archive (review stages, the complete review catalog,
+simple/complete/custom exports, and a built-in Jupyter notebook that opens
+on the page).
 It uses only Python's standard library. Setup, launch, and starting and
 ending each hosting are in [owner-dashboard/README.md](owner-dashboard/README.md).
 Until the app sends real metrics (final stage) it shows labelled demo data.
@@ -220,7 +223,7 @@ fine for testing but not accepted by Play. See [RELEASE.md](RELEASE.md).
 
 ## Roadmap
 
-- **Stage 2**: the AI maps events as a neural network, primarily a mind map
+- **Stage 2** (starts on the owner's command): the AI maps events as a neural network, primarily a mind map
   (in function and in data exploration), with Obsidian's enterprise and
   user-level functions added for familiarity, for events added on an
   irregular schedule at the person's own pace.

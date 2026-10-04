@@ -17,6 +17,7 @@
   --series-2: #eb6834;
   --seq-low: #cde2fb;
   --seq-high: #104281;
+  --rate-1: #86b6ef; --rate-2: #5598e7; --rate-3: #2a78d6; --rate-4: #1c5cab; --rate-5: #104281;
   --good: #0ca30c;
   --warning: #fab219;
   --critical: #d03b3b;
@@ -33,6 +34,7 @@
     --fg-2: #b9bdd2; --muted: #8d92ad; --line: #2b3050; --accent: #8c9bff;
     --series-1: #3987e5; --series-2: #d95926; --seq-low: #1d2238; --seq-high: #86b6ef;
     --good-ink: #4cc38a; --warning-ink: #f0c25a; --critical-ink: #f08080;
+    --rate-1: #184f95; --rate-2: #256abf; --rate-3: #3987e5; --rate-4: #6da7ec; --rate-5: #9ec5f4;
     color-scheme: dark;
   }
 }
@@ -41,9 +43,12 @@
   --fg-2: #b9bdd2; --muted: #8d92ad; --line: #2b3050; --accent: #8c9bff;
   --series-1: #3987e5; --series-2: #d95926; --seq-low: #1d2238; --seq-high: #86b6ef;
   --good-ink: #4cc38a; --warning-ink: #f0c25a; --critical-ink: #f08080;
+  --rate-1: #184f95; --rate-2: #256abf; --rate-3: #3987e5; --rate-4: #6da7ec; --rate-5: #9ec5f4;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
+.view section, #notebook-panel { scroll-margin-top: calc(var(--bar-h, 61px) + 64px); }
 body { background: var(--bg); color: var(--fg); font: 14px/1.5 var(--font-ui); }
 .wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 0 48px; }
 header.bar {
@@ -99,7 +104,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
 .tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--fg); border: 1px solid var(--line);
   border-radius: 8px; padding: 6px 10px; font: 12px var(--font-data); box-shadow: 0 4px 16px rgb(0 0 0 / 0.12); white-space: nowrap; z-index: 2; }
-.table-box { overflow-x: auto; }
+.table-box { overflow-x: auto; position: relative; }
 table { border-collapse: collapse; width: 100%; font-size: 13px; }
 th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 th { font-weight: 500; color: var(--fg-2); font-size: 12px; }
@@ -115,6 +120,81 @@ details { margin-top: 10px; } summary { cursor: pointer; color: var(--fg-2); fon
 .lifetime span { font-size: 12px; color: var(--muted); }
 footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
 @media (prefers-reduced-motion: no-preference) { .fill { transition: width 0.35s ease; } }
+
+/* ---- Navigation, find line, feature-test archive ---- */
+.tabs { display: inline-flex; gap: 4px; }
+.tabs a { padding: 6px 12px; border-radius: 8px; color: var(--fg-2); text-decoration: none; font-weight: 500; font-size: 13px; }
+.tabs a[aria-current="page"] { background: var(--sunken); color: var(--fg); box-shadow: inset 0 -2px 0 var(--accent); }
+.controls { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.findline { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--bar-h, 61px)); z-index: 4;
+  background: var(--bg); border-bottom: 1px solid var(--line); }
+.findline .wrap { display: flex; gap: 8px; align-items: center; padding-block: 8px; }
+@media (max-width: 600px) { .findline label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } .findline output { min-width: 0; } }
+.findline label { font-size: 12px; color: var(--fg-2); }
+.findline input { flex: 1 1 120px; min-width: 0; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--surface); color: var(--fg); font: 13px var(--font-ui); }
+.findline output { font: 12px var(--font-data); color: var(--muted); min-width: 7em; }
+::highlight(find-all) { background-color: color-mix(in srgb, var(--warning) 45%, transparent); color: inherit; }
+::highlight(find-current) { background-color: var(--warning); color: #151827; }
+.status { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.status svg { width: 14px; height: 14px; flex: none; }
+.status.launched { color: var(--good-ink); } .status.scheduled { color: var(--accent); }
+.status.held { color: var(--warning-ink); } .status.failed { color: var(--critical-ink); }
+.status-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.status-card { text-align: left; border: 1px solid var(--line); background: var(--sunken); border-radius: 10px; padding: 10px 12px;
+  cursor: pointer; color: var(--fg); font: inherit; }
+.status-card[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.status-card b { display: block; font: 500 22px var(--font-data); margin-top: 2px; }
+.status-card small { color: var(--muted); font-size: 12px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.toolbar input[type="search"], .toolbar select, .field select, .field input { padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--surface); color: var(--fg); font: 13px var(--font-ui); min-width: 0; }
+.toolbar input[type="search"] { flex: 1 1 220px; }
+.toolbar .spacer { flex: 1 1 auto; }
+.btn.small { padding: 4px 10px; font-size: 12.5px; }
+.btn.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+.btn[disabled], .btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+table.archive th { cursor: pointer; user-select: none; }
+table.archive th[aria-sort="ascending"]::after { content: " ▲"; font-size: 9px; }
+table.archive th[aria-sort="descending"]::after { content: " ▼"; font-size: 9px; }
+table.archive th.nosort { cursor: default; }
+table.archive tbody tr { cursor: pointer; }
+table.archive tbody tr:hover td, table.archive tbody tr:focus-visible td { background: var(--sunken); }
+td .sub { display: block; font-size: 11px; color: var(--muted); }
+.pass { color: var(--good-ink); font-weight: 600; } .short { color: var(--fg-2); }
+.crumbs { margin: 16px 0 4px; font-size: 13px; }
+.crumbs a { color: var(--accent); text-decoration: none; }
+.feature-head h2 { font-size: 22px; margin: 2px 0 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.meter-bar { position: relative; height: 10px; background: var(--sunken); border-radius: 4px; margin-top: 8px; }
+.meter-bar span { position: absolute; inset: 0 auto 0 0; background: var(--series-1); border-radius: 4px 0 0 4px; }
+.meter-bar i { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--fg); }
+.mix { display: flex; gap: 2px; height: 12px; min-width: 110px; border-radius: 3px; overflow: hidden; }
+.mix span { height: 100%; }
+.mix-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--fg-2); margin-top: 6px; }
+.mix-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.r1 { background: var(--rate-1); } .r2 { background: var(--rate-2); } .r3 { background: var(--rate-3); } .r4 { background: var(--rate-4); } .r5 { background: var(--rate-5); }
+.export-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.export-grid h3 { font-size: 13.5px; margin: 0 0 4px; }
+.export-grid .def { margin-bottom: 8px; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.columns-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 12px; margin: 8px 0; font-size: 12.5px; }
+.columns-pick label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 14px; margin: 8px 0 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field > span { font-size: 12px; color: var(--fg-2); }
+.chipset { display: flex; flex-wrap: wrap; gap: 4px; }
+.chipset button { border: 1px solid var(--line); background: var(--surface); color: var(--fg-2); border-radius: 999px; padding: 2px 10px;
+  font: 12.5px var(--font-ui); cursor: pointer; }
+.chipset button[aria-pressed="true"] { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+td.comment { white-space: normal; min-width: 240px; max-width: 520px; }
+.notebook-frame { width: 100%; height: 78vh; min-height: 480px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.callout { padding: 10px 14px; border-radius: 10px; background: var(--sunken); border: 1px solid var(--line); color: var(--fg-2); font-size: 13px; }
+.callout code, .def code { font: 12px var(--font-data); background: var(--surface); padding: 1px 5px; border-radius: 4px; }
+.legend-line { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 12.5px; color: var(--fg-2); }
+.sentinel { height: 1px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 
 <header class="bar">
@@ -123,7 +203,12 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
       <h1>EventLens Owner Dashboard</h1>
       <small id="asof">Loading…</small>
     </div>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#overview" data-view="overview">Overview</a>
+      <a href="#features" data-view="archive">Feature tests</a>
+    </nav>
     <span class="pill demo" id="source-pill" hidden>Demo data</span>
+    <div class="controls" id="overview-controls">
     <div class="seg" role="group" aria-label="Time window" id="windows">
       <button type="button" data-window="7">7 days</button>
       <button type="button" data-window="30" aria-pressed="true">30 days</button>
@@ -131,10 +216,20 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
       <button type="button" data-window="all">All time</button>
     </div>
     <button type="button" class="btn" id="meters-btn" aria-expanded="false">Meters</button>
+    </div>
   </div>
 </header>
+<div class="findline" id="findline" hidden>
+  <div class="wrap" role="search">
+    <label for="find-input">Find on this screen</label>
+    <input id="find-input" type="search" placeholder="Type to find text on this screen" autocomplete="off">
+    <output id="find-count" aria-live="polite"></output>
+    <button type="button" class="btn small" id="find-prev" aria-label="Previous match">↑</button>
+    <button type="button" class="btn small" id="find-next" aria-label="Next match">↓</button>
+  </div>
+</div>
 
-<main class="wrap">
+<main class="wrap view" id="view-overview">
   <div class="meters-panel" id="meters" hidden>
     <strong>Show or hide meters</strong>
     <div class="def">Hidden meters come back any time from here. This choice is kept in this browser only.</div>
@@ -147,6 +242,14 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
       <div class="panel-head"><h2>Utilization summary</h2><button class="hide-btn" type="button">Hide</button></div>
       <p class="def">Utilization rate is the share of live accounts that opened the app in the selected window. Stickiness is today's active accounts divided by the last 30 days'.</p>
       <div class="kpis" id="kpis"></div>
+    </section>
+
+    <section class="panel" data-panel="testing" data-title="Feature testing">
+      <div class="panel-head"><h2>Feature testing</h2><button class="hide-btn" type="button">Hide</button></div>
+      <p class="def">The state of the feature-test archive. A feature that reaches 90% "yes" in its vote ships in a dedicated update, and every fully set-up account receives a collectable linked to it.</p>
+      <div class="kpis" id="testing-kpis"></div>
+      <div class="legend-line" id="testing-last"></div>
+      <p style="margin:12px 0 0"><a class="btn small" href="#features">Open the feature-test archive</a></p>
     </section>
 
     <section class="panel wide" data-panel="reach" data-title="Reach vs utilization">
@@ -203,6 +306,94 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
     </section>
   </div>
   <footer id="footer">Hosted on this computer only (127.0.0.1). EventLens owner use; share only with approved integration partners.</footer>
+</main>
+
+<main class="wrap view" id="view-archive" hidden>
+  <section class="panel" style="margin-top:16px">
+    <div class="panel-head"><h2>Feature-test archive</h2></div>
+    <p class="def">Every test feature and the outcome of its review stages. Open a row to see its rounds, the complete review catalog, exports and the built-in notebook.</p>
+    <div class="status-cards" id="status-cards"></div>
+    <div class="toolbar">
+      <input type="search" id="archive-q" placeholder="Search features by name, ID or description" aria-label="Search features">
+      <select id="archive-category" aria-label="Category"></select>
+      <select id="archive-outcome" aria-label="Outcome"></select>
+      <button type="button" class="btn small" id="archive-clear">Clear filters</button>
+    </div>
+    <div class="toolbar">
+      <span class="def" style="margin:0" id="archive-count"></span>
+      <span class="spacer"></span>
+      <span class="def" style="margin:0">Export the archive:</span>
+      <a class="btn small" data-export="simple" data-format="csv">Simple CSV</a>
+      <a class="btn small" data-export="simple" data-format="json">Simple JSON</a>
+      <a class="btn small" data-export="complete" data-format="csv">Complete CSV</a>
+      <a class="btn small" data-export="complete" data-format="json">Complete JSON</a>
+    </div>
+    <div class="table-box"><table class="archive" id="archive-table"></table></div>
+    <div class="legend-line" id="status-legend"></div>
+    <p class="def" style="margin-top:8px">Simple: one row per test feature. Complete: every review of every feature, with all fields.</p>
+  </section>
+</main>
+
+<main class="wrap view" id="view-feature" hidden>
+  <div class="crumbs"><a href="#features">← Feature-test archive</a> <span id="crumb-id"></span></div>
+  <section class="panel feature-head" id="feature-head"></section>
+  <div class="grid">
+    <section class="panel">
+      <div class="panel-head"><h2>Review stages</h2></div>
+      <p class="def">Each feedback round (ratings 1-5) and vote round (yes, no, abstain), in aggregate.</p>
+      <div class="table-box"><table id="rounds-table"></table></div>
+      <div class="mix-legend"><span><i class="r1"></i>1</span><span><i class="r2"></i>2</span><span><i class="r3"></i>3</span><span><i class="r4"></i>4</span><span><i class="r5"></i>5 (rating mix)</span></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>Exports and analysis</h2></div>
+      <p class="def" id="export-note"></p>
+      <div class="export-grid">
+        <div>
+          <h3>Simple vector list</h3>
+          <p class="def">One row per review stage: counts, response rate, rating mix and vote shares.</p>
+          <div class="btn-row"><a class="btn small" data-fexport="simple" data-format="csv">CSV</a><a class="btn small" data-fexport="simple" data-format="json">JSON</a></div>
+        </div>
+        <div>
+          <h3>Complete vector list</h3>
+          <p class="def">Every review with every field, including comments and account context.</p>
+          <div class="btn-row"><a class="btn small" data-fexport="complete" data-format="csv">CSV</a><a class="btn small" data-fexport="complete" data-format="json">JSON</a></div>
+        </div>
+        <div>
+          <h3>Custom analysis export</h3>
+          <p class="def">Choose columns; the catalog filters below apply. Opens in the built-in notebook, fresh each time, right here on this page.</p>
+          <details><summary>Columns (<span id="column-count"></span>)</summary><div class="columns-pick" id="columns-pick"></div></details>
+          <label class="def" style="display:flex;gap:6px;align-items:center;margin:6px 0"><input type="checkbox" id="use-filters" checked> Use the catalog filters (<span id="custom-rows"></span> rows)</label>
+          <div class="btn-row">
+            <button type="button" class="btn small primary" id="open-notebook">Open in notebook</button>
+            <a class="btn small" data-fexport="custom" data-format="csv">CSV</a>
+            <a class="btn small" data-fexport="custom" data-format="kit">Analysis kit (.zip)</a>
+          </div>
+          <p class="def" style="margin-top:6px">The analysis kit is for other Python, database or data-science tools: CSV, JSON, a Jupyter notebook (.ipynb), a pandas script (.py) and a SQLite database.</p>
+        </div>
+      </div>
+      <div id="notebook-panel" hidden style="margin-top:16px">
+        <div class="toolbar">
+          <strong id="notebook-title">Notebook</strong>
+          <span class="spacer"></span>
+          <button type="button" class="btn small" id="notebook-fresh">Start fresh</button>
+          <button type="button" class="btn small" id="notebook-close">Close notebook</button>
+        </div>
+        <div id="notebook-body"></div>
+        <p class="def" style="margin-top:6px">This notebook starts new every time and keeps nothing. To keep your work, use File → Download inside the notebook. The first run of a session loads Python (Pyodide) from the internet.</p>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>Complete review catalog</h2></div>
+      <p class="def">Every individual review. The filters only offer what the selected round contains.</p>
+      <button type="button" class="btn" id="catalog-open" aria-expanded="false"></button>
+      <div id="catalog" hidden>
+        <div class="filters" id="catalog-filters"></div>
+        <div class="toolbar"><span class="def" style="margin:0" id="catalog-count"></span><span class="spacer"></span><button type="button" class="btn small" id="catalog-clear">Clear filters</button></div>
+        <div class="table-box"><table id="catalog-table"></table></div>
+        <div class="sentinel" id="catalog-more"></div>
+      </div>
+    </section>
+  </div>
 </main>
 
 <script id="embedded-metrics" type="application/json">null</script>
@@ -375,11 +566,29 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
       }).join("") : '<tr><td colspan="4">No crashes in this window.</td></tr>');
   }
 
+  function renderTesting(m) {
+    var t = m.feature_testing;
+    if (!t) return;
+    var labels = { launched: "Launched", scheduled: "Scheduled", held: "Held", failed: "Failed" };
+    var items = [["Test features", n(t.total), Object.keys(labels).map(function (k) { return labels[k] + " " + n(t.by_status[k]); }).join(" · ")],
+      ["Open rounds", n(t.open_rounds), "feedback or vote rounds running now"],
+      ["Response rate", t.avg_response_rate == null ? "—" : pct(t.avg_response_rate), "invited testers who reviewed, per round"],
+      ["At or above 90% yes", n(t.passed_vote), "latest vote of each feature"],
+      ["Dedicated updates", n(t.dedicated_updates), "features shipped after a 90% vote"],
+      ["Collectables issued", n(t.collectables), "recognition on fully set-up accounts"],
+      ["Reviews", n(t.reviews), "all feature-test reviews"]];
+    $("testing-kpis").innerHTML = items.map(function (k) {
+      return '<div class="kpi"><div class="label">' + k[0] + '</div><div class="value">' + k[1] + '</div><div class="sub">' + k[2] + '</div></div>';
+    }).join("");
+    $("testing-last").textContent = t.last_shipped ? "Last dedicated update: " + t.last_shipped.feature_id + " " + t.last_shipped.feature_name + " on " + t.last_shipped.date : "No dedicated update yet.";
+  }
+
   function renderLifetime(m) {
     var l = m.lifetime;
     var items = [["Installs", l.installs], ["Accounts created", l.accounts], ["Accounts deleted", l.accounts_deleted],
       ["Events recorded", l.events], ["AI accounts written", l.ai_accounts], ["Photos added", l.photos],
-      ["Sessions", l.sessions], ["Hours in the app", l.hours_in_app], ["Rewarded videos", l.rewarded_videos]];
+      ["Sessions", l.sessions], ["Hours in the app", l.hours_in_app], ["Rewarded videos", l.rewarded_videos],
+      ["Feature-test reviews", l.feature_reviews || 0], ["Collectables issued", l.collectables || 0]];
     $("lifetime").innerHTML = items.map(function (i) { return "<div><b>" + n(i[1]) + "</b><span>" + i[0] + "</span></div>"; }).join("");
   }
 
@@ -388,8 +597,9 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
     $("asof").textContent = "As of " + m.as_of.replace("T", " ").slice(0, 16) + " UTC · " + labels[m.window];
     $("source-pill").hidden = m.source !== "demo";
     if (m.source === "demo") $("source-pill").title = "Example data generated for review. Not real users.";
-    renderKpis(m); renderReach(m); renderSignup(m); renderActivity(m); renderRetention(m);
+    renderKpis(m); renderTesting(m); renderReach(m); renderSignup(m); renderActivity(m); renderRetention(m);
     renderDepth(m); renderFeatures(m); renderCrashes(m); renderLifetime(m);
+    if (window.EventLensFind) window.EventLensFind.refresh();
   }
 
   function load() {
@@ -399,6 +609,7 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
     $("error").hidden = true;
     if (embedded) {
       var m = embedded[state.window] || embedded["30"];
+      if (m && !m.feature_testing && embedded.features) m.feature_testing = embedded.features.summary;
       render(m);
       return;
     }
@@ -412,7 +623,7 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
   }
 
   function applyHidden() {
-    var panels = document.querySelectorAll("[data-panel]");
+    var panels = document.querySelectorAll("#view-overview [data-panel]");
     Array.prototype.forEach.call(panels, function (p) { p.hidden = !!state.hidden[p.dataset.panel]; });
     $("meter-list").innerHTML = Array.prototype.map.call(panels, function (p) {
       var id = "meter-" + p.dataset.panel;
@@ -426,7 +637,7 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
   document.addEventListener("click", function (e) {
     var t = e.target;
     if (t.matches("#windows button")) { state.window = t.dataset.window; persist(); load(); }
-    else if (t.matches(".hide-btn")) { state.hidden[t.closest("[data-panel]").dataset.panel] = true; persist(); applyHidden(); }
+    else if (t.matches("#view-overview .hide-btn")) { state.hidden[t.closest("[data-panel]").dataset.panel] = true; persist(); applyHidden(); }
     else if (t.id === "meters-btn") { var open = $("meters").hidden; $("meters").hidden = !open; t.setAttribute("aria-expanded", String(open)); }
   });
   document.addEventListener("change", function (e) {
@@ -445,5 +656,556 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
   applyHidden();
   load();
   lastWidth = $("activity").clientWidth;
+})();
+</script>
+<script>
+(function () {
+  "use strict";
+  var embedded = null;
+  try { embedded = JSON.parse(document.getElementById("embedded-metrics").textContent); } catch (e) { embedded = null; }
+  var demo = embedded && embedded.features;
+  var LIVE = !demo;
+  var nf = new Intl.NumberFormat("en-US");
+  function $(id) { return document.getElementById(id); }
+  function n(v) { return v == null ? "—" : nf.format(v); }
+  function pct(v, d) { return v == null ? "—" : (v * 100).toFixed(d == null ? 1 : d) + "%"; }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ""; }
+
+  var STATUS = { launched: "Launched", scheduled: "Scheduled", held: "Held", failed: "Failed" };
+  var STATUS_DATE = { launched: "Launched on", scheduled: "Scheduled for", held: "Held since", failed: "Failed on" };
+  var STATUS_HELP = { launched: "live with testers", scheduled: "starts in a coming update", held: "paused for rework", failed: "stopped by crashes or low ratings" };
+  var ICON = {
+    launched: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z" fill="currentColor"/></svg>',
+    scheduled: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 4.6V8l2.4 1.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    held: '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="2.6" height="10" rx="0.8" fill="currentColor"/><rect x="9.4" y="3" width="2.6" height="10" rx="0.8" fill="currentColor"/></svg>',
+    failed: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+  };
+  var OUTCOME = { "pending": "Pending", "dedicated update": "Dedicated update", "next major version": "Next major version",
+    "holiday or promotional event": "Holiday or promotional event", "back to testing": "Back to testing", "retired": "Retired" };
+  function statusChip(s) { return '<span class="status ' + s + '">' + ICON[s] + STATUS[s] + "</span>"; }
+
+  // ---- Data ---------------------------------------------------------------
+  var archiveCache = null;
+  function getArchive() {
+    if (demo) return Promise.resolve(demo);
+    return fetch("/api/features", { cache: "no-store" }).then(function (r) {
+      if (!r.ok) throw new Error("The server answered " + r.status + ".");
+      return r.json();
+    });
+  }
+  function getFeature(id) {
+    if (demo) return Promise.resolve(demo.details[id] || null);
+    return fetch("/api/features/" + encodeURIComponent(id), { cache: "no-store" }).then(function (r) {
+      if (r.status === 404) return null;
+      if (!r.ok) throw new Error("The server answered " + r.status + ".");
+      return r.json();
+    });
+  }
+  function showError(view, message) {
+    $(view).insertAdjacentHTML("afterbegin", '<div class="notice">' + esc(message) + "</div>");
+  }
+
+  // ---- Archive (top level) ---------------------------------------------------
+  var arch = { status: "", q: "", category: "", outcome: "", sort: "row", dir: 1 };
+  var ARCHIVE_COLUMNS = [
+    { key: "row", label: "#", num: true },
+    { key: "archive_status", label: "Archive status" },
+    { key: "status_date", label: "Status date" },
+    { key: "feature_id", label: "Feature ID" },
+    { key: "feature_name", label: "Feature" },
+    { key: "category", label: "Category" },
+    { key: "stage", label: "Review stage" },
+    { key: "rounds_done", label: "Rounds", num: true },
+    { key: "reviewers", label: "Reviewers", num: true },
+    { key: "reviews", label: "Reviews", num: true },
+    { key: "avg_rating", label: "Avg rating", num: true },
+    { key: "yes_share", label: "Yes vote", num: true },
+    { key: "outcome", label: "Outcome" },
+    { key: "collectables", label: "Collectables", num: true },
+    { key: "last_activity", label: "Last activity" }
+  ];
+
+  function cell(row, key) {
+    switch (key) {
+      case "row": return n(row.row);
+      case "archive_status": return statusChip(row.archive_status);
+      case "status_date": return esc(row.status_date) + '<span class="sub">' + STATUS_DATE[row.archive_status] + "</span>";
+      case "feature_id": return '<span style="font-family:var(--font-data)">' + esc(row.feature_id) + "</span>";
+      case "feature_name": return esc(row.feature_name);
+      case "category": return esc(cap(row.category));
+      case "rounds_done": return n(row.rounds_done) + " of " + n(row.rounds_planned);
+      case "avg_rating": return row.avg_rating == null ? "—" : row.avg_rating.toFixed(2);
+      case "yes_share":
+        if (row.yes_share == null) return "—";
+        var ok = row.yes_share >= row.vote_threshold;
+        return '<span class="' + (ok ? "pass" : "short") + '">' + pct(row.yes_share) + (ok ? " ✓" : "") + "</span>";
+      case "outcome": return esc(OUTCOME[row.outcome] || row.outcome) + (row.outcome_date ? '<span class="sub">' + esc(row.outcome_date) + "</span>" : "");
+      default: return typeof row[key] === "number" ? n(row[key]) : esc(row[key]);
+    }
+  }
+
+  function renderArchive(data) {
+    archiveCache = data;
+    var rows = data.rows;
+    var counts = { launched: 0, scheduled: 0, held: 0, failed: 0 };
+    rows.forEach(function (r) { counts[r.archive_status] += 1; });
+    $("status-cards").innerHTML = ['', 'launched', 'scheduled', 'held', 'failed'].map(function (s) {
+      var label = s ? statusChip(s) : '<span class="status">All test features</span>';
+      var count = s ? counts[s] : rows.length;
+      return '<button type="button" class="status-card" data-status="' + s + '" aria-pressed="' + (arch.status === s) + '">' + label +
+        "<b>" + n(count) + "</b><small>" + (s ? STATUS_HELP[s] : "in the archive") + "</small></button>";
+    }).join("");
+    function options(el, values, all, labels) {
+      var current = arch[el.id.replace("archive-", "")];
+      el.innerHTML = '<option value="">' + all + "</option>" + values.map(function (v) {
+        return '<option value="' + esc(v) + '"' + (v === current ? " selected" : "") + ">" + esc(labels ? labels[v] || v : cap(v)) + "</option>";
+      }).join("");
+    }
+    options($("archive-category"), uniq(rows.map(function (r) { return r.category; })), "All categories");
+    options($("archive-outcome"), uniq(rows.map(function (r) { return r.outcome; })), "All outcomes", OUTCOME);
+    $("archive-q").value = arch.q;
+    drawArchiveTable();
+    $("status-legend").innerHTML = Object.keys(STATUS).map(function (s) {
+      return "<span>" + statusChip(s) + " " + STATUS_DATE[s].toLowerCase() + " the status date</span>";
+    }).join("") + "<span>Yes vote ✓ means it reached the 90% bar.</span>";
+    Array.prototype.forEach.call(document.querySelectorAll("[data-export]"), function (a) {
+      setLink(a, "/api/features/export?kind=" + a.dataset.export + "&format=" + a.dataset.format);
+    });
+  }
+
+  function uniq(list) { return list.filter(function (v, i) { return v != null && list.indexOf(v) === i; }).sort(); }
+
+  function drawArchiveTable() {
+    var q = arch.q.trim().toLowerCase();
+    var rows = archiveCache.rows.filter(function (r) {
+      if (arch.status && r.archive_status !== arch.status) return false;
+      if (arch.category && r.category !== arch.category) return false;
+      if (arch.outcome && r.outcome !== arch.outcome) return false;
+      if (q && (r.feature_id + " " + r.feature_name + " " + (r.description || "")).toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
+    rows.sort(function (a, b) {
+      var x = a[arch.sort], y = b[arch.sort];
+      if (x == null && y == null) return 0;
+      if (x == null) return 1;
+      if (y == null) return -1;
+      return (x < y ? -1 : x > y ? 1 : 0) * arch.dir;
+    });
+    var head = "<thead><tr>" + ARCHIVE_COLUMNS.map(function (c) {
+      var sort = arch.sort === c.key ? (arch.dir > 0 ? "ascending" : "descending") : "none";
+      return '<th scope="col" data-sort="' + c.key + '" aria-sort="' + sort + '" tabindex="0"' + (c.num ? ' class="n"' : "") + ">" + c.label + "</th>";
+    }).join("") + '<th class="nosort"><span class="sr-only">Open</span></th></tr></thead>';
+    var body = rows.length ? rows.map(function (r) {
+      return '<tr tabindex="0" data-feature="' + esc(r.feature_id) + '">' + ARCHIVE_COLUMNS.map(function (c) {
+        return "<td" + (c.num ? ' class="n"' : "") + ">" + cell(r, c.key) + "</td>";
+      }).join("") + '<td><a href="#feature-' + esc(r.feature_id) + '">Open</a></td></tr>';
+    }).join("") : '<tr><td colspan="' + (ARCHIVE_COLUMNS.length + 1) + '">No test features match these filters.</td></tr>';
+    $("archive-table").innerHTML = head + "<tbody>" + body + "</tbody>";
+    $("archive-count").textContent = "Showing " + rows.length + " of " + archiveCache.rows.length + " test features";
+    Array.prototype.forEach.call(document.querySelectorAll(".status-card"), function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.status === arch.status));
+    });
+    refreshFind();
+  }
+
+  function setLink(a, href) {
+    if (LIVE) {
+      a.href = href;
+      a.setAttribute("download", "");
+      a.removeAttribute("aria-disabled");
+      a.removeAttribute("title");
+    } else {
+      a.removeAttribute("href");
+      a.setAttribute("aria-disabled", "true");
+      a.title = "Downloads work in the dashboard on your computer.";
+    }
+  }
+
+  // ---- One archive data point ---------------------------------------------------
+  var feat = null;
+  var cat = null;
+  var DEFAULT_COLUMNS = ["round", "round_kind", "date", "signup_method", "account_age_days", "app_version", "rating", "vote", "has_comment", "comment_words", "comment"];
+  var chosenColumns = DEFAULT_COLUMNS.slice();
+
+  function freshCatalogState() {
+    return { open: false, round: "", rating: [], vote: [], app_version: "", signup_method: [], account_age: "", comment: "", q: "", from: "", to: "", shown: 60 };
+  }
+
+  function renderFeature(d) {
+    feat = d;
+    cat = freshCatalogState();
+    var a = d.archive;
+    document.title = a.feature_id + " · EventLens Owner Dashboard";
+    $("crumb-id").textContent = "/ " + a.feature_id;
+    var vote = a.yes_share == null ? "No vote yet" : pct(a.yes_share) + " yes";
+    var bar = a.yes_share == null ? "" : '<div class="meter-bar" title="90% bar"><span style="width:' + (a.yes_share * 100).toFixed(1) + '%"></span><i style="left:' + (a.vote_threshold * 100) + '%"></i></div>';
+    var kpis = [
+      ["Reviewers", n(a.reviewers), "people who reviewed"],
+      ["Reviews", n(a.reviews), "across " + n(a.rounds_done) + " finished of " + n(a.rounds_planned) + " rounds"],
+      ["Response rate", pct(d.response_rate), "of invited testers"],
+      ["Avg rating", a.avg_rating == null ? "—" : a.avg_rating.toFixed(2), "feedback rounds, 1 to 5"],
+      ["Vote", vote, "bar: " + Math.round(a.vote_threshold * 100) + "% yes for a dedicated update", bar],
+      ["Collectables", n(a.collectables), a.outcome === "dedicated update" ? "issued to fully set-up accounts" : "issued after a dedicated update"]
+    ];
+    $("feature-head").innerHTML =
+      '<div class="chips">' + statusChip(a.archive_status) + '<span class="def" style="margin:0">' + STATUS_DATE[a.archive_status] + " " + esc(a.status_date) +
+      '</span><span class="pill">' + esc(cap(a.category)) + '</span><span class="pill">' + esc(a.stage) + '</span><span class="pill">Outcome: ' +
+      esc(OUTCOME[a.outcome] || a.outcome) + (a.outcome_date ? " (" + esc(a.outcome_date) + ")" : "") + "</span></div>" +
+      "<h2>" + esc(a.feature_name) + ' <span class="def" style="font-family:var(--font-data);font-size:14px">' + esc(a.feature_id) + "</span></h2>" +
+      '<p class="def">' + esc(a.description) + " · App version " + esc(a.app_version || "—") + "</p>" +
+      '<div class="kpis">' + kpis.map(function (k) {
+        return '<div class="kpi"><div class="label">' + k[0] + '</div><div class="value">' + k[1] + '</div><div class="sub">' + k[2] + "</div>" + (k[3] || "") + "</div>";
+      }).join("") + "</div>";
+
+    var head = "<tr><th>Round</th><th>Type</th><th>Opened</th><th>Closed</th><th class=n>Invited</th><th class=n>Reviewers</th><th class=n>Response</th><th class=n>Avg rating</th><th>Rating mix</th><th class=n>Yes</th><th class=n>No</th><th class=n>Abstain</th><th class=n>Yes share</th><th>Decision</th></tr>";
+    $("rounds-table").innerHTML = head + (d.rounds.length ? d.rounds.map(function (r) {
+      var total = r.rating_1 + r.rating_2 + r.rating_3 + r.rating_4 + r.rating_5;
+      var mix = total ? '<div class="mix" role="img" aria-label="Rating mix">' + [1, 2, 3, 4, 5].map(function (k) {
+        var v = r["rating_" + k];
+        return v ? '<span class="r' + k + '" style="flex:' + v + '" title="' + k + ": " + v + " (" + pct(v / total, 0) + ')"></span>' : "";
+      }).join("") + "</div>" : "—";
+      return "<tr><td>" + r.round + "</td><td>" + cap(r.round_kind) + "</td><td>" + esc((r.opened_at || "").slice(0, 10)) + "</td><td>" +
+        (r.closed_at ? esc(r.closed_at.slice(0, 10)) : '<span class="status launched">Open</span>') + "</td><td class=n>" + n(r.invited) +
+        "</td><td class=n>" + n(r.reviewers) + "</td><td class=n>" + pct(r.response_rate, 0) + "</td><td class=n>" + (r.avg_rating == null ? "—" : r.avg_rating.toFixed(2)) +
+        "</td><td>" + mix + "</td><td class=n>" + (r.round_kind === "vote" ? n(r.yes) : "—") + "</td><td class=n>" + (r.round_kind === "vote" ? n(r.no) : "—") +
+        "</td><td class=n>" + (r.round_kind === "vote" ? n(r.abstain) : "—") + "</td><td class=n>" + (r.yes_share == null ? "—" : pct(r.yes_share)) + "</td><td>" + esc(r.decision || (r.closed_at ? "" : "In progress")) + "</td></tr>";
+    }).join("") : '<tr><td colspan="14">No rounds yet. This test is ' + esc(STATUS_HELP[a.archive_status]) + ".</td></tr>");
+
+    $("columns-pick").innerHTML = d.columns.map(function (c) {
+      return '<label title="' + esc(c.meaning) + '"><input type="checkbox" data-column="' + c.name + '"' + (chosenColumns.indexOf(c.name) >= 0 ? " checked" : "") + "> " + esc(c.name) + "</label>";
+    }).join("");
+    $("export-note").innerHTML = LIVE ? "Files download to this computer. Nothing leaves it." :
+      "This is the shareable demo: downloads and the notebook work in the dashboard on your computer.";
+    $("catalog-open").textContent = "Open the complete review catalog (" + n(d.reviews.length) + " reviews)";
+    $("catalog-open").setAttribute("aria-expanded", "false");
+    $("catalog-open").disabled = !d.reviews.length;
+    $("catalog").hidden = true;
+    closeNotebook();
+    updateExports();
+    refreshFind();
+  }
+
+  function filteredReviews() {
+    var q = cat.q.trim().toLowerCase();
+    return feat.reviews.filter(function (r) {
+      if (cat.round && String(r.round) !== cat.round) return false;
+      if (cat.rating.length && cat.rating.indexOf(String(r.rating)) < 0) return false;
+      if (cat.vote.length && cat.vote.indexOf(r.vote || "") < 0) return false;
+      if (cat.app_version && r.app_version !== cat.app_version) return false;
+      if (cat.signup_method.length && cat.signup_method.indexOf(r.signup_method) < 0) return false;
+      if (cat.account_age && r.account_age !== cat.account_age) return false;
+      if (cat.comment === "with" && !r.has_comment) return false;
+      if (cat.comment === "without" && r.has_comment) return false;
+      if (cat.from && r.date < cat.from) return false;
+      if (cat.to && r.date > cat.to) return false;
+      if (q && ((r.comment || "") + " " + (r.account_id || "") + " " + r.review_id).toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
+  }
+
+  function filterParams() {
+    var p = [];
+    ["round", "app_version", "account_age", "comment", "q", "from", "to"].forEach(function (k) { if (cat[k]) p.push(k + "=" + encodeURIComponent(cat[k])); });
+    ["rating", "vote", "signup_method"].forEach(function (k) { if (cat[k].length) p.push(k + "=" + encodeURIComponent(cat[k].join(","))); });
+    return p;
+  }
+
+  function updateExports() {
+    if (!feat) return;
+    var id = encodeURIComponent(feat.archive.feature_id);
+    var useFilters = $("use-filters").checked;
+    Array.prototype.forEach.call(document.querySelectorAll("[data-fexport]"), function (a) {
+      var params = ["kind=" + a.dataset.fexport, "format=" + a.dataset.format];
+      if (a.dataset.fexport === "custom") {
+        params.push("columns=" + encodeURIComponent(chosenColumns.join(",")));
+        if (useFilters) params = params.concat(filterParams());
+      }
+      setLink(a, "/api/features/" + id + "/export?" + params.join("&"));
+    });
+    $("column-count").textContent = chosenColumns.length + " of " + feat.columns.length;
+    $("custom-rows").textContent = n(useFilters ? filteredReviews().length : feat.reviews.length);
+  }
+
+  // ---- Review catalog -------------------------------------------------------------
+  function catalogOptions() {
+    return cat.round ? feat.filters.rounds[cat.round] || feat.filters.all : feat.filters.all;
+  }
+
+  function renderCatalogFilters() {
+    var o = catalogOptions();
+    // Drop choices the selected round doesn't contain.
+    cat.rating = cat.rating.filter(function (v) { return o.rating.map(String).indexOf(v) >= 0; });
+    cat.vote = cat.vote.filter(function (v) { return o.vote.indexOf(v) >= 0; });
+    cat.signup_method = cat.signup_method.filter(function (v) { return o.signup_method.indexOf(v) >= 0; });
+    if (o.app_version.indexOf(cat.app_version) < 0) cat.app_version = "";
+    if (o.account_age.indexOf(cat.account_age) < 0) cat.account_age = "";
+    if (o.comment.indexOf(cat.comment) < 0) cat.comment = "";
+    if (cat.from && (cat.from < o.from || cat.from > o.to)) cat.from = "";
+    if (cat.to && (cat.to < o.from || cat.to > o.to)) cat.to = "";
+
+    function chips(key, values, label) {
+      if (!values.length) return "";
+      return '<div class="field"><span>' + label + '</span><div class="chipset" data-chips="' + key + '">' + values.map(function (v) {
+        return '<button type="button" data-value="' + esc(v) + '" aria-pressed="' + (cat[key].indexOf(String(v)) >= 0) + '">' + esc(cap(String(v))) + "</button>";
+      }).join("") + "</div></div>";
+    }
+    function select(key, values, label, all) {
+      if (!values.length) return "";
+      return '<label class="field"><span>' + label + '</span><select data-filter="' + key + '"><option value="">' + all + "</option>" + values.map(function (v) {
+        return '<option value="' + esc(v) + '"' + (cat[key] === v ? " selected" : "") + ">" + esc(cap(v)) + "</option>";
+      }).join("") + "</select></label>";
+    }
+    var rounds = feat.rounds.map(function (r) {
+      return '<option value="' + r.round + '"' + (cat.round === String(r.round) ? " selected" : "") + ">Round " + r.round + " · " + cap(r.round_kind) + " (" + n((feat.filters.rounds[String(r.round)] || { count: 0 }).count) + ")</option>";
+    }).join("");
+    $("catalog-filters").innerHTML =
+      '<label class="field"><span>Round</span><select data-filter="round"><option value="">All rounds (' + n(feat.reviews.length) + ")</option>" + rounds + "</select></label>" +
+      chips("rating", o.rating.map(String), "Rating") + chips("vote", o.vote, "Vote") +
+      select("app_version", o.app_version, "App version", "All versions") +
+      chips("signup_method", o.signup_method, "Sign-up method") +
+      select("account_age", o.account_age, "Account age", "Any age") +
+      select("comment", o.comment, "Comments", "With or without") +
+      '<label class="field"><span>From</span><input type="date" data-filter="from" min="' + esc(o.from) + '" max="' + esc(o.to) + '" value="' + esc(cat.from) + '"></label>' +
+      '<label class="field"><span>To</span><input type="date" data-filter="to" min="' + esc(o.from) + '" max="' + esc(o.to) + '" value="' + esc(cat.to) + '"></label>' +
+      '<label class="field" style="grid-column:1/-1"><span>Search reviews (comments, account or review ID)</span><input type="search" data-filter="q" value="' + esc(cat.q) + '" placeholder="Search the whole catalog"></label>';
+  }
+
+  function renderCatalogRows() {
+    var rows = filteredReviews();
+    var shown = rows.slice(0, cat.shown);
+    $("catalog-count").textContent = "Showing " + n(shown.length) + " of " + n(rows.length) + " matching reviews" + (rows.length > shown.length ? " (scroll for more)" : "");
+    $("catalog-table").innerHTML = "<thead><tr><th>Review ID</th><th class=n>Round</th><th>Date</th><th>Account</th><th>Sign-up</th><th class=n>Account age</th><th>Version</th><th class=n>Rating</th><th>Vote</th><th>Comment</th></tr></thead><tbody>" +
+      (shown.length ? shown.map(function (r) {
+        return '<tr><td style="font-family:var(--font-data);font-size:12px">' + esc(r.review_id) + "</td><td class=n>" + r.round + "</td><td>" + esc(r.date) + "</td><td>" + esc(r.account_id) +
+          "</td><td>" + esc(cap(r.signup_method)) + "</td><td class=n>" + (r.account_age_days == null ? "—" : n(r.account_age_days) + " d") + "</td><td>" + esc(r.app_version) +
+          "</td><td class=n>" + (r.rating == null ? "—" : r.rating) + "</td><td>" + esc(cap(r.vote || "")) + '</td><td class="comment">' + esc(r.comment) + "</td></tr>";
+      }).join("") : '<tr><td colspan="10">No reviews match these filters.</td></tr>') + "</tbody>";
+    updateExports();
+    refreshFind();
+  }
+
+  var observer = window.IntersectionObserver ? new IntersectionObserver(function (entries) {
+    if (entries[0].isIntersecting && cat && cat.open && cat.shown < filteredReviews().length) {
+      cat.shown += 60;
+      renderCatalogRows();
+    }
+  }, { rootMargin: "400px" }) : null;
+  if (observer) observer.observe($("catalog-more"));
+
+  // ---- Built-in notebook ----------------------------------------------------------
+  function notebookQuery() {
+    var p = ["feature=" + encodeURIComponent(feat.archive.feature_id), "columns=" + encodeURIComponent(chosenColumns.join(","))];
+    if ($("use-filters").checked) p = p.concat(filterParams());
+    return p.join("&");
+  }
+  function openNotebook() {
+    $("notebook-panel").hidden = false;
+    $("notebook-title").textContent = "Notebook · " + feat.archive.feature_id + " · " + feat.archive.feature_name;
+    var body = $("notebook-body");
+    if (!LIVE) {
+      body.innerHTML = '<div class="callout">In the dashboard on your computer, this opens a fresh Jupyter notebook right here, already loaded with the custom export. The shareable demo can\'t run it.</div>';
+      refreshFind();
+      return;
+    }
+    body.innerHTML = '<div class="callout">Preparing a fresh notebook…</div>';
+    fetch("/api/notebook/open?" + notebookQuery(), { cache: "no-store" }).then(function (r) {
+      return r.json().then(function (j) { return { ok: r.ok, body: j }; });
+    }).then(function (res) {
+      if (!res.ok) {
+        body.innerHTML = '<div class="callout">' + esc(res.body.error || "The notebook couldn't open.") +
+          '<br>Run once, with internet: <code>python -m eventlens_dashboard notebook-setup</code>, then press Open in notebook again.</div>';
+        return;
+      }
+      body.innerHTML = '<iframe class="notebook-frame" title="Jupyter notebook for ' + esc(feat.archive.feature_id) + '" src="' + esc(res.body.url) + '"></iframe>';
+      $("notebook-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+    }).catch(function (e) {
+      body.innerHTML = '<div class="callout">The notebook couldn\'t open: ' + esc(e.message) + "</div>";
+    });
+  }
+  function closeNotebook() {
+    $("notebook-panel").hidden = true;
+    $("notebook-body").innerHTML = "";
+  }
+
+  // ---- Find on this screen -----------------------------------------------------------
+  var find = { ranges: [], index: -1 };
+  var LINE = 21;
+  function activeView() { return document.querySelector(".view:not([hidden])"); }
+  function refreshFind() {
+    var bar = document.querySelector("header.bar");
+    if (bar) document.documentElement.style.setProperty("--bar-h", bar.offsetHeight + "px");
+    var view = activeView();
+    var heavy = view && Math.round(view.scrollHeight / LINE) > 30;
+    $("findline").hidden = !heavy;
+    if (heavy && $("find-input").value) runFind(false);
+    if (!heavy) clearHighlights();
+  }
+  function clearHighlights() {
+    if (window.CSS && CSS.highlights) { CSS.highlights.delete("find-all"); CSS.highlights.delete("find-current"); }
+    find.ranges = []; find.index = -1;
+    $("find-count").textContent = "";
+  }
+  function runFind(move) {
+    var query = $("find-input").value.trim().toLowerCase();
+    var keep = find.index;
+    clearHighlights();
+    if (!query) return;
+    var view = activeView();
+    var walker = document.createTreeWalker(view, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (node) {
+        var el = node.parentElement;
+        if (!el || el.closest("script,style,select,option,[hidden]") || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        return el.offsetParent === null && getComputedStyle(el).position !== "fixed" ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var node;
+    while ((node = walker.nextNode())) {
+      var text = node.nodeValue.toLowerCase();
+      var at = text.indexOf(query);
+      while (at >= 0) {
+        var range = document.createRange();
+        range.setStart(node, at);
+        range.setEnd(node, at + query.length);
+        find.ranges.push(range);
+        at = text.indexOf(query, at + query.length);
+      }
+    }
+    if (!find.ranges.length) { $("find-count").textContent = "No matches"; return; }
+    find.index = move ? 0 : Math.min(Math.max(keep, 0), find.ranges.length - 1);
+    paint(move);
+  }
+  function paint(scroll) {
+    if (window.CSS && CSS.highlights && window.Highlight) {
+      CSS.highlights.set("find-all", new Highlight(...find.ranges));
+      CSS.highlights.set("find-current", new Highlight(find.ranges[find.index]));
+    }
+    $("find-count").textContent = (find.index + 1) + " of " + find.ranges.length;
+    if (scroll) {
+      var el = find.ranges[find.index].startContainer.parentElement;
+      var details = el.closest("details");
+      if (details && !details.open) details.open = true;
+      el.scrollIntoView({ block: "center" });
+    }
+  }
+  function step(dir) {
+    if (!find.ranges.length) { runFind(true); return; }
+    find.index = (find.index + dir + find.ranges.length) % find.ranges.length;
+    paint(true);
+  }
+  $("find-input").addEventListener("input", function () { runFind(true); });
+  $("find-input").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); step(e.shiftKey ? -1 : 1); }
+    if (e.key === "Escape") { $("find-input").value = ""; clearHighlights(); }
+  });
+  $("find-next").addEventListener("click", function () { step(1); });
+  $("find-prev").addEventListener("click", function () { step(-1); });
+  document.addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f" && !$("findline").hidden) {
+      e.preventDefault();
+      $("find-input").focus();
+      $("find-input").select();
+    }
+  });
+  window.addEventListener("resize", function () { refreshFind(); });
+  window.EventLensFind = { refresh: refreshFind };
+
+  // ---- Events ---------------------------------------------------------------------------
+  document.addEventListener("click", function (e) {
+    var t = e.target;
+    var card = t.closest(".status-card");
+    if (card) { arch.status = card.dataset.status; drawArchiveTable(); return; }
+    var th = t.closest("table.archive th[data-sort]");
+    if (th) { sortBy(th.dataset.sort); return; }
+    var row = t.closest("table.archive tbody tr[data-feature]");
+    if (row && !t.closest("a")) { location.hash = "#feature-" + row.dataset.feature; return; }
+    if (t.closest("a[aria-disabled='true']")) { e.preventDefault(); return; }
+    if (t.id === "archive-clear") { arch = { status: "", q: "", category: "", outcome: "", sort: arch.sort, dir: arch.dir }; renderArchive(archiveCache); return; }
+    if (t.id === "catalog-open") {
+      cat.open = !cat.open;
+      $("catalog").hidden = !cat.open;
+      t.setAttribute("aria-expanded", String(cat.open));
+      t.textContent = (cat.open ? "Close" : "Open") + " the complete review catalog (" + n(feat.reviews.length) + " reviews)";
+      if (cat.open) { renderCatalogFilters(); renderCatalogRows(); } else refreshFind();
+      return;
+    }
+    if (t.id === "catalog-clear") { var open = cat.open; cat = freshCatalogState(); cat.open = open; renderCatalogFilters(); renderCatalogRows(); return; }
+    var chip = t.closest("[data-chips] button");
+    if (chip) {
+      var key = chip.parentElement.dataset.chips, value = chip.dataset.value, list = cat[key];
+      var i = list.indexOf(value);
+      if (i >= 0) list.splice(i, 1); else list.push(value);
+      cat.shown = 60;
+      renderCatalogFilters(); renderCatalogRows();
+      return;
+    }
+    if (t.id === "open-notebook" || t.id === "notebook-fresh") { openNotebook(); return; }
+    if (t.id === "notebook-close") { closeNotebook(); refreshFind(); }
+  });
+  document.addEventListener("keydown", function (e) {
+    var th = e.target.closest && e.target.closest("table.archive th[data-sort]");
+    if (th && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); sortBy(th.dataset.sort); }
+    var row = e.target.closest && e.target.closest("table.archive tbody tr[data-feature]");
+    if (row && e.key === "Enter") location.hash = "#feature-" + row.dataset.feature;
+  });
+  function sortBy(key) {
+    if (arch.sort === key) arch.dir = -arch.dir; else { arch.sort = key; arch.dir = 1; }
+    drawArchiveTable();
+  }
+  document.addEventListener("input", function (e) {
+    var t = e.target;
+    if (t.id === "archive-q") { arch.q = t.value; drawArchiveTable(); }
+    else if (t.dataset && t.dataset.filter === "q") { cat.q = t.value; cat.shown = 60; renderCatalogRows(); }
+  });
+  document.addEventListener("change", function (e) {
+    var t = e.target;
+    if (t.id === "archive-category") { arch.category = t.value; drawArchiveTable(); }
+    else if (t.id === "archive-outcome") { arch.outcome = t.value; drawArchiveTable(); }
+    else if (t.dataset && t.dataset.filter && t.dataset.filter !== "q") {
+      cat[t.dataset.filter] = t.value; cat.shown = 60;
+      if (t.dataset.filter === "round") renderCatalogFilters();
+      renderCatalogRows();
+    } else if (t.dataset && t.dataset.column) {
+      var name = t.dataset.column;
+      if (t.checked && chosenColumns.indexOf(name) < 0) chosenColumns.push(name);
+      if (!t.checked) chosenColumns = chosenColumns.filter(function (c) { return c !== name; });
+      if (!chosenColumns.length) { chosenColumns = [name]; t.checked = true; }
+      chosenColumns = feat.columns.map(function (c) { return c.name; }).filter(function (c) { return chosenColumns.indexOf(c) >= 0; });
+      updateExports();
+    } else if (t.id === "use-filters") updateExports();
+  });
+
+  // ---- Routing ---------------------------------------------------------------------------
+  function show(view) {
+    ["overview", "archive", "feature"].forEach(function (v) { $("view-" + v).hidden = v !== view; });
+    $("overview-controls").hidden = view !== "overview";
+    Array.prototype.forEach.call(document.querySelectorAll(".tabs a"), function (a) {
+      if (a.dataset.view === (view === "feature" ? "archive" : view)) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
+    $("find-input").value = "";
+    clearHighlights();
+  }
+  function route() {
+    var hash = location.hash.replace(/^#/, "");
+    if (hash === "features") {
+      show("archive");
+      document.title = "Feature-test archive · EventLens Owner Dashboard";
+      getArchive().then(renderArchive).catch(function (e) { showError("view-archive", "Couldn't load the archive: " + e.message); });
+    } else if (hash.indexOf("feature-") === 0) {
+      show("feature");
+      var id = hash.slice("feature-".length);
+      getFeature(id).then(function (d) {
+        if (!d) { location.hash = "#features"; return; }
+        renderFeature(d);
+        window.scrollTo(0, 0);
+      }).catch(function (e) { showError("view-feature", "Couldn't load " + id + ": " + e.message); });
+    } else {
+      show("overview");
+      document.title = "EventLens Owner Dashboard";
+      refreshFind();
+    }
+  }
+  window.addEventListener("hashchange", route);
+  route();
 })();
 </script>

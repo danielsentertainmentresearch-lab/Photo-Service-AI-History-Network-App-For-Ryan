@@ -7,6 +7,10 @@ accounts   one row per created account, linked to its install
 activity   things people did, by install and (once signed up) account
 sessions   app sessions with their length and whether they crashed
 crashes    crash reports, linked to a session
+features         test features (the feature-test archive)
+feature_rounds   feedback and vote rounds of each test feature
+feature_reviews  individual reviews (the complete review catalog)
+collectables     recognition linked to a shipped feature, per account
 
 Times are stored as ISO 8601 UTC strings ("2026-10-03T14:05:00").
 """
@@ -56,6 +60,48 @@ CREATE TABLE IF NOT EXISTS crashes (
   signature   TEXT NOT NULL,
   message     TEXT NOT NULL DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS features (
+  feature_id     TEXT PRIMARY KEY,
+  name           TEXT NOT NULL,
+  category       TEXT NOT NULL,
+  description    TEXT NOT NULL DEFAULT '',
+  status         TEXT NOT NULL,
+  status_date    TEXT NOT NULL,
+  created_at     TEXT NOT NULL,
+  app_version    TEXT NOT NULL DEFAULT '',
+  planned_rounds INTEGER NOT NULL DEFAULT 1,
+  outcome        TEXT NOT NULL DEFAULT 'pending',
+  outcome_date   TEXT,
+  vote_threshold REAL NOT NULL DEFAULT 0.9
+);
+CREATE TABLE IF NOT EXISTS feature_rounds (
+  feature_id  TEXT NOT NULL,
+  round       INTEGER NOT NULL,
+  kind        TEXT NOT NULL,
+  opened_at   TEXT NOT NULL,
+  closed_at   TEXT,
+  invited     INTEGER NOT NULL DEFAULT 0,
+  decision    TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (feature_id, round)
+);
+CREATE TABLE IF NOT EXISTS feature_reviews (
+  review_id   TEXT PRIMARY KEY,
+  feature_id  TEXT NOT NULL,
+  round       INTEGER NOT NULL,
+  account_id  TEXT,
+  at          TEXT NOT NULL,
+  rating      INTEGER,
+  vote        TEXT,
+  comment     TEXT NOT NULL DEFAULT '',
+  app_version TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS collectables (
+  feature_id  TEXT NOT NULL,
+  account_id  TEXT NOT NULL,
+  issued_at   TEXT NOT NULL,
+  PRIMARY KEY (feature_id, account_id)
+);
+CREATE INDEX IF NOT EXISTS reviews_feature ON feature_reviews(feature_id, round);
 CREATE TABLE IF NOT EXISTS meta (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -85,6 +131,16 @@ ACTIVITY_KINDS = (
 )
 
 SIGNUP_METHODS = ("email", "phone", "google", "web3")
+
+# Feature-test archive vocabulary.
+FEATURE_STATUSES = ("launched", "scheduled", "held", "failed")
+FEATURE_CATEGORIES = ("edge case", "frontier", "expert", "experimental",
+                      "unique", "new")
+FEATURE_OUTCOMES = ("pending", "dedicated update", "next major version",
+                    "holiday or promotional event", "back to testing",
+                    "retired")
+ROUND_KINDS = ("feedback", "vote")
+VOTES = ("yes", "no", "abstain")
 
 # Reach vs utilization: each step is a milestone an install can reach.
 REACH_STEPS = (
@@ -152,7 +208,8 @@ def get_meta(db, key, default=None):
 
 def clear(db):
     for table in ("installs", "accounts", "activity", "sessions", "crashes",
-                  "meta"):
+                  "features", "feature_rounds", "feature_reviews",
+                  "collectables", "meta"):
         db.execute("DELETE FROM " + table)
     db.commit()
 
@@ -168,6 +225,11 @@ def _need(record, *keys):
         if record.get(key) in (None, ""):
             raise IngestError("'%s' is missing in a %s record"
                               % (key, record.get("type", "?")))
+
+
+def _one_of(record, key, allowed):
+    if record.get(key) not in allowed:
+        raise IngestError("unknown %s '%s'" % (key, record.get(key)))
 
 
 def ingest(db, records):
@@ -233,6 +295,63 @@ def ingest(db, records):
                      record.get("account_id"), iso(parse_time(record["at"])),
                      record.get("app_version", ""), record["signature"][:300],
                      str(record.get("message", ""))[:2000])))
+            elif kind == "feature":
+                _need(record, "feature_id", "name", "category", "status",
+                      "status_date", "at")
+                _one_of(record, "category", FEATURE_CATEGORIES)
+                _one_of(record, "status", FEATURE_STATUSES)
+                outcome = record.get("outcome", "pending")
+                if outcome not in FEATURE_OUTCOMES:
+                    raise IngestError("unknown outcome '%s'" % outcome)
+                rows.append((
+                    "INSERT OR REPLACE INTO features VALUES"
+                    " (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (record["feature_id"], record["name"], record["category"],
+                     record.get("description", ""), record["status"],
+                     iso(parse_time(record["status_date"])),
+                     iso(parse_time(record["at"])),
+                     record.get("app_version", ""),
+                     max(1, int(record.get("planned_rounds", 1))), outcome,
+                     iso(parse_time(record["outcome_date"]))
+                     if record.get("outcome_date") else None,
+                     float(record.get("vote_threshold", 0.9)))))
+            elif kind == "feature_round":
+                _need(record, "feature_id", "round", "kind", "opened_at")
+                _one_of(record, "kind", ROUND_KINDS)
+                rows.append((
+                    "INSERT OR REPLACE INTO feature_rounds VALUES"
+                    " (?, ?, ?, ?, ?, ?, ?)",
+                    (record["feature_id"], int(record["round"]),
+                     record["kind"], iso(parse_time(record["opened_at"])),
+                     iso(parse_time(record["closed_at"]))
+                     if record.get("closed_at") else None,
+                     max(0, int(record.get("invited", 0))),
+                     str(record.get("decision", ""))[:200])))
+            elif kind == "feature_review":
+                _need(record, "review_id", "feature_id", "round", "at")
+                rating = record.get("rating")
+                if rating is not None and int(rating) not in (1, 2, 3, 4, 5):
+                    raise IngestError("rating must be 1 to 5")
+                vote = record.get("vote")
+                if vote is not None and vote not in VOTES:
+                    raise IngestError("vote must be yes, no or abstain")
+                if rating is None and vote is None:
+                    raise IngestError("a review needs a rating or a vote")
+                rows.append((
+                    "INSERT OR REPLACE INTO feature_reviews VALUES"
+                    " (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (record["review_id"], record["feature_id"],
+                     int(record["round"]), record.get("account_id"),
+                     iso(parse_time(record["at"])),
+                     int(rating) if rating is not None else None, vote,
+                     str(record.get("comment", ""))[:4000],
+                     record.get("app_version", ""))))
+            elif kind == "collectable":
+                _need(record, "feature_id", "account_id", "at")
+                rows.append((
+                    "INSERT OR IGNORE INTO collectables VALUES (?, ?, ?)",
+                    (record["feature_id"], record["account_id"],
+                     iso(parse_time(record["at"])))))
             else:
                 raise IngestError("unknown record type '%s'" % kind)
         except (TypeError, ValueError) as error:
@@ -483,9 +602,25 @@ def metrics(db, window="30", now=None):
         "rewarded_videos": totals.get("ad_watched", 0),
     }
 
+    # Feature testing: reviews in the window, and the archive's state.
+    from . import features as feature_archive
+    review_rows = db.execute(
+        "SELECT account_id FROM feature_reviews WHERE at >= ?", (since,)
+    ).fetchall()
+    reviewers = {r["account_id"] for r in review_rows if r["account_id"]}
+    features.append({
+        "key": "feature_review", "label": "Feature test reviews",
+        "total": len(review_rows), "accounts": len(reviewers),
+        "share_of_active": _ratio(len(reviewers & active), len(active)),
+    })
+    testing = feature_archive.summary(db)
+    lifetime["feature_reviews"] = testing["reviews"]
+    lifetime["collectables"] = testing["collectables"]
+
     return {
         "window": window,
         "as_of": iso(now),
+        "feature_testing": testing,
         "from": first_day.isoformat(),
         "source": get_meta(db, "source", "app"),
         "summary": summary,

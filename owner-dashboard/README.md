@@ -7,7 +7,9 @@ It runs on your own computer and can only be opened from that computer
 (it listens on `127.0.0.1`). It shows how the app is used: how many created
 accounts actually use EventLens, how far new installs get (reach vs
 utilization), the sign-up funnel, weekly retention, feature use, crashes,
-and lifetime totals.
+lifetime totals, and the **feature-test archive** (every test feature, its
+review stages, the complete review catalog, exports and a built-in Jupyter
+notebook).
 
 Until the app is connected (the final build stage), the dashboard shows
 **demo data**, labelled as such on every screen.
@@ -114,7 +116,69 @@ What the main measures mean:
 | Utilization depth | Live accounts by number of events recorded, all time |
 | Crash-free sessions | Sessions without a crash, by app version, plus the most frequent crashes |
 
-## 5. Other commands
+## 5. The feature-test archive
+
+Open **Feature tests** at the top. The archive lists every test feature:
+
+| Column | Meaning |
+|---|---|
+| # | Row number |
+| Archive status | **Launched** (live with testers), **Scheduled** (starts in a coming update), **Held** (paused for rework) or **Failed** (stopped by crashes or low ratings) |
+| Status date | The date that goes with the status: launched on, scheduled for, held since, or failed on |
+| Feature ID, Feature, Category | Which test, and its kind: edge case, frontier, expert, experimental, unique or new |
+| Review stage | Not started, feedback round open, voting open, under review, on hold, stopped or decided |
+| Rounds | Finished rounds of planned rounds |
+| Reviewers, Reviews, Avg rating | Totals across feedback rounds (ratings 1-5) |
+| Yes vote | Latest vote; ✓ means it reached the 90% bar for a dedicated update |
+| Outcome | Dedicated update, next major version, holiday or promotional event, back to testing, retired, or pending |
+| Collectables | Recognition issued to fully set-up accounts after a dedicated update (never bought or sold) |
+| Last activity | The latest date anything happened |
+
+Click a status card to filter, click a column title to sort, and use the
+search, category and outcome filters. **Export the archive** gives a simple
+list (one row per feature) or the complete list (every review of every
+feature), as CSV or JSON.
+
+Open a row to see that feature's page:
+
+- **Review stages**: each feedback and vote round in aggregate, with the
+  rating mix and vote shares.
+- **Exports**:
+  - **simple vector list**: one row per round, as CSV or JSON;
+  - **complete vector list**: every review with every field, as CSV or JSON;
+  - **custom analysis export**: pick columns, and the catalog filters apply.
+    **Open in notebook** opens it in a fresh Jupyter notebook right on the
+    page, with no other program, browser tab or window. **Analysis kit
+    (.zip)** is for other tools and holds CSV, JSON, a notebook (.ipynb), a
+    pandas script (.py), a SQLite database and a README.
+- **Complete review catalog** (optional, opens on request): every review.
+  The filters only offer what the selected round contains (ratings in
+  feedback rounds, votes in vote rounds, and the versions, sign-up methods,
+  account ages and dates that actually occur). It loads more as you scroll.
+
+### Built-in notebook (one-time setup)
+
+The notebook is JupyterLite, the official Jupyter that runs inside the page.
+Install it once, with an internet connection:
+
+```
+python3 -m eventlens_dashboard notebook-setup     # Windows: py -m eventlens_dashboard notebook-setup
+```
+
+It goes into the data folder (about 70 MB). Each **Open in notebook** starts
+a new notebook that keeps nothing; use **File → Download** inside it to keep
+your work. The first run of each session loads Python (Pyodide) from the
+jsDelivr CDN, so it needs internet.
+
+### Find on this screen
+
+Long screens (more than about 30 lines) show a **Find on this screen** line
+under the header. Type to highlight matches; Enter or ↓ goes to the next,
+Shift+Enter or ↑ to the previous, Esc clears. Ctrl+F (Cmd+F on a Mac) jumps
+to it. To search every review, not just the ones on screen, use the
+catalog's own search box.
+
+## 6. Other commands
 
 ```
 python3 -m eventlens_dashboard demo                 # replace the data with fresh demo data
@@ -122,19 +186,22 @@ python3 -m eventlens_dashboard reset --yes          # delete every stored metric
 python3 -m eventlens_dashboard export-demo FILE.html  # one self-contained demo page to share
 ```
 
-## 6. Security notes
+## 7. Security notes
 
 - Only this computer can open the dashboard. Integration partners get
   their own copy or an export, never a link to yours.
 - Metrics arrive at `POST /api/ingest` with the ingest token from
-  `config.json` (`Authorization: Bearer …`). Batches are all-or-nothing:
-  one bad record rejects the batch.
+  `config.json` (`Authorization: Bearer …`), as `{"records": [...]}`.
+  Record types: `install`, `account`, `account_deleted`, `activity`,
+  `session`, `crash`, and for the archive `feature`, `feature_round`,
+  `feature_review` and `collectable`. Batches are all-or-nothing: one bad
+  record rejects the batch.
 - How the app's metrics reach this computer is decided in the final
   stage (options in `docs/LAUNCH_CHECKLIST.md`). Before any real usage
   data is sent, the privacy policy needs a line about it and the app
   needs to ask for consent.
 
-## 7. For developers
+## 8. For developers
 
 ```
 cd owner-dashboard
@@ -142,5 +209,6 @@ python3 -m unittest discover -s tests -v
 ```
 
 Layout: `eventlens_dashboard/store.py` (database and every measure),
+`features.py` (feature-test archive, filters and exports),
 `server.py` (local web server), `demo.py` (example data),
 `__main__.py` (commands), `web/index.html` (the page).

@@ -1,11 +1,23 @@
-# Build stage 1: debrief
+# Build stage 1: official deliverable
 
-_EventLens · 2–3 October 2026 · status: complete, waiting for the owner's
-review_
+_EventLens · 2–4 October 2026 · status: **ended**, signed off by the owner
+on 4 October 2026 · git tag `build-stage-1`_
 
 This document closes build stage 1. It describes every mechanism, part and
 feature built in stage 1, and every notable change, addition and correction.
 Later stages refer back to it only when stage 1 context is needed.
+
+## Deliverables
+
+| Item | Where |
+|---|---|
+| Android app (test APK) | `latest-build` release: <https://github.com/danielsentertainmentresearch-lab/Photo-Service-AI-History-Network-App-For-Ryan/releases/download/latest-build/eventlens-latest.apk> (sign in with "Continue as reviewer") |
+| Source code | `main` at tag `build-stage-1` |
+| Owner dashboard | `owner-dashboard/` (zip sent to the owner by direct message or email; guide in its README) |
+| This document | `docs/BUILD_STAGE_1.md` |
+| Launch checklist | `docs/LAUNCH_CHECKLIST.md` and the shared "EventLens Launch Checklist" page |
+| Store materials | `store/` (listing, data-safety answers, icon, graphics, screenshots) |
+| Release guide and privacy policy | `RELEASE.md`, `PRIVACY_POLICY.md` |
 
 ---
 
@@ -37,6 +49,8 @@ Platform: Android, built with Flutter (Dart). Repository:
 | 8 | Screen-by-screen tests; launch checklist and standing reminder | `68f92ab`, `ea989d3` |
 | 9 | Per-account libraries, photo dates and places, On this day, export, optional weather, recent-apps privacy | `3c2a748` |
 | 10 | Full debug (6 confirmed bugs fixed, see §5), Your data dashboard, export unlock at 100 events, analysis CSV and data guide, Web3 identities, owner metrics dashboard demo | `0dedd3b` |
+| 11 | Stage 2 handover rewritten: mind maps first, then Obsidian; experimental features and feedback programme | `798151c` |
+| 12 | Owner dashboard: feature-test archive, review catalog, exports, built-in Jupyter notebook, find line; full retest; owner sign-off | tag `build-stage-1` |
 
 ## 3. Mechanisms, parts and features
 
@@ -219,6 +233,36 @@ Platform: Android, built with Flutter (Dart). Repository:
   Windows, macOS and Linux. Ingest API with a token, all-or-nothing
   batches.
 - Shows labelled demo data until the app sends real metrics (final stage).
+- **Feature-test archive** (Feature tests tab):
+  - Top level, one row per test feature. Columns, in order: #, **Archive
+    status** (Launched, Scheduled, Held, Failed, each with an icon), **Status
+    date** (launched on, scheduled for, held since, failed on), feature ID,
+    feature, category, review stage, rounds, reviewers, reviews, average
+    rating, yes vote (✓ at 90%), outcome, collectables, last activity.
+  - Status cards filter the list; columns sort; search, category and outcome
+    filters.
+  - Archive exports: simple (one row per feature) and complete (every
+    review), as CSV or JSON.
+- **Feature page** (one archive data point):
+  - Review stages in aggregate, with rating mix and vote shares, against the
+    90% bar.
+  - Exports: simple vector list (one row per round); complete vector list
+    (every review, every field); custom analysis export (chosen columns plus
+    catalog filters).
+  - **Open in notebook**: a fresh JupyterLite notebook on the same page,
+    preloaded with the custom export, with no other program, tab or window.
+    Nothing is kept between openings. One-time `notebook-setup` command.
+  - **Analysis kit (.zip)** for other tools: CSV, JSON, .ipynb, a pandas .py
+    script, a SQLite database and a README.
+  - **Complete review catalog** (optional): filters built from the selected
+    round's contents (rating, vote, app version, sign-up method, account
+    age, comments, dates, text search); loads more as you scroll.
+- **Find on this screen**: a search line on screens longer than about 30
+  lines, with match count, next/previous and Ctrl+F.
+- Overview additions: a Feature testing panel (status counts, open rounds,
+  response rate, votes at 90%, dedicated updates, collectables, reviews),
+  feature-test reviews in Feature use, and reviews and collectables in
+  Lifetime totals.
 
 ### 3.15 Build, release and store
 - **CI** (`.github/workflows/android.yml`): analyze, Flutter tests, owner
@@ -293,9 +337,19 @@ fixed.
   every screen, the database, AI requests (mocked), graph building, export,
   CSV files, meters, Web3 messages, rewarded unlocks, per-account libraries,
   and the regressions above.
-- Owner dashboard: 11 tests passing on two consecutive runs (measures on
-  exact data, demo sanity, ingest validation, server routes and tokens,
-  background start/status/stop, the self-contained demo page).
+- Owner dashboard: 27 tests passing on two consecutive runs, also run by CI
+  on Python 3.9 and 3.13. They cover measures on exact data, demo sanity,
+  ingest validation, server routes and tokens, background
+  start/status/stop, the self-contained demo page, the archive's 90% rule,
+  round aggregates, every catalog filter, every export format, the
+  analysis kit's contents (the SQLite file and the script are checked), the
+  notebook file serving and path safety.
+- Owner dashboard in a real browser (Chromium): archive, sorting and
+  filters, downloads, round-specific catalog filters, scrolling catalog,
+  find line, and the notebook opening on the page with its generated cells.
+  Running Python inside the notebook couldn't be checked here, because the
+  build environment blocks the CDN that serves Pyodide; on a normal
+  internet connection it loads on first use.
 - CI builds the APK on GitHub's Android SDK and publishes it.
 - Not testable in the build environment (check on a phone): camera and
   gallery, fingerprint/face, live AI with a real key, real ads, the live

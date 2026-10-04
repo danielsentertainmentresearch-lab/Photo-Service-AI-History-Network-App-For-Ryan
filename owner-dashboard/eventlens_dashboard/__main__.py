@@ -5,6 +5,7 @@
     python -m eventlens_dashboard status
     python -m eventlens_dashboard stop
     python -m eventlens_dashboard demo
+    python -m eventlens_dashboard notebook-setup
     python -m eventlens_dashboard export-demo FILE.html
     python -m eventlens_dashboard reset --yes
 
@@ -24,7 +25,7 @@ import urllib.request
 import webbrowser
 from pathlib import Path
 
-from . import demo, server, store
+from . import demo, features, server, store
 
 DEFAULT_PORT = 8787
 
@@ -41,7 +42,14 @@ def paths(folder):
         "config": folder / "config.json",
         "pid": folder / "dashboard.pid",
         "log": folder / "dashboard.log",
+        "notebook_env": folder / "notebook-env",
+        "notebook_build": folder / "notebook-build",
+        "notebook_site": folder / "notebook-site",
     }
+
+# The JupyterLite versions this dashboard was tested with.
+NOTEBOOK_PACKAGES = ("jupyterlite-core==0.8.5",
+                     "jupyterlite-pyodide-kernel==0.8.6")
 
 
 def load_config(folder):
@@ -130,7 +138,8 @@ def cmd_start(args):
         return 1
 
     try:
-        httpd = server.DashboardServer(str(p["db"]), config, port)
+        httpd = server.DashboardServer(str(p["db"]), config, port,
+                                       notebook_dir=str(p["notebook_site"]))
     except OSError as error:
         print("Port %d is busy (%s). Try:  start --port %d"
               % (port, error.strerror, port + 1))
@@ -191,6 +200,50 @@ def cmd_status(args):
     return 0
 
 
+def cmd_notebook_setup(args):
+    """Installs the built-in notebook (JupyterLite) into the data folder.
+    Needs an internet connection once; the dashboard serves it from then on."""
+    folder = data_dir(args)
+    load_config(folder)
+    p = paths(folder)
+    env = p["notebook_env"]
+    print("Setting up the built-in notebook in %s (one time, needs internet)." % folder)
+    if not env.exists():
+        try:
+            subprocess.run([sys.executable, "-m", "venv", str(env)], check=True)
+        except subprocess.CalledProcessError:
+            print("Couldn't create a Python environment. On Debian or Ubuntu run:"
+                  "  sudo apt install python3-venv  and try again.")
+            return 1
+    bin_dir = env / ("Scripts" if os.name == "nt" else "bin")
+    python = bin_dir / ("python.exe" if os.name == "nt" else "python")
+    try:
+        subprocess.run([str(python), "-m", "pip", "install", "--quiet",
+                        "--disable-pip-version-check"] + list(NOTEBOOK_PACKAGES),
+                       check=True)
+        build = p["notebook_build"]
+        build.mkdir(exist_ok=True)
+        (build / "jupyter-lite.json").write_text(json.dumps({
+            "jupyter-lite-schema-version": 0,
+            "jupyter-config-data": {
+                "appName": "EventLens notebook",
+                # Nothing is kept between openings: each notebook starts new.
+                "enableMemoryStorage": True,
+                # The dashboard serves each fresh notebook and its data file
+                # at api/contents/all.json and files/.
+                "contentsAllJsonFile": "all.json",
+            },
+        }, indent=2), encoding="utf-8")
+        subprocess.run([str(python), "-m", "jupyterlite_core", "build",
+                        "--output-dir", str(p["notebook_site"])],
+                       cwd=str(build), check=True)
+    except subprocess.CalledProcessError:
+        print("Setup didn't finish. Check the internet connection and run it again.")
+        return 1
+    print("Done. Start the dashboard and use 'Open in notebook' on any test feature.")
+    return 0
+
+
 def cmd_demo(args):
     folder = data_dir(args)
     load_config(folder)
@@ -209,6 +262,16 @@ def build_demo_page(db=None):
     if own:
         demo.generate(db)
     data = {window: store.metrics(db, window) for window in store.WINDOWS}
+    rows = features.archive(db)
+    data["features"] = {
+        "rows": rows,
+        "summary": features.summary(db),
+        "statuses": features.STATUS_LABELS,
+        "status_date_labels": features.STATUS_DATE_LABELS,
+        "notebook": {"installed": False},
+        "details": {r["feature_id"]: features.detail(db, r["feature_id"])
+                    for r in rows},
+    }
     if own:
         db.close()
     return server.full_page(data)
@@ -260,6 +323,12 @@ def main(argv=None):
         p.add_argument("--data-dir", default=argparse.SUPPRESS,
                    help=argparse.SUPPRESS)
         p.set_defaults(run=run)
+
+    p = sub.add_parser("notebook-setup",
+                       help="install the built-in Jupyter notebook (once)")
+    p.add_argument("--data-dir", default=argparse.SUPPRESS,
+                   help=argparse.SUPPRESS)
+    p.set_defaults(run=cmd_notebook_setup)
 
     p = sub.add_parser("export-demo", help="write a self-contained demo page")
     p.add_argument("file")

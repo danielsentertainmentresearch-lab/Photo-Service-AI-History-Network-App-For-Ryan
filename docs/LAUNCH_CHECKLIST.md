@@ -42,6 +42,7 @@ services. Rewarded ads are the exception: Google AdMob stays an option.
 | Owner metrics dashboard | Demo built (`owner-dashboard/`, demo data); connecting real metrics is the final stage | Self-hosted on the owner's computer (localhost). Metrics source options, open source first: PostHog (self-host), Umami, Plausible, Matomo; Aptabase (open source, privacy-first, has a Flutter SDK). Not chosen yet. Needs a consent line in the privacy policy before any usage metrics are sent |
 | Export plan | Built: free CSV; full export at 100 events | The paywall stage adds the higher ("+1") tier requirement for export once Play Billing is connected |
 | Backup/sync paywall | Ideas listed, not built | Payments platform above; storage options: Supabase Storage, Backblaze B2, Cloudflare R2, or self-hosted MinIO/Garage |
+| Owner dashboard notebook | Built (JupyterLite, open source) | Loads Python (Pyodide) from the jsDelivr CDN on first use; for fully offline use, self-host Pyodide in the notebook folder |
 | Brand palette | After this build phase | Swap `lib/models/ring_palette.dart` |
 
 ## Reminder log
@@ -55,3 +56,6 @@ services. Rewarded ads are the exception: Google AdMob stays an option.
   Recommended: Supabase for accounts (now also for Web3 sign-in), AdMob for
   ads. Added: Reown (WalletConnect) project id for Web3 sign-in; owner
   dashboard demo built.
+- **Build stage 1 ended (4 Oct 2026)**: accounts and ads still not active.
+  Recommended: Supabase for accounts (and Web3 sign-in), AdMob for ads.
+  Added: the owner dashboard's built-in notebook (JupyterLite).

@@ -224,7 +224,8 @@ class CommandLineTest(unittest.TestCase):
         self.assertNotIn('type="application/json">null<', page)
         data = page.split('<script id="embedded-metrics" type="application/json">')[1].split("</script>")[0]
         parsed = json.loads(data)
-        self.assertEqual(set(parsed), set(store.WINDOWS))
+        self.assertEqual(set(parsed), set(store.WINDOWS) | {"features"})
+        self.assertEqual(len(parsed["features"]["details"]), 14)
         self.assertNotIn("<!doctype", page.lower())  # the artifact host adds it
         hosts = {h.split("/")[2] for h in __import__("re").findall(r'(?:src|href)="(https://[^"]+)"', page)}
         self.assertLessEqual(hosts, {"fonts.googleapis.com"})
