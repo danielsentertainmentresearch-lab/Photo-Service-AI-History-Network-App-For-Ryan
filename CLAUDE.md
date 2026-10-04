@@ -25,6 +25,13 @@
   review happens during stage 2, before it closes. Stage 3 (likely): the
   parts and features that run on the AI backbone. Stage 4: the final LLM
   build. Launch checklist work starts after stage 3 closes.
+- **Project order** (owner, 4 Oct 2026): (1) the build phase, stages 1-4;
+  the current focus is building the app only. (2) All checklists, completed
+  between the build phase and UX/UI (launch checklist work may start after
+  stage 3). (3) UX and UI brainstorming and implementation, including the
+  design overhaul process in the README. (4) Confer with the owner on a beta
+  launch that clears Google Play's requirements, for a first app launching
+  with no existing audience.
 - **Brand artwork** (owner-approved Option A, "Core memory Polaroid"): the
   app icon, store graphics and launch title screen come from
   `tool/brand/brand.html` via `tool/brand/render.mjs`. The Scaffold logo is

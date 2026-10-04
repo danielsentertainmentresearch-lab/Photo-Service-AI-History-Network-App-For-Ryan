@@ -209,6 +209,9 @@ Until the app sends real metrics (final stage) it shows labelled demo data.
 
 ## Design Overhaul Cleanup
 
+The UX and UI work below comes after the build phase (stages 1 to 4) and
+all checklists are done.
+
 Before the design overhaul, each **Design Overhaul Cleanup** run removes old
 UX and UI items (stale text, outdated screens and graphics, leftovers)
 without restyling or restructuring the app. Each run is logged in

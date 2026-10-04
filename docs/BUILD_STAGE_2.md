@@ -83,6 +83,12 @@ importance:
   planned now: **stage 3** (likely) builds the parts and features that run
   on the AI backbone; **stage 4** is the final LLM build. Each still starts
   only on the owner's command.
+- **Project order** (4 Oct 2026). 1. The build phase (stages 1 to 4);
+  for now the work is building the app only. 2. All checklists, completed
+  between the build phase and UX/UI. 3. UX and UI brainstorming and
+  implementation (the design overhaul process in the README). 4. Planning a
+  beta launch with the owner that clears Google Play's requirements, for a
+  first app with no existing audience.
 - **Launch checklist timing** (4 Oct 2026): work on the launch checklist
   (accounts, rewarded ads and the rest of `docs/LAUNCH_CHECKLIST.md`) begins
   after build stage 3 closes; slightly earlier is possible, but that is the
@@ -214,6 +220,9 @@ importance:
 - The owner dashboard is unchanged: a title screen adds nothing to count.
 
 ## Design Overhaul Cleanup
+
+_Further runs wait until the build phase and the checklists are done
+(project order, 4 Oct 2026)._
 
 The cleanup of old UX and UI items before the design overhaul (process in
 the README). It removes what is stale; it does not restyle or restructure
