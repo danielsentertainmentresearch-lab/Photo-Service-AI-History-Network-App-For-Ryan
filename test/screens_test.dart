@@ -268,7 +268,7 @@ void main() {
     expect(find.text('Add at least one photo or some notes.'), findsOneWidget);
 
     await tester.enterText(
-      find.widgetWithText(TextField, 'What\'s happening?'),
+      find.widgetWithText(TextField, 'Notes'),
       'First day at the new studio',
     );
     await tester.tap(find.text('Save'));

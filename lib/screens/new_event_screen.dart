@@ -227,14 +227,16 @@ class _NewEventScreenState extends State<NewEventScreen> {
               maxLines: 12,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
-                labelText: 'What\'s happening?',
+                labelText: 'Notes',
                 alignLabelWithHint: true,
                 hintText: 'Who is here, what led up to this, anything the '
                     'photos can\'t show…',
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 16),
+            // A plain line keeps the free write from reading as part of
+            // the notes field above it.
+            const Divider(height: 40),
             FreeWriteBox(controller: _experience),
             const SizedBox(height: 24),
             FilledButton.icon(
