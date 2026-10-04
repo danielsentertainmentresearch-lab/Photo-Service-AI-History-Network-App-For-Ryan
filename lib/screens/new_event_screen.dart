@@ -227,7 +227,7 @@ class _NewEventScreenState extends State<NewEventScreen> {
               maxLines: 12,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
-                labelText: 'Notes',
+                labelText: 'AI Notes',
                 alignLabelWithHint: true,
                 hintText: 'Who is here, what led up to this, anything the '
                     'photos can\'t show…',

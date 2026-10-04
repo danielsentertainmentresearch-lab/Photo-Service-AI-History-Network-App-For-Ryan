@@ -115,7 +115,7 @@ class EventDetailScreen extends StatelessWidget {
                 _FreeWriteSection(event: event),
                 if (event.notes.isNotEmpty) ...[
                   const SizedBox(height: 24),
-                  Text('Your notes at the time',
+                  Text('AI Notes',
                       style: theme.textTheme.titleSmall),
                   const SizedBox(height: 4),
                   SelectableText(event.notes),
@@ -512,7 +512,7 @@ class _EditDetailsSheetState extends State<_EditDetailsSheet> {
               minLines: 3,
               maxLines: 8,
               decoration: const InputDecoration(
-                  labelText: 'Your notes', border: OutlineInputBorder()),
+                  labelText: 'AI Notes', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 8),
             Text(
