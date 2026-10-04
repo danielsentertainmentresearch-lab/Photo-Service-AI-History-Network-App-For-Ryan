@@ -18,6 +18,10 @@
   `docs/BUILD_STAGE_2.md`. Later stages build from stage 1 and refer back to
   it only when its context is needed. Each stage starts only on the owner's
   command.
+- **Brand artwork** (owner-approved Option A, "Core memory Polaroid"): the
+  app icon, store graphics and launch title screen come from
+  `tool/brand/brand.html` via `tool/brand/render.mjs`. The Scaffold logo is
+  always used exactly as supplied. Brand files are in `docs/brand/`.
 - Export rules: basic CSV free for all; full export unlocks at 100 events
   (sticky); a higher paywall tier for export is added in the paywall stage.
   The Your data meters stay free with no ads.

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/title_screen.dart';
 import 'screens/tutorial_screen.dart';
 import 'services/auth_service.dart';
 import 'state/library_scope.dart';
@@ -11,8 +12,11 @@ const appName = 'EventLens';
 
 /// Root of the app. Without an account only the tutorial is available;
 /// with the biometric lock on, the app asks for it every time it opens.
+/// With [showTitle], each launch opens on the [TitleScreen].
 class EventLensApp extends StatefulWidget {
-  const EventLensApp({super.key});
+  const EventLensApp({super.key, this.showTitle = false});
+
+  final bool showTitle;
 
   static ThemeData _theme(Brightness brightness) => ThemeData(
     colorScheme: ColorScheme.fromSeed(
@@ -47,6 +51,33 @@ class _EventLensAppState extends State<EventLensApp>
 
   DateTime? _pausedAt;
 
+  late var _showingTitle = widget.showTitle;
+
+  /// Keeps the title (and its timer) when the app is rebuilt for a
+  /// different account while it shows, such as a sign-in restored at launch.
+  final _titleKey = GlobalKey();
+
+  /// Puts the title above everything (the lock included) until it leaves;
+  /// the screens behind it load meanwhile.
+  Widget _withTitle(Widget content) {
+    if (!widget.showTitle) return content;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ExcludeSemantics(excluding: _showingTitle, child: content),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: _showingTitle
+              ? TitleScreen(
+                  key: _titleKey,
+                  onDone: () => setState(() => _showingTitle = false),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
@@ -79,24 +110,26 @@ class _EventLensAppState extends State<EventLensApp>
       // a camera trip) carries on behind the lock.
       builder: (context, navigator) {
         if (uid == null || navigator == null) {
-          return navigator ?? const SizedBox.shrink();
+          return _withTitle(navigator ?? const SizedBox.shrink());
         }
-        return LibraryScope(
-          uid: uid,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              ExcludeSemantics(
-                excluding: locked,
-                child: AbsorbPointer(absorbing: locked, child: navigator),
-              ),
-              if (locked)
-                Overlay(
-                  initialEntries: [
-                    OverlayEntry(builder: (_) => const LockScreen()),
-                  ],
+        return _withTitle(
+          LibraryScope(
+            uid: uid,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ExcludeSemantics(
+                  excluding: locked,
+                  child: AbsorbPointer(absorbing: locked, child: navigator),
                 ),
-            ],
+                if (locked)
+                  Overlay(
+                    initialEntries: [
+                      OverlayEntry(builder: (_) => const LockScreen()),
+                    ],
+                  ),
+              ],
+            ),
           ),
         );
       },

@@ -52,7 +52,7 @@ Future<void> main() async {
           ),
         ),
       ],
-      child: const EventLensApp(),
+      child: const EventLensApp(showTitle: true),
     ),
   );
 }

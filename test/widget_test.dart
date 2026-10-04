@@ -13,6 +13,7 @@ import 'package:eventlens/models/ring_palette.dart';
 import 'package:eventlens/screens/graph_editor_screen.dart';
 import 'package:eventlens/screens/graph_screen.dart';
 import 'package:eventlens/screens/mind_map_view.dart';
+import 'package:eventlens/screens/title_screen.dart';
 import 'package:eventlens/services/auth_service.dart';
 import 'package:eventlens/services/rewards_service.dart';
 import 'package:eventlens/services/settings_service.dart';
@@ -199,6 +200,53 @@ void main() {
   );
 
   setUp(() => videos = _FakeVideos());
+
+  testWidgets('each launch opens on the title screen, which then leaves', (
+    tester,
+  ) async {
+    final tmp = Directory.systemTemp.createTempSync('eventlens_title');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    final (state, prefs) = (await tester.runAsync(() => makeState(tmp)))!;
+    final auth = _FakeAuth();
+    final semantics = tester.ensureSemantics();
+
+    await tester.pumpWidget(
+      wrap(state, prefs, const EventLensApp(showTitle: true), auth: auth),
+    );
+    expect(find.byType(TitleScreen), findsOneWidget);
+    expect(
+      find.bySemanticsLabel('EventLens, by Scaffold. Core memory, 2010.'),
+      findsOneWidget,
+    );
+    // The tutorial loads behind the title, which covers it.
+    expect(find.text('Welcome to $appName').hitTestable(), findsNothing);
+
+    // A sign-in restored partway through keeps the same title and timer.
+    await tester.pump(const Duration(milliseconds: 1000));
+    await auth.signUpWithEmail('me@example.com', 'long enough');
+    await tester.pump();
+    expect(find.byType(TitleScreen), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(TitleScreen), findsNothing);
+    semantics.dispose();
+  });
+
+  testWidgets('a tap moves past the title screen straight away', (
+    tester,
+  ) async {
+    final tmp = Directory.systemTemp.createTempSync('eventlens_title_tap');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    final (state, prefs) = (await tester.runAsync(() => makeState(tmp)))!;
+
+    await tester.pumpWidget(
+      wrap(state, prefs, const EventLensApp(showTitle: true)),
+    );
+    await tester.tap(find.byType(TitleScreen));
+    await tester.pumpAndSettle();
+    expect(find.byType(TitleScreen), findsNothing);
+    expect(find.text('Welcome to $appName'), findsOneWidget);
+  });
 
   testWidgets('without an account only the tutorial is available', (
     tester,

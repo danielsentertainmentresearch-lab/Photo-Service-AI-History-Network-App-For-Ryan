@@ -93,6 +93,7 @@ importance:
 | 6 | Labels: no undo in any form, no notes in the flow, every pass a first pass | `086c9b6` |
 | 7 | Your data: the Free-write labels card above Export (owner's choice B) | `a041d90` |
 | 8 | Design Overhaul Cleanup, run 1 (see below) | `9c424bd`, `7be82a7` |
+| 9 | Brand artwork: app icon, store graphics and an opening title screen from the owner's approved logo option (see below) | _this commit_ |
 
 ## Mechanisms, parts and features
 
@@ -183,6 +184,24 @@ importance:
   panel with the share marked not right (Healthy up to 10%, Watch up to
   20%, Needs attention above), the signal to change the labelling
   instructions. Counts only, never content.
+
+## Brand artwork (step 9)
+
+- **Chosen** (owner, 4 Oct 2026): Option A, "Core memory Polaroid", of three
+  options made from the Scaffold brand kit (first priority) and the
+  Scaffold logo (second). The logo is used exactly as supplied, with only
+  its plain background removed. The pink heart after the name became the
+  brand kit's healing heart, and the "CORE MEMORY · 2010" banner is the
+  lilac tape on the icon.
+- **Where it is used**: the Android launcher icon (adaptive: a deep-teal
+  background with the torn edge, the Polaroid in the safe zone), the Play
+  Store icon and feature graphic, and a title screen at every launch (the
+  stacked lockup with the banner, about two seconds, a tap skips it, the
+  same off-white as the Android launch background).
+- **Sources**: `tool/brand/brand.html`, rendered by `tool/brand/render.mjs`
+  with the fonts in `tool/brand/fonts`. Brand reference files, including a
+  one-page brand sheet, are in `docs/brand/`.
+- The owner dashboard is unchanged: a title screen adds nothing to count.
 
 ## Design Overhaul Cleanup
 

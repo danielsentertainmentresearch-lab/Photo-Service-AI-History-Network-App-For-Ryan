@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>EventLens brand sheet</title>
+<!-- One-page brand reference, rendered to docs/brand/eventlens_brand_sheet.png
+     by tool/brand/render.mjs after the images it shows. -->
+<style>
+  @font-face { font-family: 'Permanent Marker'; font-weight: 400; font-display: block; src: url(fonts/PermanentMarker-Regular.woff2) format('woff2'); }
+  @font-face { font-family: 'Archivo Narrow'; font-weight: 700; font-display: block; src: url(fonts/ArchivoNarrow-Bold.woff2) format('woff2'); }
+  html, body { margin: 0; }
+  #sheet {
+    width: 1600px; box-sizing: border-box; padding: 56px 64px 64px; background: #FAFAF7;
+    font-family: 'Archivo Narrow', sans-serif; font-weight: 700; color: #0F0F10;
+    display: grid; grid-template-columns: 420px 1fr 300px; gap: 40px 48px;
+  }
+  .head { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; border-bottom: 3px solid #0F0F10; padding-bottom: 14px; }
+  .head h1 { margin: 0; font-size: 40px; letter-spacing: 0.04em; }
+  .head span { font-size: 18px; letter-spacing: 0.12em; color: #0E3A44; }
+  h2 { margin: 0 0 14px; font-size: 17px; letter-spacing: 0.14em; color: #1BB6B1; }
+  .panel { display: flex; flex-direction: column; }
+  .kraft { background-color: #EFE6D2; background-image: linear-gradient(rgba(14,58,68,0.10) 1px, transparent 1px), linear-gradient(90deg, rgba(14,58,68,0.10) 1px, transparent 1px); background-size: 20px 20px; display: flex; align-items: center; justify-content: center; }
+  .note { font-size: 15px; letter-spacing: 0.04em; color: #55565A; margin-top: 10px; line-height: 1.35; }
+  .swatches { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .sw { height: 86px; padding: 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-end; font-size: 14px; letter-spacing: 0.06em; }
+  .type { display: flex; flex-direction: column; gap: 16px; }
+  .type .sample-marker { font-family: 'Permanent Marker', cursive; font-weight: 400; font-size: 44px; line-height: 1; }
+  .type .sample-narrow { font-size: 30px; letter-spacing: 0.12em; color: #0E3A44; }
+</style>
+</head>
+<body>
+<div id="sheet">
+  <div class="head"><h1>EVENTLENS × SCAFFOLD</h1><span>BRAND REFERENCE · OPTION A, CORE MEMORY POLAROID · 4 OCT 2026</span></div>
+
+  <div class="panel">
+    <h2>APP ICON</h2>
+    <div class="kraft" style="height: 420px"><img src="../../docs/brand/eventlens_icon_1024.png" alt="EventLens app icon" style="width: 340px"></div>
+    <div class="note">Android rounds the square icon; the adaptive icon keeps the Polaroid inside the safe zone.</div>
+  </div>
+
+  <div class="panel">
+    <h2>LOCKUP WITH BANNER</h2>
+    <div style="height: 200px; display: flex; align-items: center; justify-content: center; border: 1px solid #E4E2DA"><img src="../../docs/brand/eventlens_lockup_banner.png" alt="EventLens lockup" style="width: 600px"></div>
+    <h2 style="margin-top: 32px">SYMBOLS</h2>
+    <div style="display: flex; gap: 40px; align-items: center">
+      <div style="text-align: center"><img src="../../docs/brand/symbol_healing_heart.png" alt="Healing heart" style="width: 96px"><div class="note">Healing heart</div></div>
+      <div style="text-align: center"><img src="../../docs/brand/symbol_core_memory_banner.png" alt="Core memory banner" style="width: 300px"><div class="note">Core memory banner (lilac tape)</div></div>
+    </div>
+    <div class="note">The Scaffold logo is used exactly as supplied; only its plain background is removed.</div>
+  </div>
+
+  <div class="panel" style="grid-row: span 2">
+    <h2>OPENING TITLE SCREEN</h2>
+    <img src="../../docs/brand/eventlens_title_screen.png" alt="Title screen" style="width: 300px; border: 1px solid #E4E2DA; border-radius: 28px">
+    <div class="note">Shown at every launch for under two seconds; a tap skips it.</div>
+  </div>
+
+  <div class="panel">
+    <h2>TYPE</h2>
+    <div class="type">
+      <div><div class="sample-marker">EventLens</div><div class="note">Permanent Marker, the handwritten name</div></div>
+      <div><div class="sample-narrow">CORE MEMORY · 2010</div><div class="note">Archivo Narrow Bold (brand kit headline font), the banner</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>COLOURS IN USE (BRAND KIT)</h2>
+    <div class="swatches">
+      <div class="sw" style="background: #0E3A44; color: #FAFAF7">DEEP TEAL<br>#0E3A44</div>
+      <div class="sw" style="background: #1BB6B1; color: #0F0F10">TEAL<br>#1BB6B1</div>
+      <div class="sw" style="background: #CDBBFF; color: #0E3A44">SOFT LILAC<br>#CDBBFF</div>
+      <div class="sw" style="background: #F2C84B; color: #0F0F10">MUSTARD<br>#F2C84B</div>
+      <div class="sw" style="background: #FFF2A8; color: #0F0F10">BUTTER<br>#FFF2A8</div>
+      <div class="sw" style="background: #0F0F10; color: #FAFAF7">CHARCOAL<br>#0F0F10</div>
+      <div class="sw" style="background: #FAFAF7; color: #0F0F10; box-shadow: inset 0 0 0 1px #E4E2DA">OFF WHITE<br>#FAFAF7</div>
+      <div class="sw kraft" style="color: #0F0F10; display: flex; align-items: flex-start; justify-content: flex-end; flex-direction: column">GRID PAPER<br>#EFE6D2</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

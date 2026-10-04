@@ -53,6 +53,8 @@ switch on once their platforms are connected).
   about the experience in your own way. The "?" beside it explains it.
   The AI never changes it; it reads it only to make a few short labels,
   checked against the writing, that show in Your data.
+- Every launch opens on a short title screen: the Scaffold logo, the
+  EventLens name and the "CORE MEMORY · 2010" banner. A tap skips it.
 - Timeline grouped by month, full-text search across everything, and
   **On this day** (events from today's date in earlier years) at the top.
 
@@ -177,10 +179,11 @@ lib/
                  Timeline graph, Books & rings, Your data, Data guide, Settings
   widgets/       Shared image and status widgets
 test/            Unit, integration (real SQLite via FFI) and widget tests
-tool/            Icon, store graphics and screenshot generators
+tool/            Brand artwork (icon, store graphics, title screen) and
+                 the screenshot generator
 store/           Play Store listing text and graphics
 owner-dashboard/ Owner-only metrics dashboard (Python, runs on localhost)
-docs/            Build stage debrief and launch checklist
+docs/            Build stage debriefs, launch checklist, brand files
 .github/workflows/android.yml   CI: analyze, test, dashboard tests, build APK + AAB
 ```
 
@@ -258,10 +261,13 @@ To regenerate review screenshots with sample data (`store/screenshots/`):
 flutter test tool/screenshots_test.dart
 ```
 
-To regenerate the icon or store graphics after changing `tool/generate_icon.dart`:
+The app icon, store icon, feature graphic, title screen lockup and the brand
+reference files in `docs/brand/` are drawn in `tool/brand/brand.html` (the
+owner's approved Option A, "Core memory Polaroid"). To regenerate them after
+a change (needs Node.js with Playwright):
 
 ```bash
-dart run tool/generate_icon.dart && dart run flutter_launcher_icons
+NODE_PATH=$(npm root -g) node tool/brand/render.mjs && dart run flutter_launcher_icons
 ```
 
 ## Builds

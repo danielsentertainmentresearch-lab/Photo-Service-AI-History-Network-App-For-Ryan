@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>EventLens brand sources</title>
+<!-- Source artwork for the EventLens icon, title screen and brand files
+     (Option A, "Core memory Polaroid", approved by the owner 4 Oct 2026).
+     tool/brand/render.mjs screenshots each element with an id. The Scaffold
+     logo is used exactly as supplied; only its plain background is removed. -->
+<style>
+  @font-face { font-family: 'Permanent Marker'; font-weight: 400; font-display: block; src: url(fonts/PermanentMarker-Regular.woff2) format('woff2'); }
+  @font-face { font-family: 'Archivo Narrow'; font-weight: 700; font-display: block; src: url(fonts/ArchivoNarrow-Bold.woff2) format('woff2'); }
+  :root {
+    --deep-teal: #0E3A44; --teal: #1BB6B1; --lilac: #CDBBFF;
+    --mustard: #F2C84B; --butter: #FFF2A8; --charcoal: #0F0F10;
+    --off-white: #FAFAF7; --kraft: #EFE6D2;
+  }
+  html, body { margin: 0; background: transparent; }
+  body { display: flex; flex-wrap: wrap; gap: 40px; padding: 40px; align-items: flex-start; }
+  .grid-paper {
+    background-color: var(--kraft);
+    background-image: linear-gradient(rgba(14,58,68,0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(14,58,68,0.12) 1px, transparent 1px);
+    background-size: 14px 14px;
+  }
+  .marker { font-family: 'Permanent Marker', cursive; color: var(--charcoal); line-height: 1; }
+  .tape-label {
+    background: rgba(205,187,255,0.92); font-family: 'Archivo Narrow', sans-serif;
+    font-weight: 700; letter-spacing: 0.12em; color: var(--deep-teal);
+    white-space: nowrap; line-height: 1.1;
+  }
+
+  /* App icon, 400 x 400 design units. */
+  .icon { width: 400px; height: 400px; position: relative; overflow: hidden; }
+  .icon.rounded { border-radius: 90px; }
+  .icon-bg {
+    position: absolute; inset: 0; background-color: var(--deep-teal);
+    background-image: radial-gradient(circle, rgba(27,182,177,0.3) 1.6px, transparent 1.9px);
+    background-size: 12px 12px;
+  }
+  .torn {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 96px; background: var(--charcoal);
+    clip-path: polygon(0 34%, 9% 12%, 17% 38%, 26% 8%, 35% 30%, 44% 10%, 53% 34%, 62% 6%, 71% 28%, 80% 6%, 90% 34%, 100% 14%, 100% 100%, 0 100%);
+  }
+  .art { position: absolute; inset: 0; }
+  .star { position: absolute; left: 34px; top: 58px; }
+  .polaroid {
+    position: absolute; left: 62px; top: 44px; width: 276px; height: 318px;
+    box-sizing: border-box; padding: 16px 16px 0; background: var(--off-white);
+    transform: rotate(-6deg); box-shadow: 0 16px 30px rgba(0,0,0,0.5);
+  }
+  .polaroid .photo { height: 218px; display: flex; align-items: center; justify-content: center; }
+  .polaroid .photo img { width: 226px; display: block; }
+  .polaroid .caption { height: 68px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 34px; }
+  .icon .tape-label { position: absolute; left: 50%; top: 22px; transform: translateX(-50%) rotate(-4deg); padding: 6px 14px; font-size: 18px; }
+  .tape-mustard { position: absolute; left: 300px; top: 300px; width: 80px; height: 26px; background: rgba(242,200,75,0.92); transform: rotate(-38deg); }
+
+  /* Adaptive icon layers: the background is shown at 108 dp with the
+     middle 72 dp visible, so its torn edge starts higher. */
+  #icon-background .torn { height: 130px; }
+  #icon-background .icon-bg { background-size: 8px 8px; }
+  #icon-foreground .art { transform: scale(0.82); }
+
+  /* Lockups. */
+  .lockup-h { display: flex; align-items: center; gap: 28px; padding: 24px; }
+  .lockup-h > img { width: 200px; display: block; }
+  .lockup-h .name { display: flex; align-items: center; gap: 10px; font-size: 60px; }
+  .lockup-h .col { display: flex; flex-direction: column; gap: 12px; }
+  .lockup-h .tape-label { align-self: flex-start; padding: 5px 12px; font-size: 18px; transform: rotate(-2deg); }
+
+  .lockup-v { width: 320px; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 12px 0 18px; }
+  .lockup-v > img { width: 290px; display: block; }
+  .lockup-v .name { display: flex; align-items: center; gap: 10px; font-size: 46px; }
+  .lockup-v .tape-label { padding: 6px 14px; font-size: 19px; transform: rotate(-3deg); }
+
+  #feature-graphic { width: 1024px; height: 500px; background: var(--off-white); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+  #feature-graphic .lockup-h { transform: scale(1.35); }
+  #feature-graphic .torn { height: 56px; }
+
+  #title-screen { width: 390px; height: 844px; background: var(--off-white); display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+
+<template id="heart-tpl">
+<svg class="heart" viewBox="0 0 24 22" aria-hidden="true"><path d="M12 20s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 9c0 6-8 11-8 11z" fill="#F2C84B" stroke="#0F0F10" stroke-width="1.5" stroke-linejoin="round"/><g transform="rotate(-35 12 11)"><rect x="5.6" y="9" width="12.8" height="4.4" rx="2.2" fill="#FFF2A8" stroke="#0F0F10" stroke-width="1.05"/><rect x="10.2" y="9" width="3.6" height="4.4" fill="#FAFAF7" stroke="#0F0F10" stroke-width="0.75"/><circle cx="7.6" cy="11.2" r="0.45" fill="#0F0F10"/><circle cx="16.4" cy="11.2" r="0.45" fill="#0F0F10"/></g></svg>
+</template>
+
+<template id="art-tpl">
+<div class="art">
+  <svg class="star" width="34" height="34" viewBox="0 0 24 24" fill="#F2C84B" stroke="#0F0F10" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg>
+  <div class="polaroid">
+    <div class="photo grid-paper"><img src="../../assets/brand/scaffold_logo.png" alt="Scaffold logo"></div>
+    <div class="caption marker">EventLens<span class="heart-slot" data-w="30" data-h="28"></span></div>
+  </div>
+  <div class="tape-label">CORE MEMORY · 2010</div>
+  <div class="tape-mustard"></div>
+</div>
+</template>
+
+<!-- Full-bleed square icon (launcher and Play icon; the OS rounds it). -->
+<div id="icon-square" class="icon"><div class="icon-bg"></div><div class="torn"></div><div class="art-slot"></div></div>
+<!-- The icon as approved, with rounded corners (brand reference). -->
+<div id="icon-rounded" class="icon rounded"><div class="icon-bg"></div><div class="torn"></div><div class="art-slot"></div></div>
+<!-- Adaptive icon layers. -->
+<div id="icon-background" class="icon"><div class="icon-bg"></div><div class="torn"></div></div>
+<div id="icon-foreground" class="icon"><div class="art-slot"></div></div>
+
+<!-- Horizontal lockup with the banner. -->
+<div id="lockup-horizontal" class="lockup-h">
+  <img src="../../assets/brand/scaffold_logo.png" alt="Scaffold logo">
+  <div class="col">
+    <div class="name marker">EventLens<span class="heart-slot" data-w="44" data-h="40"></span></div>
+    <div class="tape-label">CORE MEMORY · 2010</div>
+  </div>
+</div>
+
+<!-- Stacked lockup with the banner: the opening title screen. -->
+<div id="lockup-stacked" class="lockup-v">
+  <img src="../../assets/brand/scaffold_logo.png" alt="Scaffold logo">
+  <div class="name marker">EventLens<span class="heart-slot" data-w="36" data-h="32"></span></div>
+  <div class="tape-label">CORE MEMORY · 2010</div>
+</div>
+
+<!-- Symbols. -->
+<div id="symbol-healing-heart" style="width: 96px; height: 88px"><span class="heart-slot" data-w="96" data-h="88"></span></div>
+<div id="symbol-banner" style="padding: 10px 14px"><div class="tape-label" style="padding: 6px 14px; font-size: 18px; transform: rotate(-4deg)">CORE MEMORY · 2010</div></div>
+
+<!-- Play Store feature graphic. -->
+<div id="feature-graphic">
+  <div class="lockup-h">
+    <img src="../../assets/brand/scaffold_logo.png" alt="Scaffold logo">
+    <div class="col">
+      <div class="name marker">EventLens<span class="heart-slot" data-w="44" data-h="40"></span></div>
+      <div class="tape-label">CORE MEMORY · 2010</div>
+    </div>
+  </div>
+  <div class="torn"></div>
+</div>
+
+<!-- Title screen preview on a phone (reference only; the app builds the
+     screen from the stacked lockup). -->
+<div id="title-screen"><div class="slot-stacked"></div></div>
+
+<script>
+  const art = document.getElementById('art-tpl').content;
+  document.querySelectorAll('.art-slot').forEach(s => s.replaceWith(art.cloneNode(true)));
+  document.querySelector('.slot-stacked').replaceWith(
+    Object.assign(document.getElementById('lockup-stacked').cloneNode(true), {id: ''}));
+  const heart = document.getElementById('heart-tpl').content;
+  document.querySelectorAll('.heart-slot').forEach(s => {
+    const svg = heart.firstElementChild.cloneNode(true);
+    svg.setAttribute('width', s.dataset.w);
+    svg.setAttribute('height', s.dataset.h);
+    s.replaceWith(svg);
+  });
+</script>
+</body>
+</html>
