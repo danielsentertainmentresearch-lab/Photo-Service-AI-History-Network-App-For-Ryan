@@ -71,8 +71,10 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // Shrinking is off while testing a crash on launch (owner's
+            // moto g 2025, Android 16). Turn it back on once fixed.
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
