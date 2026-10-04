@@ -218,10 +218,12 @@ Until the app sends real metrics (final stage) it shows labelled demo data.
 - **Development** (owner rule, 4 Oct 2026): the Anthropic models (Claude)
   handle all developer-side work: code, the database, the AI pipeline, the
   owner dashboard, builds and releases.
-- Hermes keeps her own records of her work (she works fast and with a
-  different reasoning context), and hands work to Claude through handoff
-  files in [docs/handoffs/](docs/handoffs/). Claude writes its handoffs to
-  Hermes there too, before she starts a piece of work.
+- Hermes keeps her own records as a fast, technical, PowerShell-style feed
+  (RSS-like). It is written in her own symbols and is not meant for other
+  models to read. Work passes between her and Claude only through
+  plain-language handoff files in [docs/handoffs/](docs/handoffs/). Claude
+  writes its handoffs to Hermes there too, before she starts a piece of
+  work.
 - If Hermes needs to talk to a Claude session, directly or through one of
   her agents, the owner opens a separate session for it, and it states at
   the start that this is its use case.

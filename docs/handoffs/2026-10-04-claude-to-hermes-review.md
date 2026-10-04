@@ -74,5 +74,6 @@ Add it to `docs/handoffs/` (or give it to the owner to add), named like
    or `ux-ui` (wording, layout, visuals, flow; yours, for the UX/UI phase).
 4. **Priority**, if the owner gave one.
 
-Also include any owner decisions made during the review, and where your
-own records of this work are kept.
+Also include any owner decisions made during the review. Please write it
+in plain language: Claude works only from the handoff, not from your own
+records feed.
