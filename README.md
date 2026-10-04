@@ -18,7 +18,7 @@ Android app built with Flutter, set up for Google Play.
 ## Status
 
 **Build stage 1 has ended** (signed off by the owner on 4 October 2026;
-git tag `build-stage-1`). Everything built in stage 1 is described in
+frozen branch `build-stage-1`). Everything built in stage 1 is described in
 [docs/BUILD_STAGE_1.md](docs/BUILD_STAGE_1.md). Outside accounts and
 platforms still to connect are in
 [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md).

@@ -1,7 +1,7 @@
 # Build stage 1: official deliverable
 
 _EventLens · 2–4 October 2026 · status: **ended**, signed off by the owner
-on 4 October 2026 · git tag `build-stage-1`_
+on 4 October 2026 · frozen branch `build-stage-1`_
 
 This document closes build stage 1. It describes every mechanism, part and
 feature built in stage 1, and every notable change, addition and correction.
@@ -12,7 +12,7 @@ Later stages refer back to it only when stage 1 context is needed.
 | Item | Where |
 |---|---|
 | Android app (test APK) | `latest-build` release: <https://github.com/danielsentertainmentresearch-lab/Photo-Service-AI-History-Network-App-For-Ryan/releases/download/latest-build/eventlens-latest.apk> (sign in with "Continue as reviewer") |
-| Source code | `main` at tag `build-stage-1` |
+| Source code | branch `build-stage-1` (commit `0a86037`) |
 | Owner dashboard | `owner-dashboard/` (zip sent to the owner by direct message or email; guide in its README) |
 | This document | `docs/BUILD_STAGE_1.md` |
 | Launch checklist | `docs/LAUNCH_CHECKLIST.md` and the shared "EventLens Launch Checklist" page |
@@ -50,7 +50,7 @@ Platform: Android, built with Flutter (Dart). Repository:
 | 9 | Per-account libraries, photo dates and places, On this day, export, optional weather, recent-apps privacy | `3c2a748` |
 | 10 | Full debug (6 confirmed bugs fixed, see §5), Your data dashboard, export unlock at 100 events, analysis CSV and data guide, Web3 identities, owner metrics dashboard demo | `0dedd3b` |
 | 11 | Stage 2 handover rewritten: mind maps first, then Obsidian; experimental features and feedback programme | `798151c` |
-| 12 | Owner dashboard: feature-test archive, review catalog, exports, built-in Jupyter notebook, find line; full retest; owner sign-off | tag `build-stage-1` |
+| 12 | Owner dashboard: feature-test archive, review catalog, exports, built-in Jupyter notebook, find line; full retest; owner sign-off | `0a86037` (branch `build-stage-1`) |
 
 ## 3. Mechanisms, parts and features
 
