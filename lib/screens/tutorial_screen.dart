@@ -32,14 +32,13 @@ const _steps = [
     Icons.add_a_photo_outlined,
     'Record an event',
     'Tap New event, add up to 10 photos from your camera or gallery, and '
-        'jot down what\'s happening: who\'s there, what led up to it, how it '
-        'feels.',
+        'jot down what\'s happening: who\'s there and what led up to it.',
   ),
   _Step(
     Icons.auto_awesome_outlined,
     'The AI writes the account',
-    'The AI studies every photo and your notes and writes a rich, detailed '
-        'account in your voice, then suggests things worth remembering.',
+    'The AI studies every photo and your notes and writes a detailed, '
+        'factual account, then suggests things worth remembering.',
   ),
   _Step(
     Icons.psychology_outlined,

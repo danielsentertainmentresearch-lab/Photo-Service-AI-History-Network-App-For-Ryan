@@ -686,8 +686,9 @@ class _DataGuideScreenState extends State<DataGuideScreen> {
   static const _tryCode =
       '# Events per year, as a bar chart\n'
       'events.groupby("year").size().plot(kind="bar")\n\n'
-      '# The people you record most\n'
-      'events["people"].str.split("|").explode().value_counts().head(10)';
+      '# The people you record most ("none" means no one was named)\n'
+      'named = events.loc[events["people"] != "none", "people"]\n'
+      'named.str.split("|").explode().value_counts().head(10)';
 
   @override
   Widget build(BuildContext context) {

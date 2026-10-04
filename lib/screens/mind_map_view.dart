@@ -396,8 +396,7 @@ class MindMapPainter extends CustomPainter {
     tp.paint(canvas, at - Offset(tp.width / 2, 0));
   }
 
-  void _badge(Canvas canvas, Offset c, bool open, Color color) {
-    final at = c + const Offset(12, -12);
+  void _badge(Canvas canvas, Offset at, bool open, Color color) {
     canvas.drawCircle(at, 7, Paint()..color = scheme.surface);
     canvas.drawCircle(
       at,
@@ -444,6 +443,9 @@ class MindMapPainter extends CustomPainter {
       final b = p.branch;
       final c = _at(p);
       final color = _limbColor(p);
+      // Where the open/close badge goes: beside a dot, or on the corner of a
+      // chapter's bubble so it never covers the title.
+      var badgeAt = c + const Offset(12, -12);
       switch (b.kind) {
         case BranchKind.story || BranchKind.chapter:
           final tp = TextPainter(
@@ -487,6 +489,7 @@ class MindMapPainter extends CustomPainter {
             );
           }
           tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
+          badgeAt = box.outerRect.topRight + const Offset(-4, 4);
         case BranchKind.group:
           canvas.drawCircle(c, 5, Paint()..color = color);
           _label(
@@ -534,7 +537,7 @@ class MindMapPainter extends CustomPainter {
       if (p.depth > 0 &&
           b.canOpen &&
           (b.kind == BranchKind.node || b.kind == BranchKind.chapter)) {
-        _badge(canvas, c, b.isOpen, color);
+        _badge(canvas, badgeAt, b.isOpen, color);
       }
       if (b.key == selected) {
         canvas.drawCircle(

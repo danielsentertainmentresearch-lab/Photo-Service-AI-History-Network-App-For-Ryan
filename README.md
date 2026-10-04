@@ -4,8 +4,8 @@ Record the events of your life with photos and quick notes. EventLens keeps
 the photos in a private library on the phone, and Claude (Anthropic's AI)
 writes a richly detailed account of each event on your behalf. Claude draws on:
 
-- **Working memory**: what you jot down in the moment (who's there, what's
-  happening, how it feels), plus the time and place.
+- **Working memory**: what you jot down in the moment (who's there and
+  what's happening), plus the time and place.
 - **Contextual memory**: durable facts you've saved (people, places, ongoing
   situations, preferences) and summaries of your recent events, so each new
   account connects to the ones before it.
