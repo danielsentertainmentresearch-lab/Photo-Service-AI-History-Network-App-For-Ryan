@@ -245,33 +245,6 @@ the welcome line's "full story" wording, the store listing's marketing
 copy, the tutorial not yet mentioning the mind map or the free write, and
 the README architecture line that still says database v3 (it is v5).
 
-## Checkpoint (night of 4 Oct 2026)
-
-Saved at the owner's request before the manual review of the full app.
-Everything to this point is on `main`, mirrored to `stage-2-mind-map`; the
-checkpoint is the commit "Checkpoint: stage 2 state before the owner's
-full-app review" (`710e751`). Git tags can't be pushed from these sessions,
-so there is no tag.
-
-- **Built in stage 2 so far**: steps 1 to 9 above (mind map, the two parts
-  of every event, free-write labels with Fits / Doesn't fit / Label again,
-  no-blank data files, dashboard label quality and analysis-ready exports,
-  Design Overhaul Cleanup run 1, the brand artwork and launch title screen).
-- **Next, in order**:
-  1. The owner's manual review of the full app on the latest test APK.
-  2. The owner decides whether "Design Overhaul Cleanup 2" is needed.
-  3. Finalizing and closing stage 2, then stage 3, each on the owner's
-     command.
-  4. Launch checklist work after stage 3 closes (the owner's target).
-- **Open items outside the code**: the remote branch `wip/ai-notes-rename`
-  could not be deleted from here (GitHub refused) and is for the owner to
-  delete; the earlier walkthrough page shows the label sheet before the
-  no-undo change.
-- **Seen in cleanup run 1, left for the owner's review**: the welcome
-  line's "full story" wording, the store listing's marketing copy, the
-  tutorial not yet mentioning the mind map or the free write, and the
-  README architecture line that still says database v3 (it is v5).
-
 ## Not connected yet
 
 Unchanged from stage 1 — see `docs/LAUNCH_CHECKLIST.md`: accounts backend
