@@ -466,7 +466,7 @@ void main() {
         expect(note, contains('[[Chapters/Lake weeks]]'));
         expect(note, contains('[[Books/Summer 2026]]'));
         expect(note, contains('ring: "#e53935"'));
-        expect(note, contains('## My notes at the time'));
+        expect(note, contains('## AI Notes'));
         final image = state.eventById(a.id)!.images.single.fileName;
         expect(note, contains('![[$image]]'));
         expect(names, contains('EventLens/Vault/attachments/$image'));

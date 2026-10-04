@@ -145,8 +145,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const _RecentsToggle(),
           const SizedBox(height: 4),
           Text(
-            'Your photos, notes and memories are stored only on this device. '
-            'When an event is described, its photos (resized), your notes, '
+            'Your photos, AI Notes, free writes and memories are stored only on this device. '
+            'When an event is described, its photos (resized), your AI Notes, '
             'summaries of recent events and your saved memories are sent to '
             'Anthropic\'s API over an encrypted connection. Your free writes '
             'are sent to Anthropic only to make their labels. Uninstalling '

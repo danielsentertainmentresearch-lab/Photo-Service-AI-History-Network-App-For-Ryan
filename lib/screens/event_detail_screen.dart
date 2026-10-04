@@ -516,7 +516,7 @@ class _EditDetailsSheetState extends State<_EditDetailsSheet> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Changing notes does not rewrite the account. Use "Rewrite with AI" afterwards if you want it updated.',
+              'Changing AI Notes does not rewrite the account. Use "Rewrite with AI" afterwards if you want it updated.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),

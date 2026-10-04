@@ -212,8 +212,8 @@ class _EmptyState extends StatelessWidget {
             Text('No events yet', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             const Text(
-              'Tap "New event", add a few photos and some notes about what is '
-              'happening, and let the AI write the full story.',
+              'Tap "New event", add a few photos and some AI Notes, and let '
+              'the AI write the full story.',
               textAlign: TextAlign.center,
             ),
           ],

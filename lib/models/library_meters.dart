@@ -136,7 +136,7 @@ List<Meter> computeMeters({
     ),
     Meter(
       'words_mine',
-      'Words in your notes',
+      'Words in your AI Notes',
       n(events.fold<int>(0, (s, e) => s + _words(e.notes))),
     ),
     Meter('graph', 'Timeline graph', graphValue),

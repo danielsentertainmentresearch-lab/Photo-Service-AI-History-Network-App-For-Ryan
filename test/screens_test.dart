@@ -265,7 +265,10 @@ void main() {
     expect(find.text('Photos (0/10)'), findsOneWidget);
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
-    expect(find.text('Add at least one photo or some notes.'), findsOneWidget);
+    expect(
+      find.text('Add at least one photo, some AI Notes or a free write.'),
+      findsOneWidget,
+    );
 
     await tester.enterText(
       find.widgetWithText(TextField, 'AI Notes'),

@@ -23,6 +23,14 @@
   The Your data meters stay free with no ads.
 - `owner-dashboard/` is owner-only (Python stdlib, localhost). Run its
   tests with `python3 -m unittest discover -s tests` from that folder.
+- **Owner phone review before a stage closes** (owner rule, stage 2): no
+  build stage is closed until the owner has installed the latest test APK on
+  a phone and worked through `docs/APK_REVIEW.md`, and its findings are fixed
+  or accepted. Every change that adds to or changes what the app does adds
+  its checks to that checklist in the same piece of work.
+- The notes field is called **AI Notes** everywhere people see it (screens,
+  exports, documents); it feeds the AI's factual account. The free write
+  has no label at all.
 - **Dashboard follows the app** (owner rule, stage 2): whenever a change adds
   to or changes what the app does, update the owner dashboard to match in
   the same piece of work (activity kinds, feature use, demo data) and run its

@@ -203,7 +203,7 @@ String kindLabel(NodeKind kind) => switch (kind) {
 String provenanceLabel(Provenance p) => switch (p) {
   Provenance.human => 'From you',
   Provenance.ai => 'From the AI',
-  Provenance.both => 'Your photos and notes + AI account',
+  Provenance.both => 'Your photos and AI Notes + AI account',
 };
 
 class _GraphView extends StatefulWidget {

@@ -11,9 +11,11 @@ EventLens turns a few photos and a quick note into a vivid, detailed record of
 the moments that matter, written for you by AI.
 
 HOW IT WORKS
-• Add photos from your camera or gallery, plus a few words about what's
-  happening: who's there, what led up to it, how it feels.
-• The AI studies every photo and your notes, then writes a rich first-person
+• Add photos from your camera or gallery, plus a few AI Notes: who's
+  there and what led up to it.
+• Write about your experience in your own words in a blank free write. The
+  AI never changes it; it only reads it to make a few labels for Your data.
+• The AI studies every photo and your AI Notes, then writes a factual first-person
   account: the setting, the light, the people, the little details you'd
   otherwise forget.
 • It remembers. Save facts about the people, places and ongoing situations in
@@ -23,7 +25,7 @@ HOW IT WORKS
   what to keep.
 
 YOUR LIBRARY STAYS YOURS
-• Photos, notes and memories are stored only on your phone, never on a
+• Photos, AI Notes, free writes and memories are stored only on your phone, never on a
   developer server.
 • Only the event you choose to describe is sent to the AI, using your own
   Anthropic API key.
@@ -45,7 +47,7 @@ FEATURES
 • Sign in with email, phone, Google or a Web3 identity (crypto wallet or
   Farcaster)
 • Timeline of events grouped by month
-• Full-text search across titles, notes, accounts, people, places and tags
+• Full-text search across titles, AI Notes, free writes, accounts, people, places and tags
 • Edit, copy or rewrite any account
 • Choose Claude Opus 5.5 for maximum detail or Sonnet 5.5 for speed
 • Light and dark themes
@@ -78,7 +80,7 @@ actually does:
 - **Data types**:
   - Photos and videos → Photos: *shared* with Anthropic, at the user's
     request, for app functionality. Optional. Not collected.
-  - Personal info → Other info (free-text notes, free writes and
+  - Personal info → Other info (AI Notes, free writes and
     memories): same as photos. Free writes are sent to Anthropic after the
     user writes one, only to make short labels; not collected.
   - Personal info → Email address and/or Phone number: *collected* for

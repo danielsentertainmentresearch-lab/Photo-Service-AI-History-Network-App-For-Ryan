@@ -124,7 +124,7 @@ class _NewEventScreenState extends State<NewEventScreen> {
         _notes.text.trim().isEmpty &&
         _experience.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Add at least one photo or some notes.')));
+          content: Text('Add at least one photo, some AI Notes or a free write.')));
       return;
     }
     setState(() => _saving = true);

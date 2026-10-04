@@ -2,7 +2,7 @@
 
 _Last updated: 4 October 2026_
 
-EventLens ("the app") lets you record events with photos and notes and have an
+EventLens ("the app") lets you record events with photos and AI Notes and have an
 AI write a detailed account of each one. This policy explains what the app
 does with your information.
 
@@ -36,11 +36,11 @@ your advertising ID in your phone's settings. Google's policy:
 
 ## What stays on your device
 
-Your photos, notes, free writes, event descriptions and saved memories are stored only in
+Your photos, AI Notes, free writes, event descriptions and saved memories are stored only in
 the app's private storage on your phone. Each account signed in on the
 phone has its own separate library, so people sharing a phone do not see
 each other's events. The developer runs no server of
-its own and never receives your photos, notes, free writes, descriptions or memories. Cloud backup of app data is disabled. Uninstalling
+its own and never receives your photos, AI Notes, free writes, descriptions or memories. Cloud backup of app data is disabled. Uninstalling
 the app permanently deletes everything it stored.
 
 Your Anthropic API key is stored in encrypted storage on your device and is
@@ -53,7 +53,7 @@ following to **Anthropic, PBC** (`api.anthropic.com`) over an encrypted
 connection:
 
 - that event's photos, resized to a maximum of 1568 pixels;
-- that event's notes, title, place, date and time;
+- that event's AI Notes, title, place, date and time;
 - short summaries of your recent events;
 - the memories you have saved in the app.
 
@@ -83,13 +83,13 @@ The weather and location of an event are never sent to Anthropic.
   to **Open-Meteo** (`open-meteo.com`), which returns the weather for that
   hour. Policy: <https://open-meteo.com/en/terms#privacy>.
 
-No account details, photos or notes are sent to either service.
+No account details, photos, AI Notes or free writes are sent to either service.
 
 ### Your data and export
 
 The Your data screen measures your library on your phone; nothing about it
 is sent anywhere. Its exports (a spreadsheet file, and once you reach 100
-events a zip with your photos, notes and data files) are created on your
+events a zip with your photos, AI Notes and data files) are created on your
 phone, and where they go next is up to you, through your phone's share
 sheet.
 
@@ -104,7 +104,7 @@ no data with anyone else.
 ## Photos of other people
 
 Your photos may include other people. The app never uses face recognition. The
-AI names people only when your own notes or saved memories identify them.
+AI names people only when your AI Notes or saved memories identify them.
 
 ## Your choices
 

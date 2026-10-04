@@ -77,6 +77,12 @@ importance:
   app stores. The owner dashboard is the only enterprise-level part, issued
   by the owner personally. An enterprise version of the app may come later;
   none is planned.
+- **Owner phone review** (4 Oct 2026): before stage 2 (and every later
+  stage) closes, the owner reviews the latest test APK on a phone using
+  `docs/APK_REVIEW.md`. The checklist grows with every feature.
+- **"AI Notes"** (4 Oct 2026): the notes field, which feeds the AI's
+  factual account, is called AI Notes everywhere people see it, and a plain
+  line separates it from the free write.
 - **The dashboard follows the app** (4 Oct 2026): every change to what the
   app does updates the owner dashboard in the same piece of work, and its
   tests run each time.
@@ -89,7 +95,8 @@ importance:
 | 2 | Mind map view: a branching, explorable view of the existing graph, first tab on the graph screen | `f312968` |
 | 3 | Two parts to every event: the AI's account made factual and objective; the person's free write (database v4) | `28bf427` |
 | 4 | Owner dashboard follows the app: mind map and free-write use counted in Feature use and the demo data | `98f6c89` |
-| 5 | Free-write labels (annotated, checked by the app, reviewed by a second AI pass), confirm / reject / label again, no blanks in the analysis file, label quality on the dashboard | _this commit_ |
+| 5 | Free-write labels (annotated, checked by the app, reviewed by a second AI pass), confirm / reject / label again, no blanks in the analysis file, label quality on the dashboard | `3a1737e` |
+| 6 | "AI Notes" everywhere, a line before the free write, and the owner phone review checklist | _this commit_ |
 
 ## Mechanisms, parts and features
 

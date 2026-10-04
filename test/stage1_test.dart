@@ -226,7 +226,7 @@ void main() {
       expect(col('hour'), '20');
       expect(col('described'), '1');
       expect(col('photo_count'), '2');
-      expect(col('notes_words'), '2');
+      expect(col('ai_notes_words'), '2');
       expect(col('people'), 'Sam|Mum');
       expect(col('chapter'), 'Summer');
       expect(col('book'), '2026');

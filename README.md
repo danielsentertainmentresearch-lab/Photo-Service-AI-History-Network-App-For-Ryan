@@ -1,6 +1,6 @@
 # EventLens
 
-Record the events of your life with photos and quick notes. EventLens keeps
+Record the events of your life with photos and quick AI Notes. EventLens keeps
 the photos in a private library on the phone, and Claude (Anthropic's AI)
 writes a richly detailed account of each event on your behalf. Claude draws on:
 
@@ -44,7 +44,7 @@ switch on once their platforms are connected).
 
 ### Recording events
 - New event: up to 10 photos (gallery or camera), date and time, place,
-  title and notes.
+  title and AI Notes (what the AI reads), then a blank free write.
 - Dates and places fill in from the photo itself: the capture time from its
   EXIF data, and a place name from its GPS position (named by OpenStreetMap
   Nominatim). The phone's location permission is never requested, and a
@@ -58,12 +58,12 @@ switch on once their platforms are connected).
 
 ### The AI
 - Each event gets a detailed, factual first-person account (what the
-  photos, notes, time and place confirm), a short summary, and
+  photos, AI Notes, time and place confirm), a short summary, and
   labels for people, places and tags. You can edit, copy or rewrite it.
 - Memory screen: add, edit and delete what the AI should always know; the
   AI suggests new memories after each event, and you choose what to keep.
 - The AI never identifies people from faces; it names them only from your
-  notes and saved memories.
+  AI Notes and saved memories.
 - Your own Anthropic API key (stored encrypted), Claude Opus 5.5 by default
   or Sonnet 5.5, and the thinking effort, in Settings.
 
@@ -143,7 +143,7 @@ switch on once their platforms are connected).
 Data leaves the phone only for these:
 
 - **Describing an event or building the graph** sends that event's photos
-  (downscaled to 1568 px), notes, summaries of recent events and saved
+  (downscaled to 1568 px), AI Notes, summaries of recent events and saved
   memories to `api.anthropic.com`.
 - **Free-write labels** send that event's free write, and the labels
   already used in your library, to `api.anthropic.com` (after you finish
@@ -187,7 +187,7 @@ docs/            Build stage debrief and launch checklist
 Describing an event: `AppState.describeEvent` marks the event as describing
 (a second tap is ignored), downscales its photos in a background isolate, and
 `EventDescriber` sends one Messages API request with the instructions and
-long-term memory (cached system prompt), the photos, the notes and recent
+long-term memory (cached system prompt), the photos, the AI Notes and recent
 summaries. The JSON answer (constrained by a schema) is written onto the
 latest copy of the event, so an edit made meanwhile is kept. Failures are
 stored on the event with a readable message and a Retry button.

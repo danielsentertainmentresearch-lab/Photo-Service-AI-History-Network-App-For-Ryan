@@ -40,7 +40,7 @@ const analysisColumns = <DataColumn>[
   DataColumn('longitude', 'number', 'Longitude, $unknownNumber if unknown'),
   DataColumn('described', '0/1', '1 if the AI has written the account'),
   DataColumn('photo_count', 'integer', 'Photos in the event'),
-  DataColumn('notes_words', 'integer', 'Words in your own notes'),
+  DataColumn('ai_notes_words', 'integer', 'Words in your AI Notes'),
   DataColumn('description_words', 'integer', 'Words in the AI account'),
   DataColumn('people_count', 'integer', 'People named'),
   DataColumn('places_count', 'integer', 'Places named'),
@@ -121,7 +121,7 @@ String basicCsv(List<LifeEvent> events) {
       'Photos',
       'Summary',
       'Account',
-      'My notes',
+      'AI Notes',
     ],
     for (final e in _ordered(events))
       [

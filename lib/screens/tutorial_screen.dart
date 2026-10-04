@@ -26,7 +26,7 @@ const _steps = [
     Icons.auto_stories,
     'Welcome to $appName',
     'Your life, remembered in detail. Record moments with photos and a few '
-        'notes, and an AI writes the full story for you.',
+        'AI Notes, and an AI writes the full story for you.',
   ),
   _Step(
     Icons.add_a_photo_outlined,
@@ -38,7 +38,7 @@ const _steps = [
   _Step(
     Icons.auto_awesome_outlined,
     'The AI writes the account',
-    'The AI studies every photo and your notes and writes a rich, detailed '
+    'The AI studies every photo and your AI Notes and writes a rich, detailed '
         'account in your voice, then suggests things worth remembering.',
   ),
   _Step(
@@ -64,7 +64,7 @@ const _steps = [
   _Step(
     Icons.lock_outline,
     'Private by design',
-    'Photos, notes and memories stay on your phone. When you ask for an '
+    'Photos, AI Notes and memories stay on your phone. When you ask for an '
         'account, that event is sent to the AI with your own API key, and '
         'free writes are sent only to make their labels. An account is '
         'needed to start using the app.',

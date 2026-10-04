@@ -153,7 +153,7 @@ class LibraryExporter {
       if (links.isNotEmpty) note.writeln('${links.join(' · ')}\n');
       if (e.description.isNotEmpty) note.writeln('${e.description}\n');
       if (e.notes.isNotEmpty) {
-        note.writeln('## My notes at the time\n\n${e.notes}\n');
+        note.writeln('## AI Notes\n\n${e.notes}\n');
       }
       if (e.experience.trim().isNotEmpty) {
         note.writeln('## My free write\n\n${e.experience.trim()}\n');
