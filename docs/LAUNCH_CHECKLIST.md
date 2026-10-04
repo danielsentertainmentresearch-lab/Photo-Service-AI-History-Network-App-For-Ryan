@@ -59,3 +59,6 @@ services. Rewarded ads are the exception: Google AdMob stays an option.
 - **Build stage 1 ended (4 Oct 2026)**: accounts and ads still not active.
   Recommended: Supabase for accounts (and Web3 sign-in), AdMob for ads.
   Added: the owner dashboard's built-in notebook (JupyterLite).
+- **Build stage 2 started (4 Oct 2026)**: accounts and ads still not
+  active. Recommended: Supabase for accounts (and Web3 sign-in), AdMob for
+  ads.

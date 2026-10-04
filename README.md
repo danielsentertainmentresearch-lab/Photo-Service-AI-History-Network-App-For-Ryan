@@ -19,8 +19,12 @@ Android app built with Flutter, set up for Google Play.
 
 **Build stage 1 has ended** (signed off by the owner on 4 October 2026;
 frozen branch `build-stage-1`). Everything built in stage 1 is described in
-[docs/BUILD_STAGE_1.md](docs/BUILD_STAGE_1.md). Outside accounts and
-platforms still to connect are in
+[docs/BUILD_STAGE_1.md](docs/BUILD_STAGE_1.md).
+
+**Build stage 2 started on 4 October 2026**, on the owner's command. Its
+living deliverable is [docs/BUILD_STAGE_2.md](docs/BUILD_STAGE_2.md).
+
+Outside accounts and platforms still to connect are in
 [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md).
 
 **Try it:** every push to `main` publishes a test APK at
@@ -223,7 +227,7 @@ fine for testing but not accepted by Play. See [RELEASE.md](RELEASE.md).
 
 ## Roadmap
 
-- **Stage 2** (starts on the owner's command): the AI maps events as a neural network, primarily a mind map
+- **Stage 2** (in progress, started 4 October 2026): the AI maps events as a neural network, primarily a mind map
   (in function and in data exploration), with Obsidian's enterprise and
   user-level functions added for familiarity, for events added on an
   irregular schedule at the person's own pace.
