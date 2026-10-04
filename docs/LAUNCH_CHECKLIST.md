@@ -7,6 +7,11 @@ the "EventLens Launch Checklist" page shared with the owner.
 Preference order for every choice: open source first, then non-Google
 services. Rewarded ads are the exception: Google AdMob stays an option.
 
+**When the checklist work starts** (owner, 4 Oct 2026): after build stage 3
+closes (the stage after stage 2). Starting slightly earlier is possible,
+but the target is the end of stage 3. Until then the reminder below
+continues at the end of every stage.
+
 ## Standing reminder (repeat at the end of every build stage until done)
 
 - [ ] **Accounts backend**: not active. Test builds use "Continue as

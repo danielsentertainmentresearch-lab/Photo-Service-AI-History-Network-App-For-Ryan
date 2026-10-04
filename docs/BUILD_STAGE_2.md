@@ -77,6 +77,10 @@ importance:
   app stores. The owner dashboard is the only enterprise-level part, issued
   by the owner personally. An enterprise version of the app may come later;
   none is planned.
+- **Launch checklist timing** (4 Oct 2026): work on the launch checklist
+  (accounts, rewarded ads and the rest of `docs/LAUNCH_CHECKLIST.md`) begins
+  after build stage 3 closes; slightly earlier is possible, but that is the
+  target.
 - **The dashboard follows the app** (4 Oct 2026): every change to what the
   app does updates the owner dashboard in the same piece of work, and its
   tests run each time.

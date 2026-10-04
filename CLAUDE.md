@@ -11,7 +11,9 @@
   active, remind the owner that **accounts** and **rewarded ads** are not
   connected, name the currently recommended platform for each (see
   `docs/LAUNCH_CHECKLIST.md`), add a line to its reminder log, and update
-  the shared "EventLens Launch Checklist" page.
+  the shared "EventLens Launch Checklist" page. Work on the checklist itself
+  starts after build stage 3 closes (owner's target; slightly earlier is
+  possible).
 - **Build stage 1 has ended** (owner sign-off 4 Oct 2026, branch
   `build-stage-1`; deliverable: `docs/BUILD_STAGE_1.md`). **Build stage 2
   started 4 Oct 2026** on the owner's command; its living deliverable is
