@@ -199,7 +199,7 @@ void main() {
     );
     expect(find.text('Sam'), findsOneWidget);
     expect(find.text('Fallen Leaf Lake'), findsWidgets);
-    expect(find.text('AI Notes'), findsOneWidget);
+    expect(find.text('Your notes at the time'), findsOneWidget);
     expect(find.text('Remember for next time?'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Save to memory'));
@@ -268,7 +268,7 @@ void main() {
     expect(find.text('Add at least one photo or some notes.'), findsOneWidget);
 
     await tester.enterText(
-      find.widgetWithText(TextField, 'AI Notes'),
+      find.widgetWithText(TextField, 'What\'s happening?'),
       'First day at the new studio',
     );
     await tester.tap(find.text('Save'));
