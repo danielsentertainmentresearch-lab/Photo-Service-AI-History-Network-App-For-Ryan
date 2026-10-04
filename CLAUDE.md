@@ -25,7 +25,11 @@
   tests with `python3 -m unittest discover -s tests` from that folder.
 - Stage 2 (in progress) network model: **mind maps first** (primary in
   function and data exploration), then **Obsidian** enterprise/user-level
-  functions added for familiarity. Experimental features ship in irregular
+  functions added for familiarity. "Mind map" means the **mind model**:
+  subjective, psychological and sociological data about what an event
+  meant and how it felt (emotions, meaning, mood, social closeness), ahead
+  of objective or factual data. It does not mean the drawing. Neurological
+  and biological data are out of scope. See `docs/BUILD_STAGE_2.md`. Experimental features ship in irregular
   updates with feedback rounds; a 90% "yes" vote earns a dedicated update;
   fully set-up accounts get a collectable linked to the feature that can
   never be bought or sold.

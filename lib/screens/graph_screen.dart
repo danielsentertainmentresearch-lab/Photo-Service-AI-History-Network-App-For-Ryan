@@ -12,9 +12,11 @@ import '../models/ring_palette.dart';
 import '../state/app_state.dart';
 import 'event_detail_screen.dart';
 import 'graph_editor_screen.dart';
+import 'mind_map_view.dart';
 
-/// The connected timeline: a graph view of events, people, places, tags,
-/// themes and memories, plus the AI's chapters.
+/// The connected timeline: a mind map to explore it branch by branch, a
+/// graph view of events, people, places, tags, themes and memories, and the
+/// AI's chapters.
 class GraphScreen extends StatelessWidget {
   const GraphScreen({super.key});
 
@@ -34,12 +36,13 @@ class GraphScreen extends StatelessWidget {
       );
     }
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Timeline graph'),
           bottom: const TabBar(
             tabs: [
+              Tab(text: 'Mind map'),
               Tab(text: 'Graph'),
               Tab(text: 'Chapters'),
             ],
@@ -72,7 +75,7 @@ class GraphScreen extends StatelessWidget {
             const Expanded(
               child: TabBarView(
                 physics: NeverScrollableScrollPhysics(),
-                children: [_GraphView(), _ChaptersView()],
+                children: [MindMapView(), _GraphView(), _ChaptersView()],
               ),
             ),
           ],

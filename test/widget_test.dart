@@ -12,6 +12,7 @@ import 'package:eventlens/models/memory_graph.dart';
 import 'package:eventlens/models/ring_palette.dart';
 import 'package:eventlens/screens/graph_editor_screen.dart';
 import 'package:eventlens/screens/graph_screen.dart';
+import 'package:eventlens/screens/mind_map_view.dart';
 import 'package:eventlens/services/auth_service.dart';
 import 'package:eventlens/services/rewards_service.dart';
 import 'package:eventlens/services/settings_service.dart';
@@ -284,6 +285,9 @@ void main() {
     await tester.pumpWidget(
       wrap(state, prefs, const MaterialApp(home: GraphScreen())),
     );
+    // The mind map opens first; the graph is the second tab.
+    await tester.tap(find.text('Graph'));
+    await tester.pumpAndSettle();
     // Layout runs in a background isolate.
     await tester.runAsync(() => Future.delayed(const Duration(seconds: 2)));
     await tester.pump();
@@ -307,6 +311,59 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
     expect(find.text('same summit'), findsOneWidget);
+  });
+
+  testWidgets('mind map opens first; branches open, centre and lead back', (
+    tester,
+  ) async {
+    final tmp = Directory.systemTemp.createTempSync('eventlens_mindmap');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    final (state, prefs) = await graphState(tester, tmp);
+
+    await tester.pumpWidget(
+      wrap(state, prefs, const MaterialApp(home: GraphScreen())),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Your story'), findsOneWidget); // trail
+    expect(find.textContaining('Tap a branch to open it'), findsOneWidget);
+
+    final canvas = find.byWidgetPredicate(
+      (w) => w is CustomPaint && w.painter is MindMapPainter,
+    );
+    Future<void> tapBranch(String label) async {
+      final painter =
+          tester.widget<CustomPaint>(canvas).painter! as MindMapPainter;
+      final p = painter.placed.firstWhere((p) => p.branch.label == label);
+      final box = tester.renderObject<RenderBox>(canvas);
+      await tester.tapAt(box.localToGlobal(Offset(p.x, p.y) + painter.origin));
+      await tester.pumpAndSettle();
+    }
+
+    // The centre branches into the AI's chapter, its theme and Sam.
+    await tapBranch('Sam');
+    expect(find.text('Person · From you'), findsOneWidget);
+    var painter = tester.widget<CustomPaint>(canvas).painter! as MindMapPainter;
+    // Tapping Sam opened his branch: the three hikes he was on.
+    expect(
+      painter.placed.where((p) => p.branch.label.startsWith('Hike')).length,
+      3,
+    );
+
+    await tester.tap(find.text('Center here'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(ActionChip, 'Your story'), findsOneWidget);
+    expect(find.widgetWithText(Chip, 'Sam'), findsOneWidget);
+    painter = tester.widget<CustomPaint>(canvas).painter! as MindMapPainter;
+    expect(painter.placed.first.branch.label, 'Sam');
+
+    await tapBranch('Hike 1');
+    expect(find.text('Open event'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ActionChip, 'Your story'));
+    await tester.pumpAndSettle();
+    painter = tester.widget<CustomPaint>(canvas).painter! as MindMapPainter;
+    expect(painter.placed.first.branch.label, 'Your story');
+    expect(find.text('Center here'), findsNothing);
   });
 
   Future<void> pumpEditor(
