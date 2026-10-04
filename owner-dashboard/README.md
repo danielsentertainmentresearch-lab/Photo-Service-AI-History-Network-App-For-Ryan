@@ -151,6 +151,11 @@ Open a row to see that feature's page:
     page, with no other program, browser tab or window. **Analysis kit
     (.zip)** is for other tools and holds CSV, JSON, a notebook (.ipynb), a
     pandas script (.py), a SQLite database and a README.
+  - Every export, and the data the notebook opens, is analysis-ready: no
+    cell is blank. The original columns keep their place; after them,
+    unknown numbers are -999 with a `_known` 0/1 column, missing categories
+    and text are `none`, each category has one 0/1 column per value, and
+    date-times have `_weekday` (1 = Monday) and `_hour` columns.
 - **Complete review catalog** (optional, opens on request): every review.
   The filters only offer what the selected round contains (ratings in
   feedback rounds, votes in vote rounds, and the versions, sign-up methods,

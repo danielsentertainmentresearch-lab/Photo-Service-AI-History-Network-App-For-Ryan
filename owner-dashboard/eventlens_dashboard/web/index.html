@@ -374,7 +374,7 @@ td.comment { white-space: normal; min-width: 240px; max-width: 520px; }
             <a class="btn small" data-fexport="custom" data-format="csv">CSV</a>
             <a class="btn small" data-fexport="custom" data-format="kit">Analysis kit (.zip)</a>
           </div>
-          <p class="def" style="margin-top:6px">The analysis kit is for other Python, database or data-science tools: CSV, JSON, a Jupyter notebook (.ipynb), a pandas script (.py) and a SQLite database.</p>
+          <p class="def" style="margin-top:6px">The analysis kit is for other Python, database or data-science tools: CSV, JSON, a Jupyter notebook (.ipynb), a pandas script (.py) and a SQLite database. Every export is analysis-ready: no blank cells (unknown numbers are -999 with a <code>_known</code> 0/1 column; missing categories and text are <code>none</code>).</p>
         </div>
       </div>
       <div id="notebook-panel" hidden style="margin-top:16px">

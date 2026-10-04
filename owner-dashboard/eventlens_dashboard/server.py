@@ -283,8 +283,9 @@ class DashboardServer(ThreadingHTTPServer):
         filters = {k: query[k] for k in features.FILTER_KEYS if query.get(k)}
         notebook = features.notebook(feature, base + ".csv", columns, filters)
         with self.lock:
+            ready_rows, ready_columns, _ = features.analysis_ready(rows, columns)
             self._notebooks[base + ".csv"] = (
-                "text/csv", features.to_csv(rows, columns))
+                "text/csv", features.to_csv(ready_rows, ready_columns))
             self._notebooks[base + ".ipynb"] = (
                 "application/json", json.dumps(notebook))
             while len(self._notebooks) > 80:

@@ -83,6 +83,104 @@ def _ratio(part, whole):
     return round(part / whole, 4) if whole else None
 
 
+# ---- Analysis-ready exports (enterprise area) ---------------------------------
+#
+# Every export and notebook file is transformed so no cell is blank or
+# unusable. The original columns keep their place and meaning; helper
+# columns follow them:
+#   numbers that can be missing   UNKNOWN_NUMBER (-999) and <col>_known 0/1
+#   categories                    "none" when missing, one <col>_<value> 0/1
+#                                 column per possible value
+#   date-times                    <col>_known 0/1, <col>_weekday (1 = Monday),
+#                                 <col>_hour (0-23); "none" when missing
+#   text                          "none" when empty
+
+UNKNOWN_NUMBER = -999
+
+_NUMBERS = {
+    "rating": "rating 1-5",
+    "account_age_days": "account age in days",
+    "response_rate": "response rate",
+    "avg_rating": "average rating",
+    "yes_share": "share of yes votes",
+}
+
+_CATEGORIES = {
+    "category": store.FEATURE_CATEGORIES,
+    "round_kind": store.ROUND_KINDS,
+    "signup_method": store.SIGNUP_METHODS + ("none",),
+    "account_age": tuple(label for label, _, _ in AGE_BUCKETS) + ("none",),
+    "vote": store.VOTES + ("none",),
+    "archive_status": store.FEATURE_STATUSES,
+    "outcome": store.FEATURE_OUTCOMES,
+}
+
+_DATETIMES = ("reviewed_at", "opened_at", "closed_at", "status_date",
+              "outcome_date", "last_activity")
+
+
+def _slug(value):
+    out = "".join(ch if ch.isalnum() else "_" for ch in str(value).lower())
+    while "__" in out:
+        out = out.replace("__", "_")
+    return out.strip("_")
+
+
+def _parse(value):
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", ""))
+    except ValueError:
+        return None
+
+
+def analysis_ready(rows, columns):
+    """[rows] with no blank or unusable cell, and the column list with the
+    helper columns added after the originals. Returns (rows, columns,
+    helpers) where helpers is a list of (name, type, meaning)."""
+    helpers = []
+    for c in columns:
+        if c in _NUMBERS:
+            helpers.append((c + "_known", "0/1", "1 if %s is known" % _NUMBERS[c]))
+        elif c in _CATEGORIES:
+            helpers += [("%s_%s" % (c, _slug(v)), "0/1",
+                         "1 if %s is %s" % (c, v)) for v in _CATEGORIES[c]]
+        elif c in _DATETIMES:
+            helpers += [(c + "_known", "0/1", "1 if %s is known" % c),
+                        (c + "_weekday", "integer",
+                         "Day of the week of %s, 1 = Monday; %d if unknown"
+                         % (c, UNKNOWN_NUMBER)),
+                        (c + "_hour", "integer", "Hour of %s, 0-23; %d if "
+                         "unknown or a date only" % (c, UNKNOWN_NUMBER))]
+    out = []
+    for row in rows:
+        new = {}
+        for c in columns:
+            value = row.get(c)
+            missing = value is None or (isinstance(value, str) and not value.strip())
+            if c in _NUMBERS:
+                new[c] = UNKNOWN_NUMBER if missing else value
+                new[c + "_known"] = 0 if missing else 1
+            elif c in _CATEGORIES:
+                value = "none" if missing else value
+                new[c] = value
+                for v in _CATEGORIES[c]:
+                    new["%s_%s" % (c, _slug(v))] = 1 if value == v else 0
+            elif c in _DATETIMES:
+                moment = None if missing else _parse(value)
+                new[c] = "none" if missing else value
+                new[c + "_known"] = 0 if moment is None else 1
+                new[c + "_weekday"] = (UNKNOWN_NUMBER if moment is None
+                                       else moment.isoweekday())
+                has_time = moment is not None and "T" in str(value)
+                new[c + "_hour"] = moment.hour if has_time else UNKNOWN_NUMBER
+            elif missing:
+                new[c] = "none"
+            else:
+                new[c] = value
+        out.append(new)
+    return out, list(columns) + [h[0] for h in helpers], helpers
+
+
 def _age_bucket(days):
     if days is None:
         return ""
@@ -419,6 +517,7 @@ def archive_export(db, kind, fmt):
         rows, columns = reviews(db), REVIEW_COLUMN_NAMES
     else:
         raise ValueError("kind must be simple or complete")
+    rows, columns, _ = analysis_ready(rows, columns)
     name = "eventlens-feature-archive-%s" % kind
     meta = {"format": "eventlens-feature-archive", "kind": kind,
             "exported_at": store.iso(datetime.now())}
@@ -450,14 +549,15 @@ def feature_export(db, feature_id, kind, fmt, params):
     else:
         raise ValueError("kind must be simple, complete or custom")
 
+    if fmt == "kit":
+        return base + "-analysis-kit.zip", "application/zip", \
+            analysis_kit(data, rows, columns, meta, base)
+    rows, columns, _ = analysis_ready(rows, columns)
     if fmt == "csv":
         return base + ".csv", "text/csv", to_csv(rows, columns).encode("utf-8")
     if fmt == "json":
         return base + ".json", "application/json", \
             to_json(rows, columns, meta).encode("utf-8")
-    if fmt == "kit":
-        return base + "-analysis-kit.zip", "application/zip", \
-            analysis_kit(data, rows, columns, meta, base)
     raise ValueError("format must be csv, json or kit")
 
 
@@ -484,34 +584,44 @@ def notebook(feature, csv_name, columns, filters):
         code(load),
         code("reviews.describe(include='all').T"),
     ]
+    if "rating" in columns:
+        cells.append(code(
+            "# Reviews with a rating (unknown ratings are %d, so keep them out)\n"
+            "rated = reviews[reviews['rating_known'] == 1]" % UNKNOWN_NUMBER))
     if "round" in columns and "rating" in columns:
         cells.append(code(
             "# Reviews and average rating per round\n"
-            "reviews.groupby('round').agg(reviews=('rating', 'size'),"
+            "rated.groupby('round').agg(reviews=('rating', 'size'),"
             " avg_rating=('rating', 'mean'))"))
     if "rating" in columns:
         cells.append(code(
             "# Rating mix\n"
-            "reviews['rating'].dropna().astype(int).value_counts().sort_index()"
+            "rated['rating'].astype(int).value_counts().sort_index()"
             ".plot(kind='bar', title='Ratings (1-5)')"))
     if "vote" in columns:
         cells.append(code(
             "# Vote share (the dedicated-update bar is %d%% yes)\n"
-            "votes = reviews['vote'].dropna()\n"
+            "votes = reviews.loc[reviews['vote'] != 'none', 'vote']\n"
             "votes[votes != 'abstain'].value_counts(normalize=True)"
             % round(feature["vote_threshold"] * 100)))
     if "signup_method" in columns and "rating" in columns:
         cells.append(code(
             "# Average rating by sign-up method\n"
-            "reviews.groupby('signup_method')['rating'].mean().sort_values()"))
+            "rated.groupby('signup_method')['rating'].mean().sort_values()"))
     if "comment" in columns:
         cells.append(code(
             "# Most common words in comments\n"
-            "words = reviews['comment'].fillna('').str.lower()"
-            ".str.findall(r\"[a-z']{4,}\").explode()\n"
+            "words = reviews.loc[reviews['has_comment'] == 1, 'comment'] if "
+            "'has_comment' in reviews else reviews.loc[reviews['comment'] != "
+            "'none', 'comment']\n"
+            "words = words.str.lower().str.findall(r\"[a-z']{4,}\").explode()\n"
             "words.value_counts().head(20)"))
-    cells.append(md("Columns are described in the dashboard's column guide "
-                    "and in README.txt of the analysis kit."))
+    cells.append(md("No cell is blank: unknown numbers are %d (with a "
+                    "`_known` 0/1 column), missing categories and text are "
+                    "`none`, each category also has one 0/1 column per value, "
+                    "and date-times have `_weekday` and `_hour` columns. "
+                    "Columns are described in the dashboard's column guide and "
+                    "in README.txt of the analysis kit." % UNKNOWN_NUMBER))
     return {
         "cells": cells,
         "metadata": {
@@ -529,6 +639,11 @@ def analysis_kit(data, rows, columns, meta, base):
     feature = data["archive"]
     csv_name = base + ".csv"
     nb = notebook(feature, csv_name, columns, meta.get("filters", {}))
+    base_types = dict((n, (t, m)) for n, t, m in REVIEW_COLUMNS)
+    rows, columns, helpers = analysis_ready(rows, columns)
+    types = {**base_types, **{n: (t, m) for n, t, m in helpers}}
+    round_rows, round_columns, _ = analysis_ready(
+        data["rounds"], list(ROUND_COLUMNS))
     nb["metadata"]["kernelspec"] = {"name": "python3", "display_name": "Python 3",
                                     "language": "python"}
     script = (
@@ -540,25 +655,28 @@ def analysis_kit(data, rows, columns, meta, base):
         "print(reviews.describe(include='all').T)\n" % (
             feature["feature_name"], feature["feature_id"], csv_name, base,
             csv_name))
+    if "rating" in columns:
+        script += "rated = reviews[reviews['rating_known'] == 1]\n"
     if "round" in columns and "rating" in columns:
-        script += "print(reviews.groupby('round')['rating'].agg(['size', 'mean']))\n"
+        script += "print(rated.groupby('round')['rating'].agg(['size', 'mean']))\n"
     if "vote" in columns:
-        script += "print(reviews['vote'].value_counts(normalize=True))\n"
+        script += ("print(reviews.loc[reviews['vote'] != 'none', 'vote']"
+                   ".value_counts(normalize=True))\n")
 
     with tempfile.TemporaryDirectory() as folder:
         db_path = os.path.join(folder, "kit.sqlite")
         kit_db = sqlite3.connect(db_path)
         kit_db.execute("CREATE TABLE reviews (%s)" % ", ".join(
             '"%s" %s' % (c, {"integer": "INTEGER", "0/1": "INTEGER"}.get(
-                dict((n, t) for n, t, _ in REVIEW_COLUMNS)[c], "TEXT"))
+                types[c][0], "TEXT"))
             for c in columns))
         kit_db.executemany("INSERT INTO reviews VALUES (%s)" % ",".join(
             "?" * len(columns)), [[r.get(c) for c in columns] for r in rows])
         kit_db.execute("CREATE TABLE rounds (%s)" % ", ".join(
-            '"%s"' % c for c in ROUND_COLUMNS))
+            '"%s"' % c for c in round_columns))
         kit_db.executemany("INSERT INTO rounds VALUES (%s)" % ",".join(
-            "?" * len(ROUND_COLUMNS)),
-            [[r.get(c) for c in ROUND_COLUMNS] for r in data["rounds"]])
+            "?" * len(round_columns)),
+            [[r.get(c) for c in round_columns] for r in round_rows])
         kit_db.commit()
         kit_db.close()
         with open(db_path, "rb") as handle:
@@ -571,8 +689,12 @@ def analysis_kit(data, rows, columns, meta, base):
              "  %s.ipynb          a starter Jupyter notebook" % base,
              "  %s.py             the same start as a pandas script" % base,
              "  %s.sqlite         tables 'reviews' and 'rounds' (SQLite)" % base,
+             "", "No cell is blank: unknown numbers are %d (see the _known "
+             "columns), missing" % UNKNOWN_NUMBER,
+             "categories and text are 'none', each category has one 0/1 "
+             "column per value,",
+             "and date-times have _weekday (1 = Monday) and _hour columns.",
              "", "Columns"]
-    types = dict((n, (t, m)) for n, t, m in REVIEW_COLUMNS)
     guide += ["  %-18s %-9s %s" % (c, types[c][0], types[c][1]) for c in columns]
     guide += ["", "Filters: " + (", ".join("%s = %s" % kv for kv in sorted(
         meta.get("filters", {}).items())) or "none"),

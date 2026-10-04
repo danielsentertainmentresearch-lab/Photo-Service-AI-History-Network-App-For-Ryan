@@ -135,19 +135,23 @@ class ExportTest(unittest.TestCase):
         name, kind, body = features.feature_export(db, "FT-03", "simple", "csv", {})
         self.assertEqual((name, kind), ("eventlens-ft-03-simple.csv", "text/csv"))
         rows = list(csv.DictReader(io.StringIO(body.decode())))
-        self.assertEqual(list(rows[0]), list(features.ROUND_COLUMNS))
+        # The original columns keep their place; helper columns follow.
+        self.assertEqual(list(rows[0])[:len(features.ROUND_COLUMNS)],
+                         list(features.ROUND_COLUMNS))
         self.assertEqual(len(rows), 4)
 
         _, _, body = features.feature_export(db, "FT-03", "complete", "json", {})
         data = json.loads(body)
-        self.assertEqual(data["columns"], list(features.REVIEW_COLUMN_NAMES))
+        self.assertEqual(data["columns"][:len(features.REVIEW_COLUMN_NAMES)],
+                         list(features.REVIEW_COLUMN_NAMES))
         self.assertEqual(len(data["rows"]), features.archive(db)[2]["reviews"])
 
         _, _, body = features.feature_export(
             db, "FT-03", "custom", "csv", {"columns": "round,rating", "rating": "5"})
         rows = list(csv.DictReader(io.StringIO(body.decode())))
-        self.assertEqual(list(rows[0]), ["round", "rating"])
-        self.assertTrue(all(r["rating"] == "5" for r in rows))
+        self.assertEqual(list(rows[0]), ["round", "rating", "rating_known"])
+        self.assertTrue(all(r["rating"] == "5" and r["rating_known"] == "1"
+                            for r in rows))
 
         with self.assertRaises(ValueError):
             features.feature_export(db, "FT-03", "everything", "csv", {})
@@ -186,6 +190,39 @@ class ExportTest(unittest.TestCase):
                 self.assertGreater(con.execute("SELECT COUNT(*) FROM rounds").fetchone()[0], 0)
                 con.close()
             self.assertIn("round = 1", kit.read("README.txt").decode())
+
+    def test_no_export_has_a_blank_cell(self):
+        db = demo_db()
+        files = [features.archive_export(db, k, "csv") for k in ("simple", "complete")]
+        files += [features.feature_export(db, "FT-01", k, "csv", {})
+                  for k in ("simple", "complete", "custom")]
+        for name, _, body in files:
+            rows = list(csv.reader(io.StringIO(body.decode())))
+            for row in rows[1:]:
+                self.assertEqual(len(row), len(rows[0]), name)
+                self.assertNotIn("", row, name)
+        # Helper columns carry the meaning of what was missing.
+        _, _, body = features.feature_export(db, "FT-01", "complete", "csv", {})
+        rows = list(csv.DictReader(io.StringIO(body.decode())))
+        votes = [r for r in rows if r["round_kind"] == "vote"]
+        self.assertTrue(votes)
+        for r in votes:
+            self.assertEqual((r["rating"], r["rating_known"]),
+                             (str(features.UNKNOWN_NUMBER), "0"))
+            self.assertEqual(r["vote_" + r["vote"]], "1")
+        for r in rows:
+            self.assertIn(r["reviewed_at_weekday"], [str(d) for d in range(1, 8)])
+            self.assertEqual(int(r["vote_yes"]) + int(r["vote_no"]) +
+                             int(r["vote_abstain"]) + int(r["vote_none"]), 1)
+        # The kit's sqlite and README follow the same rules.
+        _, _, body = features.feature_export(db, "FT-01", "complete", "kit", {})
+        with zipfile.ZipFile(io.BytesIO(body)) as kit:
+            guide = kit.read("README.txt").decode()
+            self.assertIn("rating_known", guide)
+            self.assertIn(str(features.UNKNOWN_NUMBER), guide)
+            nb = json.dumps(json.loads(kit.read("eventlens-ft-01-complete.ipynb")))
+            self.assertIn("rating_known", nb)
+            self.assertNotIn("dropna", nb)
 
     def test_notebook_cells_follow_the_columns(self):
         feature = features.archive(demo_db())[0]
@@ -286,8 +323,8 @@ class ServerTest(unittest.TestCase):
         nb = json.loads(self.get("/notebook/files/" + first["notebook"])[2])
         self.assertEqual(nb["nbformat"], 4)
         data = self.get("/notebook/files/" + first["notebook"].replace(".ipynb", ".csv"))[2].decode()
-        self.assertTrue(data.startswith("round,rating"))
-        self.assertTrue(all(line.endswith(",5") for line in data.strip().splitlines()[1:]))
+        self.assertTrue(data.startswith("round,rating,rating_known"))
+        self.assertTrue(all(line.endswith(",5,1") for line in data.strip().splitlines()[1:]))
         self.assertEqual(self.get("/notebook/notebooks/")[2], b"<p>lite</p>")
         self.assertEqual(self.get("/notebook/../secret.txt")[0], 404)
         self.assertEqual(self.get("/notebook/%2e%2e/secret.txt")[0], 404)
