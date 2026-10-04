@@ -110,6 +110,7 @@ importance:
 | 7 | Your data: the Free-write labels card above Export (owner's choice B) | `a041d90` |
 | 8 | Design Overhaul Cleanup, run 1 (see below) | `9c424bd`, `7be82a7` |
 | 9 | Brand artwork: app icon, store graphics and an opening title screen from the owner's approved logo option (see below) | `4a9be3c` |
+| 10 | Launch crash on the owner's phone (moto g 2025, Android 16): the app closed on opening in build #30. Code shrinking (R8) turned off; build #33 opens. Shrinking stays off until keep rules are written and tested on the phone | `845b905` |
 
 ## Mechanisms, parts and features
 
