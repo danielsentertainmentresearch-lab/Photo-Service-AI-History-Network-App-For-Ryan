@@ -32,6 +32,15 @@
   design overhaul process in the README. (4) Confer with the owner on a beta
   launch that clears Google Play's requirements, for a first app launching
   with no existing audience.
+- **Who does what** (owner rule, 4 Oct 2026; README "Who does what"): all
+  UI and UX creations, changes and modifications are done only by the owner
+  and their local Hermes model (Gemini API, `dream.md`); Hermes handles
+  everything expressive, creative or artistic. Claude does all
+  developer-side work and does not make UI/UX changes. A session opened for
+  Hermes (or one of her agents) says so at its start.
+- **Review handoff** (owner, 4 Oct 2026): after each manual review, a new
+  Claude session starts from the session summary the owner adds to the repo
+  as standard practice, written by Hermes as a handoff. Start from it.
 - **Brand artwork** (owner-approved Option A, "Core memory Polaroid"): the
   app icon, store graphics and launch title screen come from
   `tool/brand/brand.html` via `tool/brand/render.mjs`. The Scaffold logo is

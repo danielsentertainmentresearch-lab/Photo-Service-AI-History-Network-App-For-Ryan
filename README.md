@@ -207,6 +207,21 @@ It uses only Python's standard library. Setup, launch, and starting and
 ending each hosting are in [owner-dashboard/README.md](owner-dashboard/README.md).
 Until the app sends real metrics (final stage) it shows labelled demo data.
 
+## Who does what
+
+- **UI and UX** (owner rule, 4 Oct 2026): all UI and UX creations,
+  changes and modifications are made only by the human owner and architect
+  and their personal configuration of the **Hermes** model, with its
+  specialized `dream.md` file, hosted locally through the Gemini API.
+  Hermes handles everything expressive, creative or artistic. She works in
+  a contained copy (a fork on her Ubuntu workspace), kept quarantined.
+- **Development** (owner rule, 4 Oct 2026): the Anthropic models (Claude)
+  handle all developer-side work: code, the database, the AI pipeline, the
+  owner dashboard, builds and releases.
+- If Hermes needs to talk to a Claude session, directly or through one of
+  her agents, the owner opens a separate session for it, and it states at
+  the start that this is its use case.
+
 ## Design Overhaul Cleanup
 
 The UX and UI work below comes after the build phase (stages 1 to 4) and
