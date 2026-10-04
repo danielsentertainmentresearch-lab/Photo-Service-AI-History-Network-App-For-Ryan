@@ -102,7 +102,7 @@ switch on once their platforms are connected).
 - **Free-write labels**: the AI reads each free write and suggests a few
   short labels (such as "calm" or "proud"), drawn from its words, meaning
   and sentiment, then checks them in a second pass. They show only in
-  Your data, where you can say whether each one fits, remove it, or have
+  Your data, where you can say once whether each one fits (no undo), or have
   the AI label the event again. In the analysis CSV each label is its own
   1/0 column, and no cell is ever blank (unknowns are words or -999).
 - **Explore your data**: a plain-language guide to opening the analysis CSV

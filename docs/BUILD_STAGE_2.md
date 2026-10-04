@@ -139,8 +139,8 @@ importance:
      experience, what each means and its sentiment (positive, negative,
      mixed or neutral), then combines the annotations into 1 to 6 short
      labels, each with its sentiment and the words it came from.
-  2. The app's own check drops any label whose words aren't in the writing,
-     and any label the person rejected for that event.
+  2. The app's own check drops any label whose words aren't in the
+     writing.
   3. A second Claude request reviews each remaining label against the
      writing, its words and its sentiment, and only supported labels are
      kept.
@@ -152,11 +152,18 @@ importance:
   label") and in the analysis file, never on the event page, so they don't
   steer what someone writes next.
 - **Fits / Doesn't fit / Label again**: tapping a label in Your data lists
-  its events. "Fits" confirms it; "Doesn't fit" removes it and remembers it
-  as rejected, so it is never proposed for that event again; "Label again"
-  asks for fresh labels, keeping confirmed ones. When the writing itself
-  changes, confirmations are dropped and labels are made again. Labels
-  stay AI-made and AI-checked; people don't type their own.
+  its events, each with its free write. "Fits" confirms the label;
+  "Doesn't fit" removes it. Both are final: there is no undo in any form,
+  and once a choice is made only "Label again" remains. The sheet shows no
+  notes, badges or reminders of earlier choices, so nothing nudges the
+  next decision.
+- **Every pass is a first pass** (owner decision, 4 Oct 2026): "Label
+  again", and labelling after the writing changes, run exactly like the
+  first time. The AI is told nothing about the event's earlier labels or
+  the person's choices, so any label, including one turned down before,
+  can come back and is shown as new. The result replaces the event's labels
+  and choices. Labels stay AI-made and AI-checked; people don't type their
+  own.
 - **Storage**: database v5 adds `experience_labels`, `labelled_experience`,
   `confirmed_labels` and `rejected_labels` to events, on the phone.
 - **Analysis file**: never a blank cell. Unknown text is a word ("untitled",

@@ -197,8 +197,8 @@ class _LabelSheet extends StatefulWidget {
 }
 
 class _LabelSheetState extends State<_LabelSheet> {
-  /// Events where the label was just removed, kept in view so the person
-  /// can ask for new labels.
+  /// Events where the label was just removed, kept in view (with only
+  /// Label again) so the person can ask for a new pass.
   final Set<String> _removed = {};
 
   @override
@@ -221,12 +221,6 @@ class _LabelSheetState extends State<_LabelSheet> {
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         children: [
           Text(widget.label, style: theme.textTheme.titleLarge),
-          const SizedBox(height: 4),
-          Text(
-            'The AI gave this label to the free writes below. Tell it '
-            'whether the label fits each one.',
-            style: theme.textTheme.bodySmall,
-          ),
           if (!state.hasApiKey)
             Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -259,29 +253,15 @@ class _LabelSheetState extends State<_LabelSheet> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      e.experienceLabels.isEmpty
-                          ? 'No labels on this event now.'
-                          : 'Labels now: ${e.experienceLabels.join(', ')}',
-                      style: theme.textTheme.bodySmall,
-                    ),
-                    if (!e.experienceLabels.contains(widget.label))
-                      Text(
-                        'Removed from this event. The AI won\'t suggest it '
-                        'here again.',
-                        style: theme.textTheme.bodySmall,
-                      ),
                     Wrap(
                       spacing: 8,
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        if (e.confirmedLabels.contains(widget.label))
-                          const Chip(
-                            avatar: Icon(Icons.check, size: 18),
-                            label: Text('You said it fits'),
-                          )
-                        else if (e.experienceLabels.contains(widget.label)) ...[
+                        // Each choice is final and leaves no mark: once made,
+                        // only Label again remains.
+                        if (e.experienceLabels.contains(widget.label) &&
+                            !e.confirmedLabels.contains(widget.label)) ...[
                           FilledButton.tonal(
                             onPressed: () =>
                                 state.confirmLabel(e.id, widget.label),

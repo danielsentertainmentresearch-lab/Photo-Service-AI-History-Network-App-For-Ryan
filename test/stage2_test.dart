@@ -307,7 +307,7 @@ void main() {
       },
     );
 
-    test('fits, doesn\'t fit, and label again', () async {
+    test('choices are final, and every pass is a first pass', () async {
       final state = await makeState();
       const writing = 'So proud of us.';
       await state.events.save(
@@ -318,35 +318,40 @@ void main() {
           labelled: writing,
         ),
       );
+      await state.events.save(
+        _event('e2', experience: 'x', labels: ['joy'], labelled: 'x'),
+      );
       await state.load();
 
       await state.confirmLabel('e1', 'proud');
       await state.rejectLabel('e1', 'tired');
+      // No undo either way: a confirmed label can't be turned down, and a
+      // removed one can't be confirmed.
+      await state.rejectLabel('e1', 'proud');
+      await state.confirmLabel('e1', 'tired');
       var e = state.eventById('e1')!;
       expect(e.confirmedLabels, ['proud']);
-      expect(e.rejectedLabels, ['tired']);
       expect(e.experienceLabels, ['calm', 'proud']);
 
-      // Label again: the AI offers "tired" once more and a new "grateful".
+      // Label again: a first pass. The AI hears nothing about this event's
+      // labels or choices, and a turned-down label can come back as new.
       ai.proposed = ['tired', 'grateful'];
       ai.supported = {'tired', 'grateful'};
       await state.labelExperience('e1', again: true);
       e = state.eventById('e1')!;
-      // Confirmed kept, rejected never back, new label added.
-      expect(e.experienceLabels, ['proud', 'grateful']);
-      expect(e.confirmedLabels, ['proud']);
-      final propose = (ai.bodies.first['messages'] as List).single['content'];
-      expect(propose, contains('<labels_they_rejected>\ntired\n'));
-
-      // New writing drops the old confirmations; rejections stay.
-      await state.updateExperience('e1', 'Proud, and a new day.');
-      ai.proposed = ['proud'];
-      ai.supported = {'proud'};
-      await state.labelExperience('e1');
-      e = state.eventById('e1')!;
+      expect(e.experienceLabels, ['tired', 'grateful']);
       expect(e.confirmedLabels, isEmpty);
-      expect(e.rejectedLabels, ['tired']);
-      expect(e.experienceLabels, ['proud']);
+      expect(e.rejectedLabels, isEmpty);
+      final propose =
+          (ai.bodies.first['messages'] as List).single['content'] as String;
+      expect(propose, isNot(contains('rejected')));
+      // Only other events' labels are offered for reuse.
+      expect(propose, contains('<existing_labels>\njoy\n</existing_labels>'));
+      expect(propose, isNot(contains('calm')));
+      expect(
+        ExperienceLabeler.proposeInstructions,
+        isNot(contains('rejected')),
+      );
     });
 
     testWidgets('Your data: tap a label, then say it fits or not', (
@@ -403,13 +408,28 @@ void main() {
       await settle(
         () => state.allEvents.any((e) => e.confirmedLabels.isNotEmpty),
       );
-      expect(find.text('You said it fits'), findsOneWidget);
+      // The choice leaves no mark; its buttons are simply gone.
+      expect(find.text('Fits'), findsOneWidget);
+      expect(find.text("Doesn't fit"), findsOneWidget);
 
       await tester.tap(find.text("Doesn't fit"));
       await settle(
         () => state.allEvents.any((e) => e.rejectedLabels.isNotEmpty),
       );
-      expect(find.textContaining('Removed from this event'), findsOneWidget);
+      expect(find.text('Fits'), findsNothing);
+      expect(find.text("Doesn't fit"), findsNothing);
+      // Only Label again stays, on both events.
+      expect(find.text('Label again'), findsNWidgets(2));
+      // No notes, citations or reminders of earlier choices.
+      for (final note in [
+        'You said it fits',
+        'Removed',
+        'Labels now',
+        'won\'t suggest',
+        'Tell it whether',
+      ]) {
+        expect(find.textContaining(note), findsNothing, reason: note);
+      }
       expect(
         state.allEvents.where((e) => e.experienceLabels.contains('proud')),
         hasLength(1),

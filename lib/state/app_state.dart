@@ -306,11 +306,13 @@ class AppState extends ChangeNotifier {
   }
 
   /// Makes labels for an event's free write when they are due, or anew when
-  /// [again] is set (the person asked to label it again). Clears them when
-  /// the free write is emptied. Without a key it leaves them waiting. A free
-  /// write edited while labelling is labelled again next time. Labels the
-  /// person rejected never come back; labels they confirmed are kept when
-  /// labelling again, and dropped once the writing itself changes.
+  /// [again] is set (the person asked to label it again). Every run is a
+  /// first pass: the AI is told nothing about this event's earlier labels or
+  /// the person's choices, so any label, including one they turned down, can
+  /// come back as new. The result replaces the event's labels and choices.
+  /// Clears labels when the free write is emptied. Without a key it leaves
+  /// them waiting. A free write edited while labelling is labelled again
+  /// next time.
   Future<void> labelExperience(String eventId, {bool again = false}) async {
     final current = await events.byId(eventId);
     if (current == null) return;
@@ -331,18 +333,20 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     try {
       final writing = current.experience;
-      final keep = current.needsLabels ? <String>[] : current.confirmedLabels;
-      final fresh = await labelerFactory(apiKey, settings.model).label(
+      final labels = await labelerFactory(apiKey, settings.model).label(
         writing,
-        existing: {for (final e in _events) ...e.experienceLabels},
-        rejected: current.rejectedLabels,
+        existing: {
+          for (final e in _events)
+            if (e.id != eventId) ...e.experienceLabels,
+        },
       );
       final latest = await events.byId(eventId);
       if (latest != null && latest.experience.trim() == writing.trim()) {
         await events.update(
           latest.copyWith(
-            experienceLabels: {...keep, ...fresh}.toList(),
-            confirmedLabels: keep,
+            experienceLabels: labels,
+            confirmedLabels: const [],
+            rejectedLabels: const [],
             labelledExperience: writing,
           ),
         );
@@ -358,7 +362,8 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// The person says [label] fits this event's free write.
+  /// The person says [label] fits this event's free write. Final: it can't
+  /// be turned into "doesn't fit" afterwards.
   Future<void> confirmLabel(String eventId, String label) async {
     final current = await events.byId(eventId);
     if (current == null || !current.experienceLabels.contains(label)) return;
@@ -370,18 +375,17 @@ class AppState extends ChangeNotifier {
   }
 
   /// The person says [label] doesn't fit (unsuitable, or made up by the
-  /// AI). It is removed from the event and never proposed for it again.
+  /// AI). It is removed from the event. Final: a label already confirmed
+  /// can't be turned down, and nothing brings a removed label back except
+  /// a new labelling pass.
   Future<void> rejectLabel(String eventId, String label) async {
     final current = await events.byId(eventId);
-    if (current == null) return;
+    if (current == null || !current.experienceLabels.contains(label)) return;
+    if (current.confirmedLabels.contains(label)) return;
     await events.update(
       current.copyWith(
         experienceLabels: [
           for (final l in current.experienceLabels)
-            if (l != label) l,
-        ],
-        confirmedLabels: [
-          for (final l in current.confirmedLabels)
             if (l != label) l,
         ],
         rejectedLabels: {...current.rejectedLabels, label}.toList(),
