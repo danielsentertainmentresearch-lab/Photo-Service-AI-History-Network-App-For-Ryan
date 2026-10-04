@@ -97,6 +97,28 @@ class MetricsTest(unittest.TestCase):
                     self.assertTrue(value is None or 0 <= value <= 1)
             self.assertGreater(len(m["daily"]), 0)
 
+    def test_stage2_features_are_counted_without_their_content(self):
+        db = small_db()
+        store.ingest(db, [
+            {"type": "activity", "account_id": "a1", "kind": "free_write_saved", "at": "2026-09-30T09:00:00Z"},
+            {"type": "activity", "account_id": "a1", "kind": "mind_map_opened", "at": "2026-09-30T09:01:00Z"},
+            {"type": "activity", "account_id": "a1", "kind": "mind_map_centered", "at": "2026-09-30T09:02:00Z", "value": 2},
+        ])
+        m = store.metrics(db, "7", now=datetime(2026, 9, 30, 12))
+        use = {f["key"]: (f["total"], f["accounts"]) for f in m["features"]}
+        self.assertEqual(use["free_write_saved"], (1, 1))
+        self.assertEqual(use["mind_map_opened"], (1, 1))
+        self.assertEqual(use["mind_map_centered"], (2, 1))
+        # Only counts are stored: the activity table has no text column.
+        columns = {r[1] for r in db.execute("PRAGMA table_info(activity)")}
+        self.assertEqual(columns, {"id", "install_id", "account_id", "at", "kind", "value"})
+
+        demo_db = store.connect(":memory:")
+        demo.generate(demo_db)
+        demo_use = {f["key"]: f["total"] for f in store.metrics(demo_db, "all")["features"]}
+        for key in ("free_write_saved", "mind_map_opened", "mind_map_centered"):
+            self.assertGreater(demo_use[key], 0, key)
+
     def test_unfinished_retention_weeks_stay_blank(self):
         db = store.connect(":memory:")
         demo.generate(db)

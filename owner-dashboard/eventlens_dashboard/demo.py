@@ -38,6 +38,9 @@ def generate(db, end=datetime(2026, 10, 3, 18, 0), days=180, seed=2026,
              installs_per_day=7.0):
     """Fills [db] with about [days] days of activity ending at [end]."""
     rng = random.Random(seed)
+    # Stage 2 features draw from their own stream, so adding them left
+    # every earlier demo number unchanged.
+    stage2 = random.Random(seed + 2)
     store.clear(db)
     start = end - timedelta(days=days)
 
@@ -116,6 +119,8 @@ def generate(db, end=datetime(2026, 10, 3, 18, 0), days=180, seed=2026,
                             act(install, account, moment, "event_described")
                         if rng.random() < 0.18:
                             act(install, account, moment, "memory_saved")
+                        if stage2.random() < 0.3 + 0.4 * engagement:
+                            act(install, account, moment, "free_write_saved")
                     if not graph and described_photos >= 10:
                         graph = True
                         act(install, account, moment, "graph_unlocked")
@@ -134,6 +139,10 @@ def generate(db, end=datetime(2026, 10, 3, 18, 0), days=180, seed=2026,
                         act(install, account, moment, "ad_watched")
                     rings += 1
                     act(install, account, moment, "ring_unlocked")
+                if graph and stage2.random() < 0.25 + 0.5 * engagement:
+                    act(install, account, moment, "mind_map_opened")
+                    for _ in range(stage2.choice((0, 0, 1, 2, 3))):
+                        act(install, account, moment, "mind_map_centered")
                 if export and rng.random() < 0.04:
                     act(install, account, moment, "export")
             if rng.random() < 0.025:

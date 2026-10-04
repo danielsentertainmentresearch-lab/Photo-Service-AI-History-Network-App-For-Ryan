@@ -54,13 +54,34 @@ importance:
   to the event as it was experienced. Neurological, biological and purely
   factual data are out of scope for this model. The branching mind-map
   view is only one way of showing it.
+- **Two parts to every event** (4 Oct 2026). The AI's account is read-only
+  and primarily factual and objective: only what the photos, notes, date,
+  place and memory confirm. The person's free write is theirs: a blank box
+  with no prompt, label or header, and a "?" beside it explaining that it is
+  for them to write freely about their experience at the event.
+- **Two data areas** (4 Oct 2026). The app's data features are the
+  everyday area, for fun and daily use: no raw subjective text, and no
+  empty, "N/A" or unusable values. Subjective writing is represented
+  through AI-made labels, each verified by a second AI pass, which become
+  1/0 columns. The owner dashboard is the enterprise area. All its data is
+  transformed automatically so every value is usable for analysis in its
+  built-in notebook. The in-app data guide and Python platforms list stay.
+- **Audience** (4 Oct 2026): everyday phone users on the Android and Apple
+  app stores. The owner dashboard is the only enterprise-level part, issued
+  by the owner personally. An enterprise version of the app may come later;
+  none is planned.
+- **The dashboard follows the app** (4 Oct 2026): every change to what the
+  app does updates the owner dashboard in the same piece of work, and its
+  tests run each time.
 
 ## How stage 2 has unfolded so far
 
 | Step | What was done | Commit |
 |---|---|---|
 | 1 | Stage 2 opened on the owner's command | `211f0d9` |
-| 2 | Mind map view: a branching, explorable view of the existing graph, first tab on the graph screen | _pending_ |
+| 2 | Mind map view: a branching, explorable view of the existing graph, first tab on the graph screen | `f312968` |
+| 3 | Two parts to every event: the AI's account made factual and objective; the person's free write (database v4) | `28bf427` |
+| 4 | Owner dashboard follows the app: mind map and free-write use counted in Feature use and the demo data | _this commit_ |
 
 ## Mechanisms, parts and features
 
@@ -82,23 +103,40 @@ importance:
 - Read-only, like the graph it draws on. The user layer (rings) shows on
   event branches.
 
-## Next: the inner layer (proposed, awaiting owner confirmation)
+### Two parts to every event (step 3)
+- **The AI's account** (`lib/ai/event_describer.dart`): written in a plain,
+  precise, objective voice, keeping to what the photos, notes, date, place
+  and memory confirm. It leaves feelings and meaning to the person.
+  Read-only, as before.
+- **The free write** (`lib/widgets/free_write_box.dart`): an outlined box
+  with no label, hint or header, on the New event screen and on every
+  event, with a "?" on its right that explains it. On an event it saves as
+  the person types and is never replaced while they are writing.
+- **Storage**: `experience` on each event (database v4, migrated on
+  upgrade). Included in search, in `data.json` and in the Obsidian note
+  ("My free write"). Not sent to the AI yet.
+- The notes field's hint no longer suggests writing how it feels; the notes
+  feed the AI's factual account.
 
-Following the decision above, the next step gives each event a
-subjective layer and makes it what the mind map branches on:
-- **Feelings**: named emotions with how strong they were and whether they
-  were pleasant or not.
-- **Meaning**: what the event meant to the person, in their own terms.
-- **State**: mood, energy and stress around the event.
-- **Social**: who they felt close to or distant from, and the roles and
-  belonging the event touched.
+### Owner dashboard (step 4)
+- New activity kinds `free_write_saved`, `mind_map_opened` and
+  `mind_map_centered`, shown in Feature use. Counts only, never content.
+- Demo data includes them, drawn from a separate random stream so every
+  earlier demo number is unchanged.
 
-Each point records whether the person said it or the AI inferred it from
-their notes. Nothing is inferred from faces or photos. The mind map gains
-Feelings, Meanings and Social branches, so a feeling such as "calm" can be
-the centre and branch out to every event that felt that way. This data is
-sensitive, stays on the phone like the rest of the library, and needs the
-privacy policy and Play data-safety answers updated before release.
+## Next: free-write labels and the enterprise transform
+
+- **Labels (everyday area)**: the AI reads a saved free write and proposes
+  short labels for it; a second AI pass keeps only the labels the text
+  supports. Each label becomes a 1/0 column in the analysis spreadsheet
+  and shows in Your data. Labels don't show on the event page. The "?"
+  text, privacy policy and Play data-safety answers are updated to say the
+  AI reads the free write to make labels and never changes it. `data.json`
+  and the Obsidian notes keep the free write as written.
+- **Transform (enterprise area)**: before any owner-dashboard export or
+  notebook, missing values become explicit 1/0 flags, categories become
+  1/0 columns, dates gain day, weekday and hour columns, and free text
+  becomes word counts and presence flags, so no cell is blank or unusable.
 
 ## Not connected yet
 

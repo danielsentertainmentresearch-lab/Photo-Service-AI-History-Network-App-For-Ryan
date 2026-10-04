@@ -24,6 +24,14 @@ frozen branch `build-stage-1`). Everything built in stage 1 is described in
 **Build stage 2 started on 4 October 2026**, on the owner's command. Its
 living deliverable is [docs/BUILD_STAGE_2.md](docs/BUILD_STAGE_2.md).
 
+**Who it's for:** everyday phone users on the Android and Apple app stores.
+Its data features (Your data, the spreadsheets, the data guide) are for
+fun and daily use. The owner dashboard is the only enterprise-level part of
+EventLens; the owner issues it personally to those who need it, or who need
+to host or fork this architecture. An enterprise version of the app may be
+developed further down the line, but there is no intention to do so at
+this point.
+
 Outside accounts and platforms still to connect are in
 [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md).
 
@@ -41,11 +49,15 @@ switch on once their platforms are connected).
   EXIF data, and a place name from its GPS position (named by OpenStreetMap
   Nominatim). The phone's location permission is never requested, and a
   date you pick yourself is never overwritten.
+- A free write on every event: a blank box with no prompt, for writing
+  about the experience in your own way. The "?" beside it explains it.
+  It stays on the phone and the AI never changes it.
 - Timeline grouped by month, full-text search across everything, and
   **On this day** (events from today's date in earlier years) at the top.
 
 ### The AI
-- Each event gets a detailed first-person account, a short summary, and
+- Each event gets a detailed, factual first-person account (what the
+  photos, notes, time and place confirm), a short summary, and
   labels for people, places and tags. You can edit, copy or rewrite it.
 - Memory screen: add, edit and delete what the AI should always know; the
   AI suggests new memories after each event, and you choose what to keep.
@@ -58,6 +70,9 @@ switch on once their platforms are connected).
 - The first 10 described photos turn the timeline into a connected graph,
   once. From then on the AI builds on it as events are described, adding
   chapters, connections and themes without rewriting what it already wrote.
+- **Mind map** (first tab): your story in the centre, branching into
+  chapters, themes, people and places. Tap a branch to open it, centre on
+  any idea to explore from there, and follow the trail back.
 - Events sit left to right in time, linked to their people, places, tags,
   themes and memories.
 - AI-owned content (chapter wording and membership, themes, connections,

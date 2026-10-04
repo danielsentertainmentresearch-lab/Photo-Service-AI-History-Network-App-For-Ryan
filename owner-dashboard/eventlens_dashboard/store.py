@@ -128,6 +128,9 @@ ACTIVITY_KINDS = (
     "ring_unlocked",
     "ad_watched",
     "memory_saved",
+    "mind_map_opened",
+    "mind_map_centered",
+    "free_write_saved",
 )
 
 SIGNUP_METHODS = ("email", "phone", "google", "web3")
@@ -165,6 +168,9 @@ FEATURES = (
     ("event_described", "AI accounts written"),
     ("photo_added", "Photos added"),
     ("memory_saved", "Memories saved"),
+    ("free_write_saved", "Free writes saved"),
+    ("mind_map_opened", "Mind map opened"),
+    ("mind_map_centered", "Mind map ideas centred on"),
     ("weather_lookup", "Weather lookups"),
     ("ring_unlocked", "Ring colours unlocked"),
     ("ad_watched", "Rewarded videos watched"),

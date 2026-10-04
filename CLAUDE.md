@@ -23,6 +23,16 @@
   The Your data meters stay free with no ads.
 - `owner-dashboard/` is owner-only (Python stdlib, localhost). Run its
   tests with `python3 -m unittest discover -s tests` from that folder.
+- **Dashboard follows the app** (owner rule, stage 2): whenever a change adds
+  to or changes what the app does, update the owner dashboard to match in
+  the same piece of work (activity kinds, feature use, demo data) and run its
+  tests every time. The dashboard only ever receives counts, never what
+  people wrote.
+- Audience: everyday phone users (Android and Apple app stores); the app's
+  data features are for fun and daily use. The owner dashboard is the only
+  enterprise-level part and is issued by the owner personally. No enterprise
+  version of the app is planned. The in-app data guide and Python platforms
+  list stay.
 - Stage 2 (in progress) network model: **mind maps first** (primary in
   function and data exploration), then **Obsidian** enterprise/user-level
   functions added for familiarity. "Mind map" means the **mind model**:
