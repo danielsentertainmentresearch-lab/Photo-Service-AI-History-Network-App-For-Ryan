@@ -144,6 +144,9 @@ class _NewEventScreenState extends State<NewEventScreen> {
         // Runs in the background; the detail screen shows its progress.
         state.describeEvent(event.id);
       }
+      if (_experience.text.trim().isNotEmpty) {
+        state.labelExperience(event.id);
+      }
       if (!mounted) return;
       Navigator.of(context).pushReplacement(MaterialPageRoute(
           builder: (_) => EventDetailScreen(eventId: event.id)));

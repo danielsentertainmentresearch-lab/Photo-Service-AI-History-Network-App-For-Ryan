@@ -33,6 +33,14 @@
   enterprise-level part and is issued by the owner personally. No enterprise
   version of the app is planned. The in-app data guide and Python platforms
   list stay.
+- **Everyday data files never have blanks** (owner rule, stage 2): every
+  cell in the in-app analysis file must work in a beginner's Jupyter
+  notebook. Unknown text gets a word marker ("unknown", "none", "not looked
+  up"), unknown numbers get `unknownNumber` (-999) so number columns stay
+  numeric, and `has_` 0/1 columns say which rows have real values.
+  Subjective writing never goes into the data files as text; it appears
+  only as AI-made, AI-checked labels, one 1/0 column per label. Review this
+  after three months of usage metrics.
 - Stage 2 (in progress) network model: **mind maps first** (primary in
   function and data exploration), then **Obsidian** enterprise/user-level
   functions added for familiarity. "Mind map" means the **mind model**:

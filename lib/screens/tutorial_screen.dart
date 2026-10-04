@@ -65,8 +65,9 @@ const _steps = [
     Icons.lock_outline,
     'Private by design',
     'Photos, notes and memories stay on your phone. When you ask for an '
-        'account, that event is sent to the AI with your own API key. An '
-        'account is needed to start using the app.',
+        'account, that event is sent to the AI with your own API key, and '
+        'free writes are sent only to make their labels. An account is '
+        'needed to start using the app.',
   ),
 ];
 

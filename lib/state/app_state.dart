@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
 import '../ai/anthropic_client.dart';
+import '../ai/experience_labeler.dart';
 import '../ai/data_platform_advisor.dart';
 import '../ai/event_describer.dart';
 import '../ai/graph_builder.dart';
@@ -54,6 +55,11 @@ typedef PlatformAdvisorFactory = DataPlatformAdvisor Function(
 DataPlatformAdvisor _defaultAdvisor(String apiKey, String model) =>
     DataPlatformAdvisor(client: AnthropicClient(apiKey: apiKey), model: model);
 
+typedef LabelerFactory = ExperienceLabeler Function(String apiKey, String model);
+
+ExperienceLabeler _defaultLabeler(String apiKey, String model) =>
+    ExperienceLabeler(client: AnthropicClient(apiKey: apiKey), model: model);
+
 /// Single source of truth for the UI.
 class AppState extends ChangeNotifier {
   final EventRepository events;
@@ -65,6 +71,7 @@ class AppState extends ChangeNotifier {
   final GraphBuilderFactory graphBuilderFactory;
   final PlacesService places;
   final PlatformAdvisorFactory advisorFactory;
+  final LabelerFactory labelerFactory;
   final Uuid _uuid = const Uuid();
 
   AppState({
@@ -77,6 +84,7 @@ class AppState extends ChangeNotifier {
     this.graphBuilderFactory = _defaultGraphBuilder,
     PlacesService? places,
     this.advisorFactory = _defaultAdvisor,
+    this.labelerFactory = _defaultLabeler,
   }) : places = places ?? PlacesService();
 
   static const int maxPhotosPerEvent = 10;
@@ -268,6 +276,126 @@ class AppState extends ChangeNotifier {
       current.copyWith(experience: text, updatedAt: DateTime.now()),
     );
     await _reload();
+  }
+
+  // ---- Free-write labels ------------------------------------------------------
+
+  final Set<String> _labelling = {};
+  String? _labelError;
+
+  /// Why the last labelling attempt failed, if it did.
+  String? get labelError => _labelError;
+  bool get labelling => _labelling.isNotEmpty;
+
+  /// Events with a free write whose labels haven't been made yet.
+  int get eventsAwaitingLabels => _events.where((e) => e.needsLabels).length;
+
+  /// Every label in the library with the number of events that carry it,
+  /// most used first.
+  List<MapEntry<String, int>> get labelCounts {
+    final counts = <String, int>{};
+    for (final e in _events) {
+      for (final label in e.experienceLabels) {
+        counts[label] = (counts[label] ?? 0) + 1;
+      }
+    }
+    return counts.entries.toList()..sort(
+      (a, b) =>
+          b.value != a.value ? b.value - a.value : a.key.compareTo(b.key),
+    );
+  }
+
+  /// Makes labels for an event's free write when they are due, or anew when
+  /// [again] is set (the person asked to label it again). Clears them when
+  /// the free write is emptied. Without a key it leaves them waiting. A free
+  /// write edited while labelling is labelled again next time. Labels the
+  /// person rejected never come back; labels they confirmed are kept when
+  /// labelling again, and dropped once the writing itself changes.
+  Future<void> labelExperience(String eventId, {bool again = false}) async {
+    final current = await events.byId(eventId);
+    if (current == null) return;
+    if (current.experience.trim().isEmpty) {
+      if (current.experienceLabels.isNotEmpty ||
+          current.labelledExperience.isNotEmpty) {
+        await events.update(
+          current.copyWith(experienceLabels: const [], labelledExperience: ''),
+        );
+        await _reload();
+      }
+      return;
+    }
+    if (!current.needsLabels && !again) return;
+    final apiKey = await settings.readApiKey();
+    if (apiKey == null || apiKey.isEmpty) return;
+    if (!_labelling.add(eventId)) return;
+    notifyListeners();
+    try {
+      final writing = current.experience;
+      final keep = current.needsLabels ? <String>[] : current.confirmedLabels;
+      final fresh = await labelerFactory(apiKey, settings.model).label(
+        writing,
+        existing: {for (final e in _events) ...e.experienceLabels},
+        rejected: current.rejectedLabels,
+      );
+      final latest = await events.byId(eventId);
+      if (latest != null && latest.experience.trim() == writing.trim()) {
+        await events.update(
+          latest.copyWith(
+            experienceLabels: {...keep, ...fresh}.toList(),
+            confirmedLabels: keep,
+            labelledExperience: writing,
+          ),
+        );
+      }
+      _labelError = null;
+    } on AnthropicException catch (e) {
+      _labelError = e.message;
+    } catch (e) {
+      _labelError = 'Labelling failed: $e';
+    } finally {
+      _labelling.remove(eventId);
+      await _reload();
+    }
+  }
+
+  /// The person says [label] fits this event's free write.
+  Future<void> confirmLabel(String eventId, String label) async {
+    final current = await events.byId(eventId);
+    if (current == null || !current.experienceLabels.contains(label)) return;
+    if (current.confirmedLabels.contains(label)) return;
+    await events.update(
+      current.copyWith(confirmedLabels: [...current.confirmedLabels, label]),
+    );
+    await _reload();
+  }
+
+  /// The person says [label] doesn't fit (unsuitable, or made up by the
+  /// AI). It is removed from the event and never proposed for it again.
+  Future<void> rejectLabel(String eventId, String label) async {
+    final current = await events.byId(eventId);
+    if (current == null) return;
+    await events.update(
+      current.copyWith(
+        experienceLabels: [
+          for (final l in current.experienceLabels)
+            if (l != label) l,
+        ],
+        confirmedLabels: [
+          for (final l in current.confirmedLabels)
+            if (l != label) l,
+        ],
+        rejectedLabels: {...current.rejectedLabels, label}.toList(),
+      ),
+    );
+    await _reload();
+  }
+
+  /// Labels every free write that is waiting, one at a time.
+  Future<void> labelAllWaiting() async {
+    for (final e in _events.where((e) => e.needsLabels).toList()) {
+      await labelExperience(e.id);
+      if (_labelError != null) return;
+    }
   }
 
   Future<void> updateDescription(LifeEvent event, String description) async {

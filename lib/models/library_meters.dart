@@ -39,6 +39,8 @@ const meterIds = <String>[
   'books',
   'rings',
   'weather',
+  'free_writes',
+  'top_label',
 ];
 
 String? _top(Iterable<String> items) {
@@ -83,6 +85,7 @@ List<Meter> computeMeters({
   final busiest = _top(events.map((e) => month.format(e.occurredAt)));
   final topPerson = _top(events.expand((e) => e.people));
   final topPlace = _top(events.expand((e) => e.places));
+  final topLabel = _top(events.expand((e) => e.experienceLabels));
   (String, String?) split(String? top, String empty) {
     if (top == null) return (empty, null);
     final parts = top.split('\u0000');
@@ -92,6 +95,7 @@ List<Meter> computeMeters({
   final (busiestValue, busiestDetail) = split(busiest, 'None yet');
   final (personValue, personDetail) = split(topPerson, 'None yet');
   final (placeValue, placeDetail) = split(topPlace, 'None yet');
+  final (labelValue, labelDetail) = split(topLabel, 'None yet');
 
   final describedPhotos = describedPhotoCount(events);
   final graphValue = graph != null
@@ -144,6 +148,12 @@ List<Meter> computeMeters({
       'Events with weather',
       n(events.where((e) => e.weather != null).length),
     ),
+    Meter(
+      'free_writes',
+      'Events with a free write',
+      n(events.where((e) => e.experience.trim().isNotEmpty).length),
+    ),
+    Meter('top_label', 'Most common free-write label', labelValue, labelDetail),
   ];
 }
 

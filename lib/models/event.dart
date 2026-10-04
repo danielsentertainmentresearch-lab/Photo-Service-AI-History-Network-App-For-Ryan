@@ -143,6 +143,19 @@ class LifeEvent {
   /// Theirs alone: never sent to the AI and never changed by it.
   final String experience;
 
+  /// Short labels the AI made from [experience] and then checked against
+  /// it, for the person's own data exploration.
+  final List<String> experienceLabels;
+
+  /// The free write the labels were made from, to tell when they are due.
+  final String labelledExperience;
+
+  /// Labels the person said fit. Kept when they ask for new labels.
+  final List<String> confirmedLabels;
+
+  /// Labels the person said don't fit. Never proposed again for this event.
+  final List<String> rejectedLabels;
+
   bool get hasCoordinates => latitude != null && longitude != null;
 
   const LifeEvent({
@@ -167,7 +180,16 @@ class LifeEvent {
     this.weather,
     this.images = const [],
     this.experience = '',
+    this.experienceLabels = const [],
+    this.labelledExperience = '',
+    this.confirmedLabels = const [],
+    this.rejectedLabels = const [],
   });
+
+  /// True when there is a free write whose labels haven't been made yet.
+  bool get needsLabels =>
+      experience.trim().isNotEmpty &&
+      experience.trim() != labelledExperience.trim();
 
   bool get hasAccount => description.trim().isNotEmpty;
 
@@ -194,6 +216,10 @@ class LifeEvent {
     bool clearCoordinates = false,
     bool clearWeather = false,
     String? experience,
+    List<String>? experienceLabels,
+    String? labelledExperience,
+    List<String>? confirmedLabels,
+    List<String>? rejectedLabels,
   }) {
     return LifeEvent(
       id: id,
@@ -217,6 +243,10 @@ class LifeEvent {
       weather: clearWeather ? null : (weather ?? this.weather),
       images: images ?? this.images,
       experience: experience ?? this.experience,
+      experienceLabels: experienceLabels ?? this.experienceLabels,
+      labelledExperience: labelledExperience ?? this.labelledExperience,
+      confirmedLabels: confirmedLabels ?? this.confirmedLabels,
+      rejectedLabels: rejectedLabels ?? this.rejectedLabels,
     );
   }
 
@@ -255,6 +285,10 @@ class LifeEvent {
               jsonDecode(row['weather'] as String) as Map<String, dynamic>),
       images: images,
       experience: (row['experience'] as String?) ?? '',
+      experienceLabels: strings(row['experience_labels']),
+      labelledExperience: (row['labelled_experience'] as String?) ?? '',
+      confirmedLabels: strings(row['confirmed_labels']),
+      rejectedLabels: strings(row['rejected_labels']),
     );
   }
 
@@ -279,5 +313,9 @@ class LifeEvent {
         'longitude': longitude,
         'weather': weather == null ? null : jsonEncode(weather!.toJson()),
         'experience': experience,
+        'experience_labels': jsonEncode(experienceLabels),
+        'labelled_experience': labelledExperience,
+        'confirmed_labels': jsonEncode(confirmedLabels),
+        'rejected_labels': jsonEncode(rejectedLabels),
       };
 }

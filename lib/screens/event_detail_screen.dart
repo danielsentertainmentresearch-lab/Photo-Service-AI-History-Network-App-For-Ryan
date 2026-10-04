@@ -214,8 +214,9 @@ class _FreeWriteSectionState extends State<_FreeWriteSection> {
   @override
   void initState() {
     super.initState();
+    // Leaving the box saves, then makes labels if the writing changed.
     _focus.addListener(() {
-      if (!_focus.hasFocus && _pending != null) _saveNow();
+      if (!_focus.hasFocus) _saveNow(label: true);
     });
   }
 
@@ -240,15 +241,21 @@ class _FreeWriteSectionState extends State<_FreeWriteSection> {
     _pending = Timer(const Duration(milliseconds: 800), _saveNow);
   }
 
-  void _saveNow() {
+  void _saveNow({bool label = false}) {
     _pending?.cancel();
     _pending = null;
-    _state.updateExperience(widget.event.id, _controller.text);
+    final id = widget.event.id, state = _state;
+    final saved = state.updateExperience(id, _controller.text);
+    if (label) saved.then((_) => state.labelExperience(id));
   }
 
   @override
   void dispose() {
-    if (_pending != null) _saveNow();
+    if (_pending != null || _controller.text != widget.event.experience) {
+      _saveNow(label: true);
+    } else if (widget.event.needsLabels) {
+      _state.labelExperience(widget.event.id);
+    }
     _focus.dispose();
     _controller.dispose();
     super.dispose();

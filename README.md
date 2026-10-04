@@ -51,7 +51,8 @@ switch on once their platforms are connected).
   date you pick yourself is never overwritten.
 - A free write on every event: a blank box with no prompt, for writing
   about the experience in your own way. The "?" beside it explains it.
-  It stays on the phone and the AI never changes it.
+  The AI never changes it; it reads it only to make a few short labels,
+  checked against the writing, that show in Your data.
 - Timeline grouped by month, full-text search across everything, and
   **On this day** (events from today's date in earlier years) at the top.
 
@@ -98,6 +99,12 @@ switch on once their platforms are connected).
   for Python (pandas, Jupyter) plus its column guide.
 - Below 100 events, a preview banner shows what the full export holds and
   how many events are left.
+- **Free-write labels**: the AI reads each free write and suggests a few
+  short labels (such as "calm" or "proud"), drawn from its words, meaning
+  and sentiment, then checks them in a second pass. They show only in
+  Your data, where you can say whether each one fits, remove it, or have
+  the AI label the event again. In the analysis CSV each label is its own
+  1/0 column, and no cell is ever blank (unknowns are words or -999).
 - **Explore your data**: a plain-language guide to opening the analysis CSV
   in a Jupyter notebook (for fun, not professional work; some Python
   knowledge recommended), with a link to jupyter.org. The list of Python
@@ -138,6 +145,9 @@ Data leaves the phone only for these:
 - **Describing an event or building the graph** sends that event's photos
   (downscaled to 1568 px), notes, summaries of recent events and saved
   memories to `api.anthropic.com`.
+- **Free-write labels** send that event's free write, and the labels
+  already used in your library, to `api.anthropic.com` (after you finish
+  writing). Only the labels come back; the writing is never changed.
 - **The data platforms list** sends only the analysis file's column names.
 - **Place names** send a photo's coordinates to OpenStreetMap Nominatim.
 - **Weather** sends coordinates or the place text, plus the date, to

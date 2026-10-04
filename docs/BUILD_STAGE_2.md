@@ -66,6 +66,13 @@ importance:
   1/0 columns. The owner dashboard is the enterprise area. All its data is
   transformed automatically so every value is usable for analysis in its
   built-in notebook. The in-app data guide and Python platforms list stay.
+- **No blanks in everyday data files** (4 Oct 2026). Blank cells cause
+  too many problems for beginners in Jupyter and other Python tools, so
+  every unknown in the in-app analysis file is marked: words for text
+  ("unknown", "none", "not looked up") and -999 for numbers, with
+  `has_location` and `has_weather` 0/1 columns for filtering. A basic
+  marking is enough for everyday users; to be reviewed after three months
+  of usage metrics.
 - **Audience** (4 Oct 2026): everyday phone users on the Android and Apple
   app stores. The owner dashboard is the only enterprise-level part, issued
   by the owner personally. An enterprise version of the app may come later;
@@ -81,7 +88,8 @@ importance:
 | 1 | Stage 2 opened on the owner's command | `211f0d9` |
 | 2 | Mind map view: a branching, explorable view of the existing graph, first tab on the graph screen | `f312968` |
 | 3 | Two parts to every event: the AI's account made factual and objective; the person's free write (database v4) | `28bf427` |
-| 4 | Owner dashboard follows the app: mind map and free-write use counted in Feature use and the demo data | _this commit_ |
+| 4 | Owner dashboard follows the app: mind map and free-write use counted in Feature use and the demo data | `98f6c89` |
+| 5 | Free-write labels (annotated, checked by the app, reviewed by a second AI pass), confirm / reject / label again, no blanks in the analysis file, label quality on the dashboard | _this commit_ |
 
 ## Mechanisms, parts and features
 
@@ -124,19 +132,54 @@ importance:
 - Demo data includes them, drawn from a separate random stream so every
   earlier demo number is unchanged.
 
-## Next: free-write labels and the enterprise transform
+### Free-write labels (step 5)
+- **How labels are made** (`lib/ai/experience_labeler.dart`), in the
+  background after someone finishes a free write, with their own API key:
+  1. Claude annotates the writing: the groups of words that carry the
+     experience, what each means and its sentiment (positive, negative,
+     mixed or neutral), then combines the annotations into 1 to 6 short
+     labels, each with its sentiment and the words it came from.
+  2. The app's own check drops any label whose words aren't in the writing,
+     and any label the person rejected for that event.
+  3. A second Claude request reviews each remaining label against the
+     writing, its words and its sentiment, and only supported labels are
+     kept.
+  The writing is treated as data, never as instructions, and is never
+  changed. Effort is low (a classification task); the model is the one
+  chosen in Settings.
+- **Where labels show**: only in Your data (the "Free-write labels" card
+  and two meters, "Events with a free write" and "Most common free-write
+  label") and in the analysis file, never on the event page, so they don't
+  steer what someone writes next.
+- **Fits / Doesn't fit / Label again**: tapping a label in Your data lists
+  its events. "Fits" confirms it; "Doesn't fit" removes it and remembers it
+  as rejected, so it is never proposed for that event again; "Label again"
+  asks for fresh labels, keeping confirmed ones. When the writing itself
+  changes, confirmations are dropped and labels are made again. Labels
+  stay AI-made and AI-checked; people don't type their own.
+- **Storage**: database v5 adds `experience_labels`, `labelled_experience`,
+  `confirmed_labels` and `rejected_labels` to events, on the phone.
+- **Analysis file**: never a blank cell. Unknown text is a word ("untitled",
+  "unknown", "none", "not looked up"), unknown numbers are -999, and
+  `has_location`, `has_weather` and `free_write_words` columns were added.
+  After the fixed columns comes one 1/0 column per label, titled with the
+  label itself. The free write never appears as text.
+- **Privacy**: the "?" text, privacy policy, Settings, tutorial, README and
+  Play data-safety answers say the free write is sent to Anthropic only to
+  make its labels.
+- **Owner dashboard**: `free_write_labelled`, `label_confirmed`,
+  `label_rejected` and `label_relabelled` counts, and a "Free-write labels"
+  panel with the share marked not right (Healthy up to 10%, Watch up to
+  20%, Needs attention above), the signal to change the labelling
+  instructions. Counts only, never content.
 
-- **Labels (everyday area)**: the AI reads a saved free write and proposes
-  short labels for it; a second AI pass keeps only the labels the text
-  supports. Each label becomes a 1/0 column in the analysis spreadsheet
-  and shows in Your data. Labels don't show on the event page. The "?"
-  text, privacy policy and Play data-safety answers are updated to say the
-  AI reads the free write to make labels and never changes it. `data.json`
-  and the Obsidian notes keep the free write as written.
-- **Transform (enterprise area)**: before any owner-dashboard export or
-  notebook, missing values become explicit 1/0 flags, categories become
-  1/0 columns, dates gain day, weekday and hour columns, and free text
-  becomes word counts and presence flags, so no cell is blank or unusable.
+## Next
+
+- **Enterprise transform (owner dashboard)**: before any export or the
+  built-in notebook, missing values become explicit 1/0 flags, categories
+  become 1/0 columns, dates gain day, weekday and hour columns, and free
+  text becomes word counts and presence flags, so no cell is blank or
+  unusable.
 
 ## Not connected yet
 

@@ -36,11 +36,11 @@ your advertising ID in your phone's settings. Google's policy:
 
 ## What stays on your device
 
-Your photos, notes, event descriptions and saved memories are stored only in
+Your photos, notes, free writes, event descriptions and saved memories are stored only in
 the app's private storage on your phone. Each account signed in on the
 phone has its own separate library, so people sharing a phone do not see
 each other's events. The developer runs no server of
-its own and never receives your photos, notes, descriptions or memories. Cloud backup of app data is disabled. Uninstalling
+its own and never receives your photos, notes, free writes, descriptions or memories. Cloud backup of app data is disabled. Uninstalling
 the app permanently deletes everything it stored.
 
 Your Anthropic API key is stored in encrypted storage on your device and is
@@ -61,6 +61,13 @@ Anthropic processes this to generate the description and returns it to your
 phone. Because the requests use your own API key, Anthropic handles them
 under your agreement with Anthropic and its privacy policy:
 <https://www.anthropic.com/legal/privacy>.
+
+When you finish writing an event's free write, the app sends that free
+write, and the short labels already used in your library, to Anthropic so
+it can suggest a few labels and check them against the writing. Only the
+labels come back. They are stored on your phone and shown in Your data and
+the analysis file; your writing is never changed. These requests also use
+your own API key.
 
 The weather and location of an event are never sent to Anthropic.
 

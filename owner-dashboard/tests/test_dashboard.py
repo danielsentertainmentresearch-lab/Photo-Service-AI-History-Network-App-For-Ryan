@@ -101,12 +101,14 @@ class MetricsTest(unittest.TestCase):
         db = small_db()
         store.ingest(db, [
             {"type": "activity", "account_id": "a1", "kind": "free_write_saved", "at": "2026-09-30T09:00:00Z"},
+            {"type": "activity", "account_id": "a1", "kind": "free_write_labelled", "at": "2026-09-30T09:00:30Z"},
             {"type": "activity", "account_id": "a1", "kind": "mind_map_opened", "at": "2026-09-30T09:01:00Z"},
             {"type": "activity", "account_id": "a1", "kind": "mind_map_centered", "at": "2026-09-30T09:02:00Z", "value": 2},
         ])
         m = store.metrics(db, "7", now=datetime(2026, 9, 30, 12))
         use = {f["key"]: (f["total"], f["accounts"]) for f in m["features"]}
         self.assertEqual(use["free_write_saved"], (1, 1))
+        self.assertEqual(use["free_write_labelled"], (1, 1))
         self.assertEqual(use["mind_map_opened"], (1, 1))
         self.assertEqual(use["mind_map_centered"], (2, 1))
         # Only counts are stored: the activity table has no text column.
@@ -116,8 +118,30 @@ class MetricsTest(unittest.TestCase):
         demo_db = store.connect(":memory:")
         demo.generate(demo_db)
         demo_use = {f["key"]: f["total"] for f in store.metrics(demo_db, "all")["features"]}
-        for key in ("free_write_saved", "mind_map_opened", "mind_map_centered"):
+        for key in ("free_write_saved", "free_write_labelled",
+                    "mind_map_opened", "mind_map_centered"):
             self.assertGreater(demo_use[key], 0, key)
+
+    def test_label_reviews_give_a_rejection_rate(self):
+        db = small_db()
+        m = store.metrics(db, "7", now=datetime(2026, 9, 30, 12))
+        self.assertIsNone(m["labels"]["rejection_rate"])   # nothing reviewed
+        records = [{"type": "activity", "account_id": "a1", "kind": kind,
+                    "at": "2026-09-30T09:0%d:00Z" % i}
+                   for i, kind in enumerate(["free_write_labelled"] * 2 + ["label_confirmed"] * 3
+                                            + ["label_rejected", "label_relabelled"])]
+        store.ingest(db, records)
+        labels = store.metrics(db, "7", now=datetime(2026, 9, 30, 12))["labels"]
+        self.assertEqual((labels["labelled"], labels["confirmed"], labels["rejected"],
+                          labels["relabelled"], labels["reviewed"]), (2, 3, 1, 1, 4))
+        self.assertEqual(labels["rejection_rate"], 0.25)
+        self.assertGreaterEqual(labels["rejection_rate"], labels["alert"])
+
+        demo_db = store.connect(":memory:")
+        demo.generate(demo_db)
+        demo_labels = store.metrics(demo_db, "all")["labels"]
+        self.assertGreater(demo_labels["reviewed"], 0)
+        self.assertTrue(0 < demo_labels["rejection_rate"] < demo_labels["watch"] * 2)
 
     def test_unfinished_retention_weeks_stay_blank(self):
         db = store.connect(":memory:")

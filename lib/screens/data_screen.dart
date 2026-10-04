@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -45,6 +46,8 @@ class DataScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           const _ExportCard(),
+          const SizedBox(height: 12),
+          const _LabelsCard(),
           const SizedBox(height: 20),
           Text(
             'Your library at a glance',
@@ -100,6 +103,217 @@ class DataScreen extends StatelessWidget {
         showDragHandle: true,
         builder: (_) => const _MeterPicker(),
       );
+}
+
+/// The labels the AI made from free writes, each with how many events
+/// carry it. In the analysis file, each label is a 1/0 column.
+class _LabelsCard extends StatelessWidget {
+  const _LabelsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final theme = Theme.of(context);
+    final labels = state.labelCounts;
+    final waiting = state.eventsAwaitingLabels;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Free-write labels', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              labels.isEmpty
+                  ? 'Labels appear here once the AI has read your free '
+                        'writes. Each one becomes a column in the analysis '
+                        'file, marked 1 or 0 for every event.'
+                  : 'Made by the AI from your free writes and checked '
+                        'against them. Tap a label to say whether it fits. In '
+                        'the analysis file each label is a column, marked 1 '
+                        'or 0 for every event.',
+              style: theme.textTheme.bodySmall,
+            ),
+            if (labels.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final MapEntry(key: label, value: count) in labels)
+                    ActionChip(
+                      label: Text('$label · $count'),
+                      onPressed: () => showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        showDragHandle: true,
+                        builder: (_) => _LabelSheet(label: label),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+            if (waiting > 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                waiting == 1
+                    ? '1 free write is waiting for labels.'
+                    : '$waiting free writes are waiting for labels.',
+              ),
+              if (state.labelError != null)
+                Text(
+                  state.labelError!,
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
+              const SizedBox(height: 4),
+              if (!state.hasApiKey)
+                Text(
+                  'Add your Anthropic API key in Settings to make labels.',
+                  style: theme.textTheme.bodySmall,
+                )
+              else
+                FilledButton.tonal(
+                  onPressed: state.labelling ? null : state.labelAllWaiting,
+                  child: Text(state.labelling ? 'Labelling…' : 'Make labels'),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Every event the AI gave [label], with a way to say it fits, that it
+/// doesn't (unsuitable or made up), or to have the AI label it again.
+class _LabelSheet extends StatefulWidget {
+  final String label;
+
+  const _LabelSheet({required this.label});
+
+  @override
+  State<_LabelSheet> createState() => _LabelSheetState();
+}
+
+class _LabelSheetState extends State<_LabelSheet> {
+  /// Events where the label was just removed, kept in view so the person
+  /// can ask for new labels.
+  final Set<String> _removed = {};
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final theme = Theme.of(context);
+    final date = DateFormat.yMMMd();
+    final events = [
+      for (final e in state.allEvents)
+        if (e.experienceLabels.contains(widget.label) || _removed.contains(e.id))
+          e,
+    ]..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.7,
+      maxChildSize: 0.95,
+      builder: (context, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        children: [
+          Text(widget.label, style: theme.textTheme.titleLarge),
+          const SizedBox(height: 4),
+          Text(
+            'The AI gave this label to the free writes below. Tell it '
+            'whether the label fits each one.',
+            style: theme.textTheme.bodySmall,
+          ),
+          if (!state.hasApiKey)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Add your Anthropic API key in Settings to label again.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+          for (final e in events)
+            Card(
+              margin: const EdgeInsets.only(top: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      e.title.isEmpty ? date.format(e.occurredAt) : e.title,
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    if (e.title.isNotEmpty)
+                      Text(
+                        date.format(e.occurredAt),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    const SizedBox(height: 6),
+                    Text(
+                      e.experience,
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      e.experienceLabels.isEmpty
+                          ? 'No labels on this event now.'
+                          : 'Labels now: ${e.experienceLabels.join(', ')}',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    if (!e.experienceLabels.contains(widget.label))
+                      Text(
+                        'Removed from this event. The AI won\'t suggest it '
+                        'here again.',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        if (e.confirmedLabels.contains(widget.label))
+                          const Chip(
+                            avatar: Icon(Icons.check, size: 18),
+                            label: Text('You said it fits'),
+                          )
+                        else if (e.experienceLabels.contains(widget.label)) ...[
+                          FilledButton.tonal(
+                            onPressed: () =>
+                                state.confirmLabel(e.id, widget.label),
+                            child: const Text('Fits'),
+                          ),
+                          OutlinedButton(
+                            onPressed: () {
+                              setState(() => _removed.add(e.id));
+                              state.rejectLabel(e.id, widget.label);
+                            },
+                            child: const Text("Doesn't fit"),
+                          ),
+                        ],
+                        TextButton(
+                          onPressed: !state.hasApiKey || state.labelling
+                              ? null
+                              : () =>
+                                    state.labelExperience(e.id, again: true),
+                          child: Text(
+                            state.labelling ? 'Labelling…' : 'Label again',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _MeterCard extends StatelessWidget {
@@ -665,6 +879,15 @@ class _DataGuideScreenState extends State<DataGuideScreen> {
                   title: Text(c.name),
                   subtitle: Text('${c.type} · ${c.meaning}'),
                 ),
+              const ListTile(
+                dense: true,
+                title: Text('One column per free-write label'),
+                subtitle: Text(
+                  '0/1 · Titled with the label itself, such as "calm": 1 if '
+                  'the AI labelled that event\'s free write with it, 0 if '
+                  'not. Never blank.',
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),

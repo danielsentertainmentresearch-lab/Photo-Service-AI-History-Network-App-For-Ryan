@@ -292,6 +292,12 @@ td.comment { white-space: normal; min-width: 240px; max-width: 520px; }
       <div class="table-box"><table id="features"></table></div>
     </section>
 
+    <section class="panel half" data-panel="labels" data-title="Free-write labels">
+      <div class="panel-head"><h2>Free-write labels</h2><button class="hide-btn" type="button">Hide</button></div>
+      <p class="def">How people judge the labels the AI makes from their free writes. A rising share marked not right means the labelling instructions need changing.</p>
+      <div class="table-box"><table id="labels"></table></div>
+    </section>
+
     <section class="panel half" data-panel="crashes" data-title="Stability">
       <div class="panel-head"><h2>Stability</h2><button class="hide-btn" type="button">Hide</button></div>
       <p class="def">Crash-free sessions by app version, then the most frequent crashes in the window.</p>
@@ -555,6 +561,22 @@ td.comment { white-space: normal; min-width: 240px; max-width: 520px; }
       }).join("");
   }
 
+  function renderLabels(m) {
+    var l = m.labels;
+    if (!l) return;
+    var rate = l.rejection_rate;
+    $("labels").innerHTML = "<tr><th>Measure</th><th class=n>Value</th><th>State</th></tr>" +
+      [["Free writes labelled", n(l.labelled), ""],
+       ["Labels reviewed", n(l.reviewed), ""],
+       ["Confirmed as fitting", n(l.confirmed), ""],
+       ["Marked not right", n(l.rejected), ""],
+       ["Re-labels asked for", n(l.relabelled), ""],
+       ["Marked not right, of reviewed", rate == null ? "—" : pct(rate),
+        rate == null ? "No reviews yet" : status(rate, l.watch, l.alert, false)]].map(function (r) {
+        return "<tr><td>" + r[0] + "</td><td class=n>" + r[1] + "</td><td>" + r[2] + "</td></tr>";
+      }).join("");
+  }
+
   function renderCrashes(m) {
     $("versions").innerHTML = "<tr><th>App version</th><th class=n>Sessions</th><th class=n>Crashes</th><th class=n>Crash-free</th><th>State</th></tr>" +
       (m.crashes.by_version.length ? m.crashes.by_version.map(function (v) {
@@ -598,7 +620,7 @@ td.comment { white-space: normal; min-width: 240px; max-width: 520px; }
     $("source-pill").hidden = m.source !== "demo";
     if (m.source === "demo") $("source-pill").title = "Example data generated for review. Not real users.";
     renderKpis(m); renderTesting(m); renderReach(m); renderSignup(m); renderActivity(m); renderRetention(m);
-    renderDepth(m); renderFeatures(m); renderCrashes(m); renderLifetime(m);
+    renderDepth(m); renderFeatures(m); renderLabels(m); renderCrashes(m); renderLifetime(m);
     if (window.EventLensFind) window.EventLensFind.refresh();
   }
 

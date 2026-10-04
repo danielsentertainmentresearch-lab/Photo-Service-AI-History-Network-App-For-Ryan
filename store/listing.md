@@ -78,8 +78,9 @@ actually does:
 - **Data types**:
   - Photos and videos → Photos: *shared* with Anthropic, at the user's
     request, for app functionality. Optional. Not collected.
-  - Personal info → Other info (free-text notes and memories): same as
-    photos.
+  - Personal info → Other info (free-text notes, free writes and
+    memories): same as photos. Free writes are sent to Anthropic after the
+    user writes one, only to make short labels; not collected.
   - Personal info → Email address and/or Phone number: *collected* for
     account management (Firebase Authentication). Required.
   - Personal info → User IDs: *collected* for account management

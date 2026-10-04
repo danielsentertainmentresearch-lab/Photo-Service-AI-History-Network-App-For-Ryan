@@ -131,6 +131,10 @@ ACTIVITY_KINDS = (
     "mind_map_opened",
     "mind_map_centered",
     "free_write_saved",
+    "free_write_labelled",
+    "label_confirmed",
+    "label_rejected",
+    "label_relabelled",
 )
 
 SIGNUP_METHODS = ("email", "phone", "google", "web3")
@@ -169,6 +173,10 @@ FEATURES = (
     ("photo_added", "Photos added"),
     ("memory_saved", "Memories saved"),
     ("free_write_saved", "Free writes saved"),
+    ("free_write_labelled", "Free writes labelled"),
+    ("label_confirmed", "Labels confirmed"),
+    ("label_rejected", "Labels marked not right"),
+    ("label_relabelled", "Re-labels asked for"),
     ("mind_map_opened", "Mind map opened"),
     ("mind_map_centered", "Mind map ideas centred on"),
     ("weather_lookup", "Weather lookups"),
@@ -176,6 +184,12 @@ FEATURES = (
     ("ad_watched", "Rewarded videos watched"),
     ("export", "Exports made"),
 )
+
+# Share of reviewed free-write labels that people mark as not right. At or
+# above WATCH the labelling instructions deserve a look; at or above ALERT
+# they need changing.
+LABEL_REJECTION_WATCH = 0.10
+LABEL_REJECTION_ALERT = 0.20
 
 DEPTH_BUCKETS = ((0, 0, "0 events"), (1, 4, "1-4"), (5, 19, "5-19"),
                  (20, 99, "20-99"), (100, None, "100+"))
@@ -573,6 +587,21 @@ def metrics(db, window="30", now=None):
             "share_of_active": _ratio(people, len(active)),
         })
 
+    # Free-write label quality: how people judge the AI's labels.
+    use = {f["key"]: f["total"] for f in features}
+    reviewed = use["label_confirmed"] + use["label_rejected"]
+    labels = {
+        "labelled": use["free_write_labelled"],
+        "confirmed": use["label_confirmed"],
+        "rejected": use["label_rejected"],
+        "relabelled": use["label_relabelled"],
+        "reviewed": reviewed,
+        "rejection_rate": (round(use["label_rejected"] / reviewed, 4)
+                           if reviewed else None),
+        "watch": LABEL_REJECTION_WATCH,
+        "alert": LABEL_REJECTION_ALERT,
+    }
+
     # Crashes.
     by_version = []
     for row in db.execute(
@@ -638,6 +667,7 @@ def metrics(db, window="30", now=None):
         "retention": retention,
         "depth": depth,
         "features": features,
+        "labels": labels,
         "crashes": {"by_version": by_version, "top": top_crashes},
         "lifetime": lifetime,
     }

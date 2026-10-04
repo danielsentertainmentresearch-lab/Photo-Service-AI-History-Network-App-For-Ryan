@@ -148,8 +148,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'Your photos, notes and memories are stored only on this device. '
             'When an event is described, its photos (resized), your notes, '
             'summaries of recent events and your saved memories are sent to '
-            'Anthropic\'s API over an encrypted connection. Uninstalling the '
-            'app deletes all of its data.',
+            'Anthropic\'s API over an encrypted connection. Your free writes '
+            'are sent to Anthropic only to make their labels. Uninstalling '
+            'the app deletes all of its data.',
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
