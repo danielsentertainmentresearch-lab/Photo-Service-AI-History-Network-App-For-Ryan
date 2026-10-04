@@ -93,7 +93,7 @@ importance:
 | 6 | Labels: no undo in any form, no notes in the flow, every pass a first pass | `086c9b6` |
 | 7 | Your data: the Free-write labels card above Export (owner's choice B) | `a041d90` |
 | 8 | Design Overhaul Cleanup, run 1 (see below) | `9c424bd`, `7be82a7` |
-| 9 | Brand artwork: app icon, store graphics and an opening title screen from the owner's approved logo option (see below) | _this commit_ |
+| 9 | Brand artwork: app icon, store graphics and an opening title screen from the owner's approved logo option (see below) | `4a9be3c` |
 
 ## Mechanisms, parts and features
 
