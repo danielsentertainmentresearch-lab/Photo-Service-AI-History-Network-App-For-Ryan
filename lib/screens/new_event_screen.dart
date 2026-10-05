@@ -160,7 +160,7 @@ class _NewEventScreenState extends State<NewEventScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final hasKey = context.select<AppState, bool>((s) => s.hasApiKey);
+    final hasKey = context.select<AppState, bool>((s) => s.aiReady);
     return Scaffold(
       appBar: AppBar(title: const Text('New event')),
       body: AbsorbPointer(

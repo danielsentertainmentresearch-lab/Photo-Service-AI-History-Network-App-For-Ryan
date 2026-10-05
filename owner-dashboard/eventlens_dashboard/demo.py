@@ -134,6 +134,11 @@ def generate(db, end=datetime(2026, 10, 3, 18, 0), days=180, seed=2026,
                                     else:
                                         act(install, account, moment,
                                             "label_confirmed")
+                        if stage2.random() < 0.04:
+                            act(install, account, moment,
+                                "ai_allowance_reached")
+                            if stage2.random() < 0.5:
+                                act(install, account, moment, "ai_topup")
                     if not graph and described_photos >= 10:
                         graph = True
                         act(install, account, moment, "graph_unlocked")

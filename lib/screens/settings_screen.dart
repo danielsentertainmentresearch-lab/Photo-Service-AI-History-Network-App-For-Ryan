@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../ai/ai_server.dart';
 import '../ai/event_describer.dart';
 import '../app.dart';
 import '../services/auth_service.dart';
@@ -58,86 +59,90 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           const _AccountSection(),
           const Divider(height: 32),
-          Text('Anthropic API key', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(
-            'The AI runs on Anthropic\'s Claude using your own API key. Create '
-            'one at console.anthropic.com → API Keys. Usage is billed to your '
-            'Anthropic account. The key is stored encrypted on this device.',
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: 12),
-          if (state.hasApiKey)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.check_circle, color: Colors.green),
-              title: const Text('API key saved'),
-              trailing: TextButton(
-                onPressed: () => state.setApiKey(null),
-                child: const Text('Remove'),
-              ),
-            )
-          else
-            TextField(
-              controller: _keyController,
-              obscureText: _obscure,
-              autocorrect: false,
-              enableSuggestions: false,
-              decoration: InputDecoration(
-                labelText: 'sk-ant-…',
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscure ? Icons.visibility : Icons.visibility_off,
+          if (state.usesAiServer)
+            const _AiServerSection()
+          else ...[
+            Text('Anthropic API key', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              'The AI runs on Anthropic\'s Claude using your own API key. Create '
+              'one at console.anthropic.com → API Keys. Usage is billed to your '
+              'Anthropic account. The key is stored encrypted on this device.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            if (state.hasApiKey)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.check_circle, color: Colors.green),
+                title: const Text('API key saved'),
+                trailing: TextButton(
+                  onPressed: () => state.setApiKey(null),
+                  child: const Text('Remove'),
+                ),
+              )
+            else
+              TextField(
+                controller: _keyController,
+                obscureText: _obscure,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: InputDecoration(
+                  labelText: 'sk-ant-…',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscure ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () => setState(() => _obscure = !_obscure),
                   ),
-                  onPressed: () => setState(() => _obscure = !_obscure),
+                ),
+                onSubmitted: (_) => _saveKey(),
+              ),
+            if (!state.hasApiKey) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: _saveKey,
+                  child: const Text('Save key'),
                 ),
               ),
-              onSubmitted: (_) => _saveKey(),
-            ),
-          if (!state.hasApiKey) ...[
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton(
-                onPressed: _saveKey,
-                child: const Text('Save key'),
+            ],
+            const Divider(height: 32),
+            Text('AI model', style: theme.textTheme.titleMedium),
+            RadioGroup<String>(
+              groupValue: state.model,
+              onChanged: (v) => v == null ? null : state.setModel(v),
+              child: Column(
+                children: [
+                  for (final entry in supportedModels.entries)
+                    RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      value: entry.key,
+                      title: Text(entry.value),
+                    ),
+                ],
               ),
             ),
-          ],
-          const Divider(height: 32),
-          Text('AI model', style: theme.textTheme.titleMedium),
-          RadioGroup<String>(
-            groupValue: state.model,
-            onChanged: (v) => v == null ? null : state.setModel(v),
-            child: Column(
-              children: [
-                for (final entry in supportedModels.entries)
-                  RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    value: entry.key,
-                    title: Text(entry.value),
-                  ),
-              ],
+            const SizedBox(height: 8),
+            Text('Thinking effort', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              'Higher effort gives more careful, detailed accounts but takes '
+              'longer and costs more.',
+              style: theme.textTheme.bodySmall,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text('Thinking effort', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(
-            'Higher effort gives more careful, detailed accounts but takes '
-            'longer and costs more.',
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: 8),
-          SegmentedButton<String>(
-            segments: [
-              for (final e in supportedEfforts)
-                ButtonSegment(value: e, label: Text(_effortLabel(e))),
-            ],
-            selected: {state.effort},
-            onSelectionChanged: (s) => state.setEffort(s.first),
-          ),
+            const SizedBox(height: 8),
+            SegmentedButton<String>(
+              segments: [
+                for (final e in supportedEfforts)
+                  ButtonSegment(value: e, label: Text(_effortLabel(e))),
+              ],
+              selected: {state.effort},
+              onSelectionChanged: (s) => state.setEffort(s.first),
+            ),
+          ],
           const Divider(height: 32),
           const _ExportSection(),
           const Divider(height: 32),
@@ -145,12 +150,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const _RecentsToggle(),
           const SizedBox(height: 4),
           Text(
-            'Your photos, notes and memories are stored only on this device. '
-            'When an event is described, its photos (resized), your notes, '
-            'summaries of recent events and your saved memories are sent to '
-            'Anthropic\'s API over an encrypted connection. Your free writes '
-            'are sent to Anthropic only to make their labels. Uninstalling '
-            'the app deletes all of its data.',
+            state.usesAiServer
+                ? 'Your photos, notes and memories are stored only on this '
+                      'device. When an event is described, a copy of its '
+                      'photos (resized), your notes, short summaries of recent '
+                      'events and your saved memories goes through the '
+                      'EventLens AI server to Anthropic\'s AI over an '
+                      'encrypted connection. Only the description comes back. '
+                      'The server keeps nothing you wrote or photographed, '
+                      'only how much AI you used today. Your free writes are '
+                      'sent the same way only to make their labels. '
+                      'Uninstalling the app deletes all of its data.'
+                : 'Your photos, notes and memories are stored only on this device. '
+                      'When an event is described, its photos (resized), your notes, '
+                      'summaries of recent events and your saved memories are sent to '
+                      'Anthropic\'s API over an encrypted connection. Your free writes '
+                      'are sent to Anthropic only to make their labels. Uninstalling '
+                      'the app deletes all of its data.',
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
@@ -318,9 +334,61 @@ class _ExportSection extends StatelessWidget {
         'export once you reach 100 events.',
       ),
       trailing: const Icon(Icons.chevron_right),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const DataScreen()),
-      ),
+      onTap: () =>
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const DataScreen())),
+    );
+  }
+}
+
+/// Shown instead of the API key and model choices when the AI runs through
+/// the owner's server: the AI is included, within a daily allowance.
+class _AiServerSection extends StatefulWidget {
+  const _AiServerSection();
+
+  @override
+  State<_AiServerSection> createState() => _AiServerSectionState();
+}
+
+class _AiServerSectionState extends State<_AiServerSection> {
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final client = ProxyAIClient.fromEnvironment(AiTask.describe);
+    try {
+      await client.fetchAllowance();
+    } catch (_) {
+      // Offline or signed out: keep whatever was last reported.
+    } finally {
+      client.close();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('AI', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 4),
+        ValueListenableBuilder<AiAllowance?>(
+          valueListenable: aiAllowance,
+          builder: (context, allowance, _) => Text(
+            allowance == null
+                ? 'The AI is included with your account, within a daily '
+                      'allowance.'
+                : 'The AI is included with your account. Today\'s '
+                      'allowance: ${allowance.remaining} of '
+                      '${allowance.daily} left. It refills every day.',
+            style: theme.textTheme.bodySmall,
+          ),
+        ),
+      ],
     );
   }
 }

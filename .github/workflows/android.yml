@@ -41,6 +41,21 @@ jobs:
       - run: python -m unittest discover -s tests -v
         working-directory: owner-dashboard
 
+  ai-server:
+    name: AI server tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno lint
+      - run: deno check index.ts
+      - run: deno test logic_test.ts
+    defaults:
+      run:
+        working-directory: supabase/functions/ai
+
   build:
     name: Build Android app
     needs: check
@@ -87,6 +102,9 @@ jobs:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
           ADMOB_REWARDED_ID: ${{ secrets.ADMOB_REWARDED_ID }}
+          # The owner's AI server (docs/AI_SERVER.md). Empty until deployed:
+          # without it, the app asks for the person's own Anthropic API key.
+          AI_SERVER_URL: ${{ secrets.AI_SERVER_URL }}
         run: |
           DEFINES=(
             --dart-define=FIREBASE_API_KEY="$FIREBASE_API_KEY"
@@ -94,6 +112,9 @@ jobs:
             --dart-define=FIREBASE_SENDER_ID="$FIREBASE_SENDER_ID"
             --dart-define=FIREBASE_PROJECT_ID="$FIREBASE_PROJECT_ID"
           )
+          if [ -n "$AI_SERVER_URL" ]; then
+            DEFINES+=(--dart-define=AI_SERVER_URL="$AI_SERVER_URL")
+          fi
           if [ -n "$ADMOB_REWARDED_ID" ]; then
             DEFINES+=(--dart-define=ADMOB_REWARDED_ID="$ADMOB_REWARDED_ID")
           fi

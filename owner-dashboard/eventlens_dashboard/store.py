@@ -135,6 +135,8 @@ ACTIVITY_KINDS = (
     "label_confirmed",
     "label_rejected",
     "label_relabelled",
+    "ai_allowance_reached",
+    "ai_topup",
 )
 
 SIGNUP_METHODS = ("email", "phone", "google", "web3")
@@ -177,6 +179,8 @@ FEATURES = (
     ("label_confirmed", "Labels confirmed"),
     ("label_rejected", "Labels marked not right"),
     ("label_relabelled", "Re-labels asked for"),
+    ("ai_allowance_reached", "Daily AI allowance used up"),
+    ("ai_topup", "AI allowance top-ups from ads"),
     ("mind_map_opened", "Mind map opened"),
     ("mind_map_centered", "Mind map ideas centred on"),
     ("weather_lookup", "Weather lookups"),

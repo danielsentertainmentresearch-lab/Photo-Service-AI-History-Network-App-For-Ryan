@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:eventlens/ai/ai_server.dart';
 import 'package:eventlens/ai/anthropic_ai_client.dart';
 import 'package:eventlens/ai/event_describer.dart';
 import 'package:eventlens/ai/graph_builder.dart';
@@ -36,7 +37,12 @@ void main() {
   var graphUpdate = <String, dynamic>{};
   var graphStatus = 200;
 
-  Future<AppState> build({required String? apiKey}) async {
+  late List<String> factoryKeys;
+
+  Future<AppState> build({
+    required String? apiKey,
+    bool useAiServer = false,
+  }) async {
     SharedPreferences.setMockInitialValues({});
     FlutterSecureStorage.setMockInitialValues(
       apiKey == null ? {} : {'anthropic_api_key': apiKey},
@@ -55,11 +61,12 @@ void main() {
       graphRepo: GraphRepository(db),
       vault: ImageVault(Directory('${tmp.path}/vault')),
       settings: settings,
+      useAiServer: useAiServer,
       describerFactory: (key, model, effort) => EventDescriber(
         model: model,
         effort: effort,
         client: AnthropicAIClient(
-          apiKey: key,
+          apiKey: (factoryKeys..add(key)).last,
           httpClient: MockClient((request) async {
             sentBodies.add(jsonDecode(request.body) as Map<String, dynamic>);
             return http.Response(
@@ -129,6 +136,7 @@ void main() {
   setUp(() async {
     tmp = await Directory.systemTemp.createTemp('eventlens_test');
     sentBodies = [];
+    factoryKeys = [];
     graphBodies = [];
     graphStatus = 200;
     graphBuild = {
@@ -246,6 +254,22 @@ void main() {
     expect(failed.status, EventStatus.failed);
     expect(failed.error, contains('API key'));
     expect(sentBodies, isEmpty);
+  });
+
+  test('on the owner\'s AI server, no API key is needed', () async {
+    state = await build(apiKey: null, useAiServer: true);
+    expect(state.hasApiKey, isFalse);
+    expect(state.aiReady, isTrue);
+    final event = await state.createEvent(
+      title: 't',
+      notes: 'n',
+      location: '',
+      occurredAt: DateTime(2026),
+      photos: const [],
+    );
+    await state.describeEvent(event.id);
+    expect(state.eventById(event.id)!.status, EventStatus.described);
+    expect(factoryKeys, [aiServerCredential]);
   });
 
   test('deleting an event removes its photos from the vault', () async {

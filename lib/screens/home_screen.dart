@@ -56,7 +56,7 @@ class HomeScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          if (!state.hasApiKey)
+          if (!state.aiReady)
             MaterialBanner(
               leading: const Icon(Icons.key_outlined),
               content: const Text(

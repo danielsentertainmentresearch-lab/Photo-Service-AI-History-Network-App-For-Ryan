@@ -39,7 +39,7 @@ continues at the end of every stage.
 | Upload signing key + GitHub secrets | Waiting on owner | See RELEASE.md; keep in Bitwarden |
 | Privacy policy URL | Waiting on owner | GitHub Pages |
 | Support email | Waiting on owner | Proton Mail on a custom domain |
-| AI access | Active | Each user's own Anthropic API key |
+| AI access | Built, waiting on owner to deploy (`docs/AI_SERVER.md`) | The owner's AI server on **Supabase** (Edge Function) holds the Anthropic key; daily allowance with reward-video top-ups. Until `AI_SERVER_URL` is set, builds still use each user's own key. Set a monthly spend limit on the key in the Anthropic Console |
 | Crash reporting | Owner to choose (not picked yet) | Options: GlitchTip (open source, self-host or hosted), Sentry (open-source SDK; self-host or sentry.io), Bugsink (open source, self-host). Crash data goes to the owner dashboard |
 | Payments (paywall stage) | Later | Google Play Billing (required); RevenueCat optional |
 | Place names (Nominatim) | Active (free, light use) | OpenStreetMap's public server allows max 1 request/s and no heavy use. Before launch at scale: self-host Nominatim or Photon (open source), or a paid OSM-based provider; base URL is configurable in `PlacesService` |

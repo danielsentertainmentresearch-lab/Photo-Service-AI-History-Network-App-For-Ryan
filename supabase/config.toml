@@ -1,0 +1,7 @@
+# Supabase project settings for the EventLens AI server (docs/AI_SERVER.md).
+project_id = "eventlens"
+
+# The app signs in with Firebase, so the function checks Firebase ID tokens
+# itself; AdMob's reward callback carries no token at all.
+[functions.ai]
+verify_jwt = false

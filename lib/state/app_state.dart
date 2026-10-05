@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
+import '../ai/ai_server.dart';
 import '../ai/anthropic_ai_client.dart';
 import '../ai/experience_labeler.dart';
 import '../ai/data_platform_advisor.dart';
@@ -33,16 +34,23 @@ typedef GraphBuilderFactory = GraphBuilder Function(
   String effort,
 );
 
+/// The owner's AI server when [credential] is [aiServerCredential],
+/// otherwise Anthropic directly with the person's own key.
+AIClient aiClientFor(String credential, String task) =>
+    credential == aiServerCredential
+    ? ProxyAIClient.fromEnvironment(task)
+    : AnthropicAIClient(apiKey: credential);
+
 GraphBuilder _defaultGraphBuilder(String apiKey, String model, String effort) =>
     GraphBuilder(
-      client: AnthropicAIClient(apiKey: apiKey),
+      client: aiClientFor(apiKey, AiTask.graph),
       model: model,
       effort: effort,
     );
 
 EventDescriber _defaultDescriber(String apiKey, String model, String effort) =>
     EventDescriber(
-      client: AnthropicAIClient(apiKey: apiKey),
+      client: aiClientFor(apiKey, AiTask.describe),
       model: model,
       effort: effort,
     );
@@ -53,12 +61,18 @@ typedef PlatformAdvisorFactory = DataPlatformAdvisor Function(
 );
 
 DataPlatformAdvisor _defaultAdvisor(String apiKey, String model) =>
-    DataPlatformAdvisor(client: AnthropicAIClient(apiKey: apiKey), model: model);
+    DataPlatformAdvisor(
+      client: aiClientFor(apiKey, AiTask.advise),
+      model: model,
+    );
 
-typedef LabelerFactory = ExperienceLabeler Function(String apiKey, String model);
+typedef LabelerFactory = ExperienceLabeler Function(
+  String apiKey,
+  String model,
+);
 
 ExperienceLabeler _defaultLabeler(String apiKey, String model) =>
-    ExperienceLabeler(client: AnthropicAIClient(apiKey: apiKey), model: model);
+    ExperienceLabeler(client: aiClientFor(apiKey, AiTask.label), model: model);
 
 /// Single source of truth for the UI.
 class AppState extends ChangeNotifier {
@@ -85,7 +99,13 @@ class AppState extends ChangeNotifier {
     PlacesService? places,
     this.advisorFactory = _defaultAdvisor,
     this.labelerFactory = _defaultLabeler,
-  }) : places = places ?? PlacesService();
+    bool? useAiServer,
+  }) : places = places ?? PlacesService(),
+       usesAiServer = useAiServer ?? aiServerUrl.isNotEmpty;
+
+  /// True when the AI runs through the owner's server (see `AI_SERVER_URL`),
+  /// so nobody needs their own Anthropic API key.
+  final bool usesAiServer;
 
   static const int maxPhotosPerEvent = 10;
 
@@ -100,6 +120,16 @@ class AppState extends ChangeNotifier {
   List<LifeEvent> get allEvents => _events;
   List<MemoryItem> get memories => _memories;
   bool get hasApiKey => _hasApiKey;
+
+  /// True when the AI features can run: through the owner's server, or with
+  /// the person's own key.
+  bool get aiReady => usesAiServer || _hasApiKey;
+
+  /// What the AI factories are given: [aiServerCredential] on the owner's
+  /// server, otherwise the saved API key (null when there is none).
+  Future<String?> _aiCredential() async =>
+      usesAiServer ? aiServerCredential : settings.readApiKey();
+
   bool get loaded => _loaded;
   String get model => settings.model;
   String get effort => settings.effort;
@@ -179,7 +209,7 @@ class AppState extends ChangeNotifier {
       final cached = PlatformAdvice.fromJsonString(settings.platformAdvice);
       if (cached != null) return cached;
     }
-    final apiKey = await settings.readApiKey();
+    final apiKey = await _aiCredential();
     if (apiKey == null || apiKey.isEmpty) return PlatformAdvice.fallback;
     try {
       final advice = await advisorFactory(apiKey, settings.model).suggest();
@@ -300,8 +330,7 @@ class AppState extends ChangeNotifier {
       }
     }
     return counts.entries.toList()..sort(
-      (a, b) =>
-          b.value != a.value ? b.value - a.value : a.key.compareTo(b.key),
+      (a, b) => b.value != a.value ? b.value - a.value : a.key.compareTo(b.key),
     );
   }
 
@@ -327,7 +356,7 @@ class AppState extends ChangeNotifier {
       return;
     }
     if (!current.needsLabels && !again) return;
-    final apiKey = await settings.readApiKey();
+    final apiKey = await _aiCredential();
     if (apiKey == null || apiKey.isEmpty) return;
     if (!_labelling.add(eventId)) return;
     notifyListeners();
@@ -440,7 +469,7 @@ class AppState extends ChangeNotifier {
     final event = await events.byId(eventId);
     if (event == null || event.status == EventStatus.describing) return;
 
-    final apiKey = await settings.readApiKey();
+    final apiKey = await _aiCredential();
     if (apiKey == null || apiKey.isEmpty) {
       await events.update(
         event.copyWith(
@@ -525,7 +554,7 @@ class AppState extends ChangeNotifier {
     final current = _graph;
     if (current == null && describedPhotos < graphUnlockPhotos) return;
     if (current != null && eventsAwaitingGraph == 0) return;
-    final apiKey = await settings.readApiKey();
+    final apiKey = await _aiCredential();
     if (apiKey == null || apiKey.isEmpty) {
       _graphError = 'Add your Anthropic API key in Settings first.';
       notifyListeners();

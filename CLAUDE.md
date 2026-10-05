@@ -48,6 +48,13 @@
 - Export rules: basic CSV free for all; full export unlocks at 100 events
   (sticky); a higher paywall tier for export is added in the paywall stage.
   The Your data meters stay free with no ads.
+- **AI server** (owner decision, 5 Oct 2026): the AI runs through the
+  owner's server (`supabase/functions/ai/`, `docs/AI_SERVER.md`) when
+  `AI_SERVER_URL` is set, so users need no Anthropic key. Every AI feature
+  takes an `AIClient` (`lib/ai/ai_client.dart`). The server stores usage
+  counts only, never content; memories stay on the phone. Its follow-up
+  steps are scheduled in `docs/AI_SERVER.md`. Test it with
+  `deno test logic_test.ts` from `supabase/functions/ai/`.
 - `owner-dashboard/` is owner-only (Python stdlib, localhost). Run its
   tests with `python3 -m unittest discover -s tests` from that folder.
 - **Dashboard follows the app** (owner rule, stage 2): whenever a change adds

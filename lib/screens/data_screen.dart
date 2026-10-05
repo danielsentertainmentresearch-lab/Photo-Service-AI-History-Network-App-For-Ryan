@@ -167,7 +167,7 @@ class _LabelsCard extends StatelessWidget {
                   style: TextStyle(color: theme.colorScheme.error),
                 ),
               const SizedBox(height: 4),
-              if (!state.hasApiKey)
+              if (!state.aiReady)
                 Text(
                   'Add your Anthropic API key in Settings to make labels.',
                   style: theme.textTheme.bodySmall,
@@ -221,7 +221,7 @@ class _LabelSheetState extends State<_LabelSheet> {
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         children: [
           Text(widget.label, style: theme.textTheme.titleLarge),
-          if (!state.hasApiKey)
+          if (!state.aiReady)
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
@@ -276,7 +276,7 @@ class _LabelSheetState extends State<_LabelSheet> {
                           ),
                         ],
                         TextButton(
-                          onPressed: !state.hasApiKey || state.labelling
+                          onPressed: !state.aiReady || state.labelling
                               ? null
                               : () =>
                                     state.labelExperience(e.id, again: true),

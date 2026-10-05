@@ -97,6 +97,18 @@ class MetricsTest(unittest.TestCase):
                     self.assertTrue(value is None or 0 <= value <= 1)
             self.assertGreater(len(m["daily"]), 0)
 
+    def test_ai_allowance_counts(self):
+        db = small_db()
+        store.ingest(db, [
+            {"type": "activity", "account_id": "a1", "kind": "ai_allowance_reached", "at": "2026-09-30T09:00:00Z"},
+            {"type": "activity", "account_id": "a1", "kind": "ai_topup", "at": "2026-09-30T09:05:00Z"},
+            {"type": "activity", "account_id": "a2", "kind": "ai_allowance_reached", "at": "2026-09-30T10:00:00Z"},
+        ])
+        m = store.metrics(db, "7", now=datetime(2026, 9, 30, 12))
+        use = {f["key"]: (f["total"], f["accounts"]) for f in m["features"]}
+        self.assertEqual(use["ai_allowance_reached"], (2, 2))
+        self.assertEqual(use["ai_topup"], (1, 1))
+
     def test_stage2_features_are_counted_without_their_content(self):
         db = small_db()
         store.ingest(db, [
