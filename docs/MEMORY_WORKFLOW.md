@@ -61,16 +61,22 @@ login, no way to push):
 ## Section 2: the dream pass
 
 Data starts flowing to the AI on its own here, so the privacy text ships in
-the same merge.
+the same merge. This is the longest section, so it has six pause points.
+Every one is safe to stop at overnight: the work is pushed to the
+`memory-architecture` branch with tests passing, and `main` is untouched
+until 2.6.
 
-- **2.1** Dream pass prompt, structured reply, parser, compact rendering,
-  tests with a fake AI. Learns from confirmed labels and answers, never from
-  raw free writes or support readings; respects Quiet; honors Honored. ⏸
-- **2.2** AI server: `dream` task and its credit cost, server tests. ⏸
-- **2.3** Coordinator: when to dream (every N events, run on app open when
-  due), one at a time, failure and retry, tests. ⏸
-- **2.4** Privacy policy, Play data-safety answers and SUPPORT_AND_SAFETY.md.
-- **End:** merge to `main`.
+| Step | Work | Ends at pause | Next sitting starts with |
+|---|---|---|---|
+| 2.1 | Dream pass prompt and structured reply schema, from Hermes's design | ⏸ P1: request builds, schema tests pass | 2.2 |
+| 2.2 | Reply parser: points added, revised, retired; rejects anything outside the rules (raw free writes, support readings, Quiet names surfacing); tests with a fake AI | ⏸ P2: parser tests pass | 2.3 |
+| 2.3 | Compact rendering of the memory for prompts, with its size limit; tests | ⏸ P3: rendering tests pass | 2.4 |
+| 2.4 | AI server: `dream` task and its credit cost; server tests (Deno) | ⏸ P4: server tests pass | 2.5 |
+| 2.5 | Coordinator: when to dream (every N events, on app open when due), one at a time, failure and retry, saving a new version; tests | ⏸ P5: whole app test suite passes | 2.6 |
+| 2.6 | Privacy policy, Play data-safety answers, SUPPORT_AND_SAFETY.md; Hermes reviews the prompt wording; merge to `main` | ⏸ P6: merged, APK builds | Section 3 |
+
+If a sitting must end between pauses, Claude pushes what is done to the
+branch with a note of where it stopped; nothing reaches `main`.
 
 ## Section 3: putting the memory to use
 
