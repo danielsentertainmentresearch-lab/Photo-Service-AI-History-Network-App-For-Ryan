@@ -104,22 +104,12 @@ Set with `supabase secrets set NAME=value`:
 3. The app sets the signed-in account id as the ad's user id
    (`ServerSideVerificationOptions`). That app change is scheduled below.
 
-## Check before relying on it
+## Before beta testers and launch
 
-- **Time limit.** Supabase limits how long one function call may run
-  (about 150 seconds on the free plan, 400 on paid plans at the time of
-  writing; check Supabase's current limits). A photo description at high
-  effort usually finishes well within that, but a long one can run close.
-  If descriptions fail with "temporarily unavailable" after a long wait,
-  move to a paid Supabase plan or lower `AI_MAX_EFFORT` to `medium`.
-- **Known limit.** Credits are charged by task, and the server trusts the
-  task name the app sends. Someone with a modified app could send a large
-  request under a cheap task. Requests over 20 MB are refused, and the
-  daily allowance still caps how many requests an account makes, but if
-  usage looks off on the dashboard, charging by request size is the next
-  step.
-- **Spending.** Set a monthly spend limit on the Anthropic key in the
-  Anthropic Console, so a mistake can't run up a large bill.
+The steps that wait until testers or deployment (spending limit, time limit
+check, switching on, allowance size, ad callback, usage review) are in
+`docs/LAUNCH_CHECKLIST.md`, section "AI server". Nothing is spent until
+then.
 
 ## Scheduled (owner-approved order, 5 Oct 2026)
 
@@ -127,12 +117,12 @@ Set with `supabase secrets set NAME=value`:
 |---|---|---|---|
 | 1 | `AIClient` interface: every AI feature behind one contract | Claude | Done (`6057de5`) |
 | 2 | AI server, allowance tables, app client, Settings in server mode, dashboard counts | Claude | Done (this change) |
-| 3 | Set up Supabase, deploy, add `AI_SERVER_URL` (steps above) | Owner | Waiting on owner |
+| 3 | Set up Supabase, deploy, add `AI_SERVER_URL` (steps above) | Owner | Waits until beta testers (launch checklist) |
 | 4 | Update the privacy policy and Play data-safety answers to name the owner's server as the route to Anthropic (it passes requests through and keeps only usage counts). The Settings privacy text already says this when the server is in use | Claude | Together with step 3, before `AI_SERVER_URL` is set |
 | 5 | Reward-video top-ups in the app: set the ad's user id, a "watch a video for more AI" action where the allowance runs out | Claude (wiring), Hermes (how it looks) | After AdMob is connected |
 | 6 | Allowance and "AI is working" indicators | Hermes (design), Claude (data: every server reply reports what's left) | With step 5 |
 | 7 | Move sign-in from Firebase to Supabase (owner's non-Google preference); the server then checks Supabase tokens | Claude | Separate step, after the server is live |
-| 8 | The true memory file: memory as promised, kept on the phone, with the dream file's consolidation ideas | Hermes (proposal), Claude (build) | Owner is asking Hermes |
+| 8 | The app's own memory file and dream state: kept on the phone as promised; the app learns from how each person corrects and confirms it, and a periodic "dream" pass consolidates what it learned. Learning is measured with signals the dashboard already counts (for example, labels marked not right) | Hermes (proposal), Claude (build) | Owner is asking Hermes; design review with Claude before building |
 | 9 | Optional: a cheaper or self-hosted model for light tasks (labels, advice), chosen on the server per task | Owner decision | Later; possible now through `AI_MODEL_LABEL` / `AI_MODEL_ADVISE` |
 
 Not planned: storing memories or vectors on the server. That would change

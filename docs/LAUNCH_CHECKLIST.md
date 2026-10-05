@@ -25,6 +25,44 @@ continues at the end of every stage.
       AppLovin MAX, Unity LevelPlay, Liftoff, Mintegral, Pangle, Meta
       Audience Network; open source Prebid Mobile only at large scale.
 
+## AI server: waits until beta testers or deployment
+
+Owner rule (5 Oct 2026): nothing is spent until testers use the server, so
+these steps wait until then. Setup commands: `docs/AI_SERVER.md`.
+
+**Before beta testers**
+
+- [ ] **Supabase project**: create it, run `supabase db push`, set
+      `ANTHROPIC_API_KEY` and `FIREBASE_PROJECT_ID`, deploy the `ai`
+      function (`docs/AI_SERVER.md`, steps 1 to 4).
+- [ ] **Privacy before switching on**: tell Claude first, so the privacy
+      policy, Play data-safety answers and store listing name the AI server
+      in the same build.
+- [ ] **Switch on**: add the `AI_SERVER_URL` GitHub secret (the Firebase
+      secrets in RELEASE.md must be set too; reviewer sign-in can't use the
+      server).
+- [ ] **Spending limit**: set a monthly limit on the Anthropic key in the
+      Anthropic Console.
+- [ ] **Time limit check**: on the owner's phone, describe a multi-photo
+      event at high effort and confirm it finishes within Supabase's time
+      limit (about 150 s on the free plan). If not: a paid Supabase plan or
+      `AI_MAX_EFFORT=medium`.
+- [ ] **Allowance size**: check the 20 daily credits against real costs
+      from the first testers; change with `AI_DAILY_CREDITS`.
+
+**Before public launch**
+
+- [ ] **Reward-video top-ups**: once AdMob is connected, set its
+      server-side verification callback to `.../functions/v1/ai/admob-reward`,
+      set `ADS_ENABLED=true`, and ship the app's top-up action.
+- [ ] **Usage review**: watch the dashboard's allowance counts; if usage
+      looks off, charge credits by request size (the server currently trusts
+      the task name the app sends; requests over 20 MB are refused).
+- [ ] **Sign-in on Supabase**: move sign-in off Firebase (owner's
+      non-Google preference); the server then checks Supabase tokens.
+- [ ] **Hosting plan**: choose the Supabase plan (or self-hosting) from
+      real usage.
+
 ## Everything else
 
 | Item | Status | Recommended |
@@ -39,7 +77,7 @@ continues at the end of every stage.
 | Upload signing key + GitHub secrets | Waiting on owner | See RELEASE.md; keep in Bitwarden |
 | Privacy policy URL | Waiting on owner | GitHub Pages |
 | Support email | Waiting on owner | Proton Mail on a custom domain |
-| AI access | Built, waiting on owner to deploy (`docs/AI_SERVER.md`) | The owner's AI server on **Supabase** (Edge Function) holds the Anthropic key; daily allowance with reward-video top-ups. Until `AI_SERVER_URL` is set, builds still use each user's own key. Set a monthly spend limit on the key in the Anthropic Console |
+| AI access | Built; deploy waits until beta testers (see "AI server" above) | The owner's AI server on **Supabase** (Edge Function) holds the Anthropic key; daily allowance with reward-video top-ups. Until `AI_SERVER_URL` is set, builds still use each user's own key. Set a monthly spend limit on the key in the Anthropic Console |
 | Crash reporting | Owner to choose (not picked yet) | Options: GlitchTip (open source, self-host or hosted), Sentry (open-source SDK; self-host or sentry.io), Bugsink (open source, self-host). Crash data goes to the owner dashboard |
 | Payments (paywall stage) | Later | Google Play Billing (required); RevenueCat optional |
 | Place names (Nominatim) | Active (free, light use) | OpenStreetMap's public server allows max 1 request/s and no heavy use. Before launch at scale: self-host Nominatim or Photon (open source), or a paid OSM-based provider; base URL is configurable in `PlacesService` |
@@ -68,3 +106,7 @@ continues at the end of every stage.
 - **Build stage 2 started (4 Oct 2026)**: accounts and ads still not
   active. Recommended: Supabase for accounts (and Web3 sign-in), AdMob for
   ads.
+- **Post-review fix 1 (5 Oct 2026)**: accounts and ads still not active.
+  Recommended: Supabase for accounts (and Web3 sign-in), AdMob for ads.
+  Added: the AI server (Supabase) and its "waits until beta testers or
+  deployment" list.
