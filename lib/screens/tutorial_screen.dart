@@ -25,20 +25,21 @@ const _steps = [
   _Step(
     Icons.auto_stories,
     'Welcome to $appName',
-    'Your life, remembered in detail. Record moments with photos and a few '
-        'notes, and an AI writes the full story for you.',
+    'Your life, remembered in detail. Record moments with photos, and an AI '
+        'writes the factual story for you.',
   ),
   _Step(
     Icons.add_a_photo_outlined,
     'Record an event',
     'Tap New event, add up to 10 photos from your camera or gallery, and '
-        'jot down what\'s happening: who\'s there and what led up to it.',
+        'write about it in your own words in the box that\'s yours.',
   ),
   _Step(
     Icons.auto_awesome_outlined,
     'The AI writes the account',
-    'The AI studies every photo and your notes and writes a detailed, '
-        'factual account, then suggests things worth remembering.',
+    'The AI studies every photo, the time, the place and your memories and '
+        'writes a detailed, factual account in its own area, then suggests '
+        'things worth remembering.',
   ),
   _Step(
     Icons.psychology_outlined,

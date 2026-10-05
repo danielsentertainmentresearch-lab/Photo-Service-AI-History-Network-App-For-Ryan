@@ -8,11 +8,15 @@ class FreeWriteBox extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final FocusNode? focusNode;
 
+  /// Puts the cursor here when the screen opens.
+  final bool autofocus;
+
   const FreeWriteBox({
     super.key,
     required this.controller,
     this.onChanged,
     this.focusNode,
+    this.autofocus = false,
   });
 
   static const explanation =
@@ -20,7 +24,7 @@ class FreeWriteBox extends StatelessWidget {
       'at this event, in your own way. There are no questions to answer '
       'and no right way to fill it.\n\n'
       'The AI never changes what you write here. It reads it only to make a '
-      'few short labels for Your data, using your own API key.';
+      'few short labels for Your data.';
 
   static Future<void> explain(BuildContext context) => showDialog<void>(
     context: context,
@@ -52,6 +56,7 @@ class FreeWriteBox extends StatelessWidget {
               key: const ValueKey('free-write'),
               controller: controller,
               focusNode: focusNode,
+              autofocus: autofocus,
               onChanged: onChanged,
               minLines: 6,
               maxLines: null,

@@ -22,7 +22,6 @@ class _NewEventScreenState extends State<NewEventScreen> {
   final _picker = ImagePicker();
   final _title = TextEditingController();
   final _location = TextEditingController();
-  final _notes = TextEditingController();
   final _experience = TextEditingController();
   final List<File> _photos = [];
   DateTime _occurredAt = DateTime.now();
@@ -38,7 +37,6 @@ class _NewEventScreenState extends State<NewEventScreen> {
   void dispose() {
     _title.dispose();
     _location.dispose();
-    _notes.dispose();
     _experience.dispose();
     super.dispose();
   }
@@ -47,8 +45,9 @@ class _NewEventScreenState extends State<NewEventScreen> {
     if (_remaining <= 0) return;
     final picked = await _picker.pickMultiImage(limit: _remaining);
     if (picked.isEmpty) return;
-    setState(() =>
-        _photos.addAll(picked.take(_remaining).map((x) => File(x.path))));
+    setState(
+      () => _photos.addAll(picked.take(_remaining).map((x) => File(x.path))),
+    );
     _fillFromPhoto();
   }
 
@@ -84,15 +83,16 @@ class _NewEventScreenState extends State<NewEventScreen> {
         filled.add('place');
       }
       if (filled.isNotEmpty) {
-        _filledFromPhoto = 'Filled in the ${filled.join(' and ')} from your photo.';
+        _filledFromPhoto =
+            'Filled in the ${filled.join(' and ')} from your photo.';
       }
     });
     if (meta.hasLocation && _location.text.trim().isEmpty) {
       try {
         final name = await context.read<AppState>().places.placeName(
-              meta.latitude!,
-              meta.longitude!,
-            );
+          meta.latitude!,
+          meta.longitude!,
+        );
         if (mounted && name != null && _location.text.trim().isEmpty) {
           setState(() => _location.text = name);
         }
@@ -111,20 +111,28 @@ class _NewEventScreenState extends State<NewEventScreen> {
     );
     if (date == null || !mounted) return;
     final time = await showTimePicker(
-        context: context, initialTime: TimeOfDay.fromDateTime(_occurredAt));
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_occurredAt),
+    );
     setState(() {
       _userPickedDate = true;
-      _occurredAt = DateTime(date.year, date.month, date.day,
-          time?.hour ?? _occurredAt.hour, time?.minute ?? _occurredAt.minute);
+      _occurredAt = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time?.hour ?? _occurredAt.hour,
+        time?.minute ?? _occurredAt.minute,
+      );
     });
   }
 
   Future<void> _save({required bool describe}) async {
-    if (_photos.isEmpty &&
-        _notes.text.trim().isEmpty &&
-        _experience.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Add at least one photo or some notes.')));
+    if (_photos.isEmpty && _experience.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Add at least one photo or write something.'),
+        ),
+      );
       return;
     }
     setState(() => _saving = true);
@@ -132,7 +140,7 @@ class _NewEventScreenState extends State<NewEventScreen> {
     try {
       final event = await state.createEvent(
         title: _title.text,
-        notes: _notes.text,
+        notes: '',
         location: _location.text,
         occurredAt: _occurredAt,
         photos: _photos,
@@ -148,8 +156,9 @@ class _NewEventScreenState extends State<NewEventScreen> {
         state.labelExperience(event.id);
       }
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(MaterialPageRoute(
-          builder: (_) => EventDetailScreen(eventId: event.id)));
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: event.id)),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
@@ -168,8 +177,10 @@ class _NewEventScreenState extends State<NewEventScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text('Photos (${_photos.length}/${AppState.maxPhotosPerEvent})',
-                style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              'Photos (${_photos.length}/${AppState.maxPhotosPerEvent})',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: 8),
             SizedBox(
               height: 104,
@@ -183,13 +194,15 @@ class _NewEventScreenState extends State<NewEventScreen> {
                     ),
                   if (_remaining > 0) ...[
                     _AddTile(
-                        icon: Icons.photo_library_outlined,
-                        label: 'Gallery',
-                        onTap: _pickFromGallery),
+                      icon: Icons.photo_library_outlined,
+                      label: 'Gallery',
+                      onTap: _pickFromGallery,
+                    ),
                     _AddTile(
-                        icon: Icons.photo_camera_outlined,
-                        label: 'Camera',
-                        onTap: _takePhoto),
+                      icon: Icons.photo_camera_outlined,
+                      label: 'Camera',
+                      onTap: _takePhoto,
+                    ),
                   ],
                 ],
               ),
@@ -221,21 +234,9 @@ class _NewEventScreenState extends State<NewEventScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: _notes,
-              minLines: 5,
-              maxLines: 12,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'What\'s happening?',
-                alignLabelWithHint: true,
-                hintText: 'Who is here, what led up to this, anything the '
-                    'photos can\'t show…',
-                border: OutlineInputBorder(),
-              ),
-            ),
+            const _AiWritingArea(),
             const SizedBox(height: 16),
-            FreeWriteBox(controller: _experience),
+            FreeWriteBox(controller: _experience, autofocus: true),
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: _saving ? null : () => _save(describe: hasKey),
@@ -243,7 +244,8 @@ class _NewEventScreenState extends State<NewEventScreen> {
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2))
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Icon(Icons.auto_awesome),
               label: Text(hasKey ? 'Save and describe' : 'Save'),
             ),
@@ -276,11 +278,13 @@ class _Thumb extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.file(file,
-                width: 104,
-                height: 104,
-                fit: BoxFit.cover,
-                cacheWidth: (104 * ratio).round()),
+            child: Image.file(
+              file,
+              width: 104,
+              height: 104,
+              fit: BoxFit.cover,
+              cacheWidth: (104 * ratio).round(),
+            ),
           ),
           Positioned(
             top: 2,
@@ -303,7 +307,11 @@ class _AddTile extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _AddTile({required this.icon, required this.label, required this.onTap});
+  const _AddTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -314,8 +322,9 @@ class _AddTile extends StatelessWidget {
         child: OutlinedButton(
           style: OutlinedButton.styleFrom(
             padding: EdgeInsets.zero,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
           onPressed: onTap,
           child: Column(
@@ -323,6 +332,51 @@ class _AddTile extends StatelessWidget {
             children: [Icon(icon), const SizedBox(height: 4), Text(label)],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Where the AI's account of the event appears once it is written. Nobody
+/// types here: the account is the AI's alone, factual and objective, so
+/// the person's own writing goes in the free write below.
+class _AiWritingArea extends StatelessWidget {
+  const _AiWritingArea();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Semantics(
+      label: 'AI writing generates here',
+      readOnly: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 16, color: scheme.primary),
+              const SizedBox(width: 6),
+              Text(
+                'AI writing generates here',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: scheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Container(
+            key: const ValueKey('ai-writing-area'),
+            height: 112,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: scheme.outlineVariant),
+            ),
+          ),
+        ],
       ),
     );
   }

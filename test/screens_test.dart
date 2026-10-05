@@ -257,24 +257,43 @@ void main() {
     expect(find.text('The lake is where we camped as kids'), findsOneWidget);
   });
 
-  testWidgets('new event saves notes without photos and opens the event', (
-    tester,
-  ) async {
+  testWidgets('new event: the AI area takes no typing; the cursor starts '
+      'in the free write', (tester) async {
     await setUpState(tester);
     await tester.pumpWidget(app(const NewEventScreen()));
+    await tester.pumpAndSettle();
     expect(find.text('Photos (0/10)'), findsOneWidget);
+
+    // The AI's area is labelled and holds no text field.
+    expect(find.text('AI writing generates here'), findsOneWidget);
+    final area = find.byKey(const ValueKey('ai-writing-area'));
+    expect(area, findsOneWidget);
+    expect(
+      find.descendant(of: area, matching: find.byType(TextField)),
+      findsNothing,
+    );
+    expect(find.widgetWithText(TextField, 'What\'s happening?'), findsNothing);
+
+    // The free write has the cursor from the start.
+    final box = find.byKey(const ValueKey('free-write'));
+    final editable = find.descendant(
+      of: box,
+      matching: find.byType(EditableText),
+    );
+    expect(tester.widget<EditableText>(editable).focusNode.hasFocus, isTrue);
+
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
-    expect(find.text('Add at least one photo or some notes.'), findsOneWidget);
-
-    await tester.enterText(
-      find.widgetWithText(TextField, 'What\'s happening?'),
-      'First day at the new studio',
+    expect(
+      find.text('Add at least one photo or write something.'),
+      findsOneWidget,
     );
+
+    await tester.enterText(box, 'First day at the new studio');
     await tester.tap(find.text('Save'));
     await settle(tester, () => state.allEvents.length == 3);
     expect(state.allEvents, hasLength(3));
-    expect(find.text('First day at the new studio'), findsOneWidget);
+    expect(state.allEvents.first.notes, isEmpty);
   });
 
   testWidgets('the free write is a blank box with no prompt; ? explains it', (
