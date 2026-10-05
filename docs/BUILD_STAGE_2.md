@@ -138,9 +138,11 @@ Points to settle with the owner before building:
   and a short, warm message. Never a diagnosis, never blocking the app.
 - **Privacy**: whether any signal is kept, counted or sent anywhere. The
   dashboard would receive counts only, never content, if at all.
-- **Tone and review**: wording reviewed by the owner (and ideally someone
-  with crisis-support experience) before release; tested so it shows when
-  it should and stays quiet otherwise.
+- **No tone review** (owner, who has crisis support and intervention
+  training): written words carry no fixed tone. Any phrase, even one most
+  people read as loving, can be a trigger for one person because of what
+  it means in their own life. So the route must not rely on judging tone
+  or a list of "dangerous" words; it is built and tested with the owner.
 - **Store requirements**: Google Play policies for apps handling sensitive
   topics.
 
