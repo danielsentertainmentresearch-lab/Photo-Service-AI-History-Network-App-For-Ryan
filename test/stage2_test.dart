@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:eventlens/ai/anthropic_client.dart';
+import 'package:eventlens/ai/anthropic_ai_client.dart';
 import 'package:eventlens/ai/experience_labeler.dart';
 import 'package:eventlens/data/app_database.dart';
 import 'package:eventlens/data/event_repository.dart';
@@ -103,7 +103,7 @@ void main() {
 
   group('labeller', () {
     final labeler = ExperienceLabeler(
-      client: AnthropicClient(apiKey: 'k'),
+      client: AnthropicAIClient(apiKey: 'k'),
       model: 'claude-opus-5-5',
     );
 
@@ -228,7 +228,7 @@ void main() {
         settings: SettingsService(const FlutterSecureStorage(), prefs),
         labelerFactory: (key, model) => ExperienceLabeler(
           model: model,
-          client: AnthropicClient(
+          client: AnthropicAIClient(
             apiKey: key,
             httpClient: ai.client,
             maxRetries: 0,
@@ -447,7 +447,7 @@ void main() {
         vault: state.vault,
         settings: state.settings,
         labelerFactory: (key, model) => ExperienceLabeler(
-          client: AnthropicClient(
+          client: AnthropicAIClient(
             apiKey: key,
             maxRetries: 0,
             httpClient: MockClient((_) async => http.Response('{}', 401)),

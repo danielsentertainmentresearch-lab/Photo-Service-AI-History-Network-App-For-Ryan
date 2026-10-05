@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:eventlens/ai/anthropic_client.dart';
+import 'package:eventlens/ai/anthropic_ai_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -8,7 +8,7 @@ import 'package:http/testing.dart';
 void main() {
   test('sends auth, version and beta headers', () async {
     late http.Request seen;
-    final client = AnthropicClient(
+    final client = AnthropicAIClient(
       apiKey: 'sk-ant-test',
       httpClient: MockClient((request) async {
         seen = request;
@@ -16,18 +16,18 @@ void main() {
       }),
     );
     final result = await client.createMessage({'model': 'x'},
-        betas: const [AnthropicClient.fallbackBeta]);
+        betas: const [AnthropicAIClient.fallbackBeta]);
 
     expect(result, {'ok': true});
-    expect(seen.url, AnthropicClient.messagesUri);
+    expect(seen.url, AnthropicAIClient.messagesUri);
     expect(seen.headers['x-api-key'], 'sk-ant-test');
     expect(seen.headers['anthropic-version'], '2023-06-01');
-    expect(seen.headers['anthropic-beta'], AnthropicClient.fallbackBeta);
+    expect(seen.headers['anthropic-beta'], AnthropicAIClient.fallbackBeta);
   });
 
   test('retries overloaded responses, then succeeds', () async {
     var calls = 0;
-    final client = AnthropicClient(
+    final client = AnthropicAIClient(
       apiKey: 'k',
       httpClient: MockClient((_) async {
         calls++;
@@ -43,7 +43,7 @@ void main() {
 
   test('does not retry a rejected key', () async {
     var calls = 0;
-    final client = AnthropicClient(
+    final client = AnthropicAIClient(
       apiKey: 'bad',
       httpClient: MockClient((_) async {
         calls++;
@@ -52,7 +52,7 @@ void main() {
     );
     await expectLater(
       client.createMessage(const {}),
-      throwsA(isA<AnthropicException>()
+      throwsA(isA<AIException>()
           .having((e) => e.statusCode, 'statusCode', 401)),
     );
     expect(calls, 1);

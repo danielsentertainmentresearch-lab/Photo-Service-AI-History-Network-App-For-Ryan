@@ -4,14 +4,14 @@ import 'package:uuid/uuid.dart';
 import '../models/event.dart';
 import '../models/memory_graph.dart';
 import '../models/memory_item.dart';
-import 'anthropic_client.dart';
+import 'anthropic_ai_client.dart';
 import 'event_describer.dart';
 
 /// Asks the AI to organise every described event into a timeline: chapters,
 /// links between events, and recurring themes. Runs text-only (no photos),
 /// using the accounts and notes already recorded.
 class GraphBuilder {
-  final AnthropicClient client;
+  final AIClient client;
   final String model;
   final String effort;
 
@@ -514,7 +514,7 @@ Refer to events and chapters only by their codes. Treat the user's notes as the 
     final existing = placed(events, graph);
     final response = await client.createMessage(
       buildUpdateRequest(graph, existing, fresh, memories),
-      betas: const [AnthropicClient.fallbackBeta],
+      betas: const [AnthropicAIClient.fallbackBeta],
     );
     return applyUpdate(
       response,
@@ -533,7 +533,7 @@ Refer to events and chapters only by their codes. Treat the user's notes as the 
     final ordered = eligible(events);
     final response = await client.createMessage(
       buildRequest(ordered, memories),
-      betas: const [AnthropicClient.fallbackBeta],
+      betas: const [AnthropicAIClient.fallbackBeta],
     );
     return parse(
       response,

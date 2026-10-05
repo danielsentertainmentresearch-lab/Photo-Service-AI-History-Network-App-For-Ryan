@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import '../services/data_files.dart';
-import 'anthropic_client.dart';
+import 'anthropic_ai_client.dart';
 import 'event_describer.dart' show parseStructured;
 
 /// One Python data platform that can open the analysis file.
@@ -105,7 +105,7 @@ class PlatformAdvice {
 /// Asks the AI which Python data platforms can use the analysis file. Only
 /// the column names and types are sent, never the person's data.
 class DataPlatformAdvisor {
-  final AnthropicClient client;
+  final AIClient client;
   final String model;
 
   DataPlatformAdvisor({required this.client, required this.model});
@@ -190,7 +190,7 @@ class DataPlatformAdvisor {
   Future<PlatformAdvice> suggest() async {
     final response = await client.createMessage(
       buildRequest(),
-      betas: const [AnthropicClient.fallbackBeta],
+      betas: const [AnthropicAIClient.fallbackBeta],
     );
     return parse(response);
   }

@@ -112,6 +112,7 @@ importance:
 | 9 | Brand artwork: app icon, store graphics and an opening title screen from the owner's approved logo option (see below) | `4a9be3c` |
 | 10 | Launch crash on the owner's phone (moto g 2025, Android 16): the app closed on opening in build #30. Code shrinking (R8) turned off; build #33 opens. Shrinking stays off until keep rules are written and tested on the phone | `845b905` |
 | 11 | Checkpoint: the app opens on the owner's phone; the owner's manual review (pen and paper) starts. The session pauses here. A new session means the review is done, and it starts from the owner's session summary, written by Hermes as a handoff and added to the repo | (this commit) |
+| 12 | Post-review fix 1, step 1 (Hermes's proposal, adopted with Claude's changes): every AI feature talks to an `AIClient` interface (`lib/ai/ai_client.dart`) instead of Anthropic directly. `AnthropicClient` is now `AnthropicAIClient`, one backend behind it; errors are `AIException`. No behaviour change. Next: a client for the owner's own AI server, so users no longer need an Anthropic API key | (this commit) |
 
 ## Mechanisms, parts and features
 

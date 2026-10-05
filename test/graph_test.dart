@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:eventlens/ai/anthropic_client.dart';
+import 'package:eventlens/ai/anthropic_ai_client.dart';
 import 'package:eventlens/ai/graph_builder.dart';
 import 'package:eventlens/data/app_database.dart';
 import 'package:eventlens/data/graph_repository.dart';
@@ -63,7 +63,7 @@ void main() {
   });
 
   test('request is text-only with structured output and fallbacks', () {
-    final builder = GraphBuilder(client: AnthropicClient(apiKey: 'k'));
+    final builder = GraphBuilder(client: AnthropicAIClient(apiKey: 'k'));
     final body = builder.buildRequest(ordered, const []);
     expect(body['fallbacks'], 'default');
     expect(
@@ -122,7 +122,7 @@ void main() {
         ordered,
         describedCount: 3,
       ),
-      throwsA(isA<AnthropicException>()),
+      throwsA(isA<AIException>()),
     );
   });
 

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
-import 'package:eventlens/ai/anthropic_client.dart';
+import 'package:eventlens/ai/anthropic_ai_client.dart';
 import 'package:eventlens/ai/event_describer.dart';
 import 'package:eventlens/data/app_database.dart';
 import 'package:eventlens/data/event_repository.dart';
@@ -259,7 +259,7 @@ void main() {
         describerFactory: (key, model, effort) => EventDescriber(
           model: model,
           effort: effort,
-          client: AnthropicClient(
+          client: AnthropicAIClient(
             apiKey: key,
             httpClient: MockClient((request) async {
               aiBodies.add(jsonDecode(request.body) as Map<String, dynamic>);

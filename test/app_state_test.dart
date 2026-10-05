@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:eventlens/ai/anthropic_client.dart';
+import 'package:eventlens/ai/anthropic_ai_client.dart';
 import 'package:eventlens/ai/event_describer.dart';
 import 'package:eventlens/ai/graph_builder.dart';
 import 'package:eventlens/data/app_database.dart';
@@ -58,7 +58,7 @@ void main() {
       describerFactory: (key, model, effort) => EventDescriber(
         model: model,
         effort: effort,
-        client: AnthropicClient(
+        client: AnthropicAIClient(
           apiKey: key,
           httpClient: MockClient((request) async {
             sentBodies.add(jsonDecode(request.body) as Map<String, dynamic>);
@@ -91,7 +91,7 @@ void main() {
       graphBuilderFactory: (key, model, effort) => GraphBuilder(
         model: model,
         effort: effort,
-        client: AnthropicClient(
+        client: AnthropicAIClient(
           apiKey: key,
           httpClient: MockClient((request) async {
             final body = jsonDecode(request.body) as Map<String, dynamic>;

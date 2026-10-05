@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:eventlens/ai/anthropic_client.dart';
+import 'package:eventlens/ai/anthropic_ai_client.dart';
 import 'package:eventlens/ai/event_describer.dart';
 import 'package:eventlens/models/event.dart';
 import 'package:eventlens/models/memory_item.dart';
@@ -35,9 +35,29 @@ Map<String, dynamic> _response(Map<String, dynamic> account,
       ],
     };
 
+/// Stands in for any non-Anthropic backend behind the [AIClient] interface.
+class _FakeAIClient implements AIClient {
+  final Map<String, dynamic> reply;
+  Map<String, dynamic>? sent;
+  List<String>? sentBetas;
+
+  _FakeAIClient(this.reply);
+
+  @override
+  Future<Map<String, dynamic>> createMessage(Map<String, dynamic> body,
+      {List<String> betas = const []}) async {
+    sent = body;
+    sentBetas = betas;
+    return reply;
+  }
+
+  @override
+  void close() {}
+}
+
 void main() {
   final describer =
-      EventDescriber(client: AnthropicClient(apiKey: 'sk-ant-test'));
+      EventDescriber(client: AnthropicAIClient(apiKey: 'sk-ant-test'));
   final memories = [
     MemoryItem(
       id: 'm1',
@@ -118,13 +138,13 @@ void main() {
     expect(
       () => EventDescriber.parseResponse(
           _response(const {}, stopReason: 'refusal')),
-      throwsA(isA<AnthropicException>()
+      throwsA(isA<AIException>()
           .having((e) => e.message, 'message', contains('declined'))),
     );
     expect(
       () => EventDescriber.parseResponse(
           _response(const {}, stopReason: 'max_tokens')),
-      throwsA(isA<AnthropicException>()
+      throwsA(isA<AIException>()
           .having((e) => e.message, 'message', contains('cut off'))),
     );
   });
@@ -137,7 +157,28 @@ void main() {
           {'type': 'text', 'text': 'not json'},
         ],
       }),
-      throwsA(isA<AnthropicException>()),
+      throwsA(isA<AIException>()),
     );
+  });
+
+  test('describes through any AIClient backend, not only Anthropic', () async {
+    final backend = _FakeAIClient(_response({
+      'title': 'Sunset at the lake',
+      'summary': 'Sam and I watched the sunset.',
+      'description': 'The water was glass...',
+      'people': ['Sam'],
+      'places': ['Lake Tahoe'],
+      'tags': ['summer'],
+      'memory_suggestions': [],
+    }));
+    final account = await EventDescriber(client: backend).describe(
+      event: _event(),
+      jpegs: [Uint8List.fromList([1])],
+      memories: memories,
+      history: const [],
+    );
+    expect(account.title, 'Sunset at the lake');
+    expect(backend.sent?['messages'], isNotEmpty);
+    expect(backend.sentBetas, [AnthropicAIClient.fallbackBeta]);
   });
 }

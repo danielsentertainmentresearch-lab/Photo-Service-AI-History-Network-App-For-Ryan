@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
-import '../ai/anthropic_client.dart';
+import '../ai/anthropic_ai_client.dart';
 import '../ai/experience_labeler.dart';
 import '../ai/data_platform_advisor.dart';
 import '../ai/event_describer.dart';
@@ -35,14 +35,14 @@ typedef GraphBuilderFactory = GraphBuilder Function(
 
 GraphBuilder _defaultGraphBuilder(String apiKey, String model, String effort) =>
     GraphBuilder(
-      client: AnthropicClient(apiKey: apiKey),
+      client: AnthropicAIClient(apiKey: apiKey),
       model: model,
       effort: effort,
     );
 
 EventDescriber _defaultDescriber(String apiKey, String model, String effort) =>
     EventDescriber(
-      client: AnthropicClient(apiKey: apiKey),
+      client: AnthropicAIClient(apiKey: apiKey),
       model: model,
       effort: effort,
     );
@@ -53,12 +53,12 @@ typedef PlatformAdvisorFactory = DataPlatformAdvisor Function(
 );
 
 DataPlatformAdvisor _defaultAdvisor(String apiKey, String model) =>
-    DataPlatformAdvisor(client: AnthropicClient(apiKey: apiKey), model: model);
+    DataPlatformAdvisor(client: AnthropicAIClient(apiKey: apiKey), model: model);
 
 typedef LabelerFactory = ExperienceLabeler Function(String apiKey, String model);
 
 ExperienceLabeler _defaultLabeler(String apiKey, String model) =>
-    ExperienceLabeler(client: AnthropicClient(apiKey: apiKey), model: model);
+    ExperienceLabeler(client: AnthropicAIClient(apiKey: apiKey), model: model);
 
 /// Single source of truth for the UI.
 class AppState extends ChangeNotifier {
@@ -352,7 +352,7 @@ class AppState extends ChangeNotifier {
         );
       }
       _labelError = null;
-    } on AnthropicException catch (e) {
+    } on AIException catch (e) {
       _labelError = e.message;
     } catch (e) {
       _labelError = 'Labelling failed: $e';
@@ -493,7 +493,7 @@ class AppState extends ChangeNotifier {
         ),
       );
     } catch (e) {
-      final message = e is AnthropicException || e is FormatException
+      final message = e is AIException || e is FormatException
           ? e.toString()
           : 'Something went wrong: $e';
       final latest = await events.byId(eventId);
@@ -556,7 +556,7 @@ class AppState extends ChangeNotifier {
       await graphRepo.replace(clean);
       _graph = clean;
     } catch (e) {
-      _graphError = e is AnthropicException
+      _graphError = e is AIException
           ? e.toString()
           : 'Could not update the timeline graph: $e';
     } finally {

@@ -4,22 +4,13 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
-/// Error from the Claude API, with a message suitable for showing the user.
-class AnthropicException implements Exception {
-  final int? statusCode;
-  final String message;
-  final bool retryable;
+import 'ai_client.dart';
 
-  const AnthropicException(this.message,
-      {this.statusCode, this.retryable = false});
-
-  @override
-  String toString() => message;
-}
+export 'ai_client.dart';
 
 /// Minimal Claude Messages API client over raw HTTP (there is no official
 /// Anthropic SDK for Dart).
-class AnthropicClient {
+class AnthropicAIClient implements AIClient {
   static final Uri messagesUri =
       Uri.parse('https://api.anthropic.com/v1/messages');
   static const String apiVersion = '2023-06-01';
@@ -33,13 +24,14 @@ class AnthropicClient {
   final int maxRetries;
   final Duration timeout;
 
-  AnthropicClient({
+  AnthropicAIClient({
     required this.apiKey,
     http.Client? httpClient,
     this.maxRetries = 2,
     this.timeout = const Duration(minutes: 10),
   }) : _http = httpClient ?? http.Client();
 
+  @override
   Future<Map<String, dynamic>> createMessage(Map<String, dynamic> body,
       {List<String> betas = const []}) async {
     final headers = {
@@ -64,19 +56,20 @@ class AnthropicClient {
         await Future.delayed(_retryDelay(response, attempt));
       } on SocketException {
         if (attempt >= maxRetries) {
-          throw const AnthropicException(
+          throw const AIException(
               'No internet connection. Check your network and try again.',
               retryable: true);
         }
         await Future.delayed(_backoff(attempt));
       } on TimeoutException {
-        throw const AnthropicException(
+        throw const AIException(
             'The request took too long. Try again, or use fewer photos.',
             retryable: true);
       }
     }
   }
 
+  @override
   void close() => _http.close();
 
   static Duration _backoff(int attempt) =>
@@ -90,7 +83,7 @@ class AnthropicClient {
     return _backoff(attempt);
   }
 
-  static AnthropicException _errorFrom(http.Response response) {
+  static AIException _errorFrom(http.Response response) {
     final status = response.statusCode;
     String? apiMessage;
     try {
@@ -101,24 +94,24 @@ class AnthropicClient {
     }
     final detail = apiMessage == null ? '' : ' ($apiMessage)';
     return switch (status) {
-      401 => AnthropicException(
+      401 => AIException(
           'Your Anthropic API key was rejected. Check it in Settings.',
           statusCode: status),
-      403 => AnthropicException(
+      403 => AIException(
           'This API key is not allowed to use the selected model$detail.',
           statusCode: status),
       400 || 404 || 413 =>
-        AnthropicException('The request was rejected$detail.',
+        AIException('The request was rejected$detail.',
             statusCode: status),
-      429 => AnthropicException(
+      429 => AIException(
           'Rate limited by Anthropic. Wait a minute and retry.',
           statusCode: status,
           retryable: true),
-      _ when status >= 500 => AnthropicException(
+      _ when status >= 500 => AIException(
           'Anthropic is temporarily unavailable ($status). Try again soon.',
           statusCode: status,
           retryable: true),
-      _ => AnthropicException('Unexpected API error $status$detail.',
+      _ => AIException('Unexpected API error $status$detail.',
           statusCode: status),
     };
   }

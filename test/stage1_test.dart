@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
-import 'package:eventlens/ai/anthropic_client.dart';
+import 'package:eventlens/ai/anthropic_ai_client.dart';
 import 'package:eventlens/ai/data_platform_advisor.dart';
 import 'package:eventlens/ai/event_describer.dart';
 import 'package:eventlens/app.dart';
@@ -141,11 +141,11 @@ void main() {
       describerFactory: (key, model, effort) => EventDescriber(
         model: model,
         effort: effort,
-        client: AnthropicClient(apiKey: key, httpClient: ai.client),
+        client: AnthropicAIClient(apiKey: key, httpClient: ai.client),
       ),
       advisorFactory: (key, model) => DataPlatformAdvisor(
         model: model,
-        client: AnthropicClient(
+        client: AnthropicAIClient(
           apiKey: key,
           httpClient: ai.client,
           maxRetries: 0,

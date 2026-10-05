@@ -1,4 +1,4 @@
-import 'anthropic_client.dart';
+import 'anthropic_ai_client.dart';
 import 'event_describer.dart' show defaultModel, parseStructured;
 
 /// A label the AI proposed, with its sentiment and the word groups from the
@@ -17,7 +17,7 @@ class ProposedLabel {
 /// drops any label whose words aren't in the writing; a second request
 /// reviews each remaining label. It never changes the writing itself.
 class ExperienceLabeler {
-  final AnthropicClient client;
+  final AIClient client;
   final String model;
 
   static const maxLabels = 6;
@@ -224,7 +224,7 @@ You review labels proposed for a person's private free write about one event. Ea
     final proposed = parseProposal(
       await client.createMessage(
         buildProposeRequest(writing, existing),
-        betas: const [AnthropicClient.fallbackBeta],
+        betas: const [AnthropicAIClient.fallbackBeta],
       ),
       writing,
     );
@@ -232,7 +232,7 @@ You review labels proposed for a person's private free write about one event. Ea
     return parseVerification(
       await client.createMessage(
         buildVerifyRequest(writing, proposed),
-        betas: const [AnthropicClient.fallbackBeta],
+        betas: const [AnthropicAIClient.fallbackBeta],
       ),
       proposed,
     );

@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../models/event.dart';
 import '../models/memory_item.dart';
-import 'anthropic_client.dart';
+import 'anthropic_ai_client.dart';
 
 /// Models offered in Settings. Both accept adaptive thinking, effort,
 /// structured outputs and server-side fallbacks.
@@ -44,7 +44,7 @@ class EventAccount {
 /// Builds the request that turns photos + working memory + long-term memory
 /// into a detailed account of an event, and parses the result.
 class EventDescriber {
-  final AnthropicClient client;
+  final AIClient client;
   final String model;
   final String effort;
 
@@ -220,7 +220,7 @@ Also return:
   }
 
   /// Turns an API response into an [EventAccount], or throws a user-facing
-  /// [AnthropicException] explaining why there is no account.
+  /// [AIException] explaining why there is no account.
   static EventAccount parseResponse(Map<String, dynamic> response) {
     final data = parseStructured(response);
     List<String> strings(String key) => ((data[key] as List?) ?? const [])
@@ -255,24 +255,24 @@ Also return:
         memories: memories,
         history: history,
       ),
-      betas: const [AnthropicClient.fallbackBeta],
+      betas: const [AnthropicAIClient.fallbackBeta],
     );
     return parseResponse(response);
   }
 }
 
 /// Checks the stop reason and decodes the JSON text of a structured-output
-/// response, throwing a user-facing [AnthropicException] on any problem.
+/// response, throwing a user-facing [AIException] on any problem.
 Map<String, dynamic> parseStructured(Map<String, dynamic> response) {
   final stopReason = response['stop_reason'] as String?;
   if (stopReason == 'refusal') {
-    throw const AnthropicException(
+    throw const AIException(
       'The AI declined this request. Try editing the notes or removing a '
       'photo, then retry.',
     );
   }
   if (stopReason == 'max_tokens') {
-    throw const AnthropicException(
+    throw const AIException(
       'The AI response was cut off. Try fewer photos or a lower effort '
       'level in Settings.',
     );
@@ -283,12 +283,12 @@ Map<String, dynamic> parseStructured(Map<String, dynamic> response) {
       .map((b) => b['text'] as String)
       .join();
   if (text.trim().isEmpty) {
-    throw const AnthropicException('The AI returned an empty response.');
+    throw const AIException('The AI returned an empty response.');
   }
   try {
     return jsonDecode(text) as Map<String, dynamic>;
   } on FormatException {
-    throw const AnthropicException(
+    throw const AIException(
       'The AI response could not be read. Please retry.',
     );
   }
