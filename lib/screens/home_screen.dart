@@ -9,6 +9,7 @@ import '../widgets/common.dart';
 import 'data_screen.dart';
 import 'event_detail_screen.dart';
 import 'graph_screen.dart';
+import 'support_screen.dart';
 import 'memory_screen.dart';
 import 'new_event_screen.dart';
 import 'settings_screen.dart';
@@ -46,6 +47,11 @@ class HomeScreen extends StatelessWidget {
             tooltip: 'What the AI is learning',
             icon: const Icon(Icons.psychology_outlined),
             onPressed: () => _push(context, const MemoryScreen()),
+          ),
+          IconButton(
+            tooltip: 'Support',
+            icon: const Icon(Icons.volunteer_activism_outlined),
+            onPressed: () => _push(context, const SupportScreen()),
           ),
           IconButton(
             tooltip: 'Settings',
@@ -275,6 +281,11 @@ class _OnThisDay extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final now = DateTime.now();
+    final honored = context.watch<AppState>().honoredNames;
+    bool remembered(LifeEvent e) => [
+      ...e.people,
+      ...e.places,
+    ].any((n) => honored.contains(n.trim().toLowerCase()));
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: Card(
@@ -294,6 +305,15 @@ class _OnThisDay extends StatelessWidget {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   dense: true,
+                  leading: remembered(e)
+                      ? Tooltip(
+                          message: 'Someone you honor is part of this',
+                          child: Icon(
+                            Icons.spa_outlined,
+                            color: theme.colorScheme.onSecondaryContainer,
+                          ),
+                        )
+                      : null,
                   title: Text(e.title.isEmpty ? 'Untitled event' : e.title),
                   subtitle: Text(_ago(now.year - e.occurredAt.year)),
                   trailing: const Icon(Icons.chevron_right),

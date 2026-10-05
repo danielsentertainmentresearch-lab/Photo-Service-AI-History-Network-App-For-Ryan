@@ -1,5 +1,14 @@
 import 'dart:convert';
 
+/// What the label pass noticed in a free write (see [LifeEvent.supportLevel]).
+const supportNone = 'none';
+
+/// Signs of distress, stated or implied.
+const supportDistress = 'distress';
+
+/// Suicidal thoughts or severe self-harm, stated plainly and unmistakably.
+const supportCrisis = 'crisis';
+
 /// Lifecycle of an event's AI account.
 enum EventStatus { draft, describing, described, failed }
 
@@ -160,6 +169,16 @@ class LifeEvent {
   /// The AI's open questions about who or where (see [AiQuestion]).
   final List<AiQuestion> questions;
 
+  /// What the label pass noticed about whether the person might need
+  /// support: [supportNone], [supportDistress] or [supportCrisis]. Kept on
+  /// the phone only; never exported, counted or shown in data files.
+  final String supportLevel;
+
+  /// The person put away the support line on this event.
+  final bool supportDismissed;
+
+  bool get offersSupport => supportLevel != supportNone && !supportDismissed;
+
   final EventStatus status;
   final String? error;
   final String? model;
@@ -206,6 +225,8 @@ class LifeEvent {
     this.tags = const [],
     this.suggestions = const [],
     this.questions = const [],
+    this.supportLevel = supportNone,
+    this.supportDismissed = false,
     this.status = EventStatus.draft,
     this.error,
     this.model,
@@ -240,6 +261,8 @@ class LifeEvent {
     List<String>? tags,
     List<MemorySuggestion>? suggestions,
     List<AiQuestion>? questions,
+    String? supportLevel,
+    bool? supportDismissed,
     EventStatus? status,
     String? error,
     bool clearError = false,
@@ -271,6 +294,8 @@ class LifeEvent {
       tags: tags ?? this.tags,
       suggestions: suggestions ?? this.suggestions,
       questions: questions ?? this.questions,
+      supportLevel: supportLevel ?? this.supportLevel,
+      supportDismissed: supportDismissed ?? this.supportDismissed,
       status: status ?? this.status,
       error: clearError ? null : (error ?? this.error),
       model: model ?? this.model,
@@ -322,6 +347,8 @@ class LifeEvent {
           : (jsonDecode(rawQuestions) as List)
                 .map((e) => AiQuestion.fromJson(e as Map<String, dynamic>))
                 .toList(),
+      supportLevel: (row['support_level'] as String?) ?? supportNone,
+      supportDismissed: (row['support_dismissed'] as int? ?? 0) == 1,
       status: EventStatus.values.byName((row['status'] as String?) ?? 'draft'),
       error: row['error'] as String?,
       model: row['model'] as String?,
@@ -356,6 +383,8 @@ class LifeEvent {
     'tags': jsonEncode(tags),
     'suggestions': jsonEncode(suggestions.map((s) => s.toJson()).toList()),
     'questions': jsonEncode(questions.map((q) => q.toJson()).toList()),
+    'support_level': supportLevel,
+    'support_dismissed': supportDismissed ? 1 : 0,
     'status': status.name,
     'error': error,
     'model': model,

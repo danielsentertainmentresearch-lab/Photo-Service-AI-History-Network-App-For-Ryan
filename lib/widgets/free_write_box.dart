@@ -23,8 +23,9 @@ class FreeWriteBox extends StatelessWidget {
       'This box is yours. Write anything you like about your experience '
       'at this event, in your own way. There are no questions to answer '
       'and no right way to fill it.\n\n'
-      'The AI never changes what you write here. It reads it only to make a '
-      'few short labels for Your data.';
+      'The AI never changes what you write here. It reads it to make a few '
+      'short labels for Your data, and to notice if you might need support, '
+      'so help is easy to reach. No one else sees it.';
 
   static Future<void> explain(BuildContext context) => showDialog<void>(
     context: context,

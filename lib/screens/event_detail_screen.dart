@@ -11,6 +11,8 @@ import '../models/memory_item.dart';
 import '../services/places_service.dart';
 import '../services/rewards_service.dart';
 import '../state/app_state.dart';
+import 'person_screen.dart';
+import 'support_screen.dart';
 import '../widgets/common.dart';
 import '../widgets/free_write_box.dart';
 
@@ -109,8 +111,16 @@ class EventDetailScreen extends StatelessWidget {
                     style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
                   ),
                   const SizedBox(height: 16),
-                  _LabelRow(icon: Icons.people_outline, labels: event.people),
-                  _LabelRow(icon: Icons.place_outlined, labels: event.places),
+                  _LabelRow(
+                    icon: Icons.people_outline,
+                    labels: event.people,
+                    kind: 'person',
+                  ),
+                  _LabelRow(
+                    icon: Icons.place_outlined,
+                    labels: event.places,
+                    kind: 'place',
+                  ),
                   _LabelRow(icon: Icons.sell_outlined, labels: event.tags),
                   if (event.model != null && event.model!.isNotEmpty)
                     Padding(
@@ -124,6 +134,7 @@ class EventDetailScreen extends StatelessWidget {
                 if (event.questions.isNotEmpty) _QuestionsCard(event: event),
                 if (event.suggestions.isNotEmpty)
                   _SuggestionsCard(event: event),
+                if (event.offersSupport) _SupportLine(event: event),
                 const SizedBox(height: 24),
                 _FreeWriteSection(event: event),
                 if (event.notes.isNotEmpty) ...[
@@ -422,11 +433,61 @@ class _ErrorCard extends StatelessWidget {
   }
 }
 
+/// A quiet, dismissible line when the free write suggests the person might
+/// need support. Never a pop-up, never blocking, never a judgement.
+class _SupportLine extends StatelessWidget {
+  final LifeEvent event;
+
+  const _SupportLine({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(top: 16),
+      color: theme.colorScheme.surfaceContainerHigh,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'If anything here is weighing on you, support is one tap away, '
+              'whenever you want it.',
+              style: theme.textTheme.bodyMedium,
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () =>
+                      context.read<AppState>().dismissSupport(event.id),
+                  child: const Text('Not now'),
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SupportScreen()),
+                  ),
+                  icon: const Icon(Icons.volunteer_activism_outlined),
+                  label: const Text('Support'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _LabelRow extends StatelessWidget {
   final IconData icon;
   final List<String> labels;
 
-  const _LabelRow({required this.icon, required this.labels});
+  /// `person` or `place`: each name opens its page. Null for plain tags.
+  final String? kind;
+
+  const _LabelRow({required this.icon, required this.labels, this.kind});
 
   @override
   Widget build(BuildContext context) {
@@ -447,7 +508,18 @@ class _LabelRow extends StatelessWidget {
               runSpacing: 6,
               children: [
                 for (final l in labels)
-                  Chip(label: Text(l), visualDensity: VisualDensity.compact),
+                  kind == null
+                      ? Chip(label: Text(l), visualDensity: VisualDensity.compact)
+                      : ActionChip(
+                          label: Text(l),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  PersonScreen(name: l, kind: kind!),
+                            ),
+                          ),
+                        ),
               ],
             ),
           ),

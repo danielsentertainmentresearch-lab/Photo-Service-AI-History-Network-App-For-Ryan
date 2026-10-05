@@ -12,6 +12,7 @@ import '../data/event_repository.dart';
 import '../data/graph_repository.dart';
 import '../data/image_vault.dart';
 import '../data/memory_repository.dart';
+import '../data/name_state_repository.dart';
 import '../services/insight_pass.dart';
 import '../services/rewards_service.dart';
 import '../services/settings_service.dart';
@@ -84,6 +85,7 @@ Future<Library> openLibrary({
     graphRepo: GraphRepository(db),
     vault: ImageVault(vaultDir),
     settings: SettingsService(secure, prefs, scope: key),
+    nameStateRepo: NameStateRepository(db),
   );
   await state.load();
   return Library(

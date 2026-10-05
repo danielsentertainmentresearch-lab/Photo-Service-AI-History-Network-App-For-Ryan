@@ -51,6 +51,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
       memories: state.memories,
       graph: state.graphSnapshot,
       now: DateTime.now(),
+      nameStates: state.nameStates,
     );
     _scheduleRotation(view.nextChange);
 
@@ -84,6 +85,29 @@ class _MemoryScreenState extends State<MemoryScreen> {
                 _Count(value: view.facts, label: 'other things'),
               ],
             ),
+            if (view.remembering.isNotEmpty)
+              _Section(
+                icon: Icons.spa_outlined,
+                title: 'Remembering',
+                children: [
+                  for (final r in view.remembering)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(r.name, style: theme.textTheme.bodyLarge),
+                        Text(
+                          [
+                            r.moments == 1
+                                ? '1 shared moment'
+                                : '${r.moments} shared moments',
+                            if (r.moment != null) r.moment!,
+                          ].join(' · '),
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             if (view.connections.isNotEmpty)
               _Section(
                 icon: Icons.link,

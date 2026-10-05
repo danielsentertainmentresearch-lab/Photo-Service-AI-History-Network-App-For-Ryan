@@ -14,6 +14,10 @@ import 'package:eventlens/screens/insight_preview_screen.dart';
 import 'package:eventlens/screens/memory_screen.dart';
 import 'package:eventlens/screens/name_spellings_screen.dart';
 import 'package:eventlens/screens/privacy_policy_screen.dart';
+import 'package:eventlens/screens/person_screen.dart';
+import 'package:eventlens/screens/support_screen.dart';
+import 'package:eventlens/screens/how_support_works_screen.dart';
+import 'package:eventlens/models/name_state.dart';
 import 'package:eventlens/screens/new_event_screen.dart';
 import 'package:eventlens/screens/settings_screen.dart';
 import 'package:eventlens/services/auth_service.dart';
@@ -382,6 +386,97 @@ It cannot be undone.
       300,
     );
     expect(find.text('Erasing what the AI remembers'), findsOneWidget);
+  });
+
+  testWidgets('support: the crisis line and emergency come first and big', (
+    tester,
+  ) async {
+    await setUpState(tester);
+    await tester.pumpWidget(app(const SupportScreen(countryCode: 'US')));
+    await tester.pumpAndSettle();
+    final crisis = tester.getTopLeft(find.text('Call 988'));
+    expect(find.text('Emergency: 911'), findsOneWidget);
+    expect(find.text('If you\'re in crisis right now'), findsOneWidget);
+    // Everything else sits below the crisis line.
+    expect(
+      tester.getTopLeft(find.text('If someone else is a danger to you')).dy,
+      greaterThan(crisis.dy),
+    );
+    await tester.scrollUntilVisible(find.text('NAMI HelpLine'), 300);
+    await tester.scrollUntilVisible(find.text('Naloxone (Narcan)'), 300);
+    await tester.scrollUntilVisible(
+      find.text('How support works in EventLens'),
+      300,
+    );
+  });
+
+  testWidgets('a person can be kept as usual, quiet or honored, any time', (
+    tester,
+  ) async {
+    await setUpState(tester);
+    await tester.pumpWidget(
+      app(const PersonScreen(name: 'Sam', kind: 'person')),
+    );
+    expect(find.text('As usual'), findsOneWidget);
+    expect(find.text('Quiet'), findsOneWidget);
+    expect(find.text('Honored'), findsOneWidget);
+    await tester.tap(find.text('Quiet'));
+    await tester.pumpAndSettle();
+    expect(state.nameStateOf('Sam', 'person')!.state, nameQuiet);
+    expect(find.textContaining('Quiet since'), findsOneWidget);
+    expect(state.quietNames, {'sam'});
+    await tester.tap(find.text('Honored'));
+    await tester.pumpAndSettle();
+    expect(state.honoredNames, {'sam'});
+    await tester.tap(find.text('As usual'));
+    await tester.pumpAndSettle();
+    expect(state.nameStateOf('Sam', 'person'), isNull);
+  });
+
+  testWidgets('a quiet line offers support on an event and can be put away', (
+    tester,
+  ) async {
+    await setUpState(tester);
+    final lake = state.eventById('lake')!;
+    await tester.runAsync(() async {
+      await state.events.update(lake.copyWith(supportLevel: 'distress'));
+      await state.load();
+    });
+    await tester.pumpWidget(app(const EventDetailScreen(eventId: 'lake')));
+    await settle(tester);
+    final line = find.textContaining(
+      'support is one tap away',
+      skipOffstage: false,
+    );
+    expect(line, findsOneWidget);
+    await tester.ensureVisible(find.text('Not now', skipOffstage: false));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Not now'));
+    await settle(tester, () => state.eventById('lake')!.supportDismissed);
+    expect(
+      find.textContaining('support is one tap away', skipOffstage: false),
+      findsNothing,
+    );
+  });
+
+  testWidgets('the bundled "How support works" page explains every feature', (
+    tester,
+  ) async {
+    await setUpState(tester);
+    await tester.pumpWidget(app(const HowSupportWorksScreen()));
+    await tester.runAsync(
+      () => Future.delayed(const Duration(milliseconds: 300)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('How support works in EventLens'), findsOneWidget);
+    for (final heading in [
+      'What EventLens is, and what it is not',
+      'The quiet support line',
+      'As usual, Quiet and Honored',
+      'Limits',
+    ]) {
+      await tester.scrollUntilVisible(find.text(heading), 300);
+    }
   });
 
   testWidgets('a failed event shows the reason and Retry explains the key', (

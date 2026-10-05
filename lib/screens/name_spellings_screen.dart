@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/name_spelling.dart';
 import '../state/app_state.dart';
+import 'person_screen.dart';
 
 /// Correct how the people and places the AI knows are spelled (owner,
 /// 5 Oct 2026). Spelling only: a few letters or capitals, never a different
@@ -87,6 +88,11 @@ class NameSpellingsScreen extends StatelessWidget {
               for (final n in names.where((n) => n.kind == kind))
                 ListTile(
                   contentPadding: EdgeInsets.zero,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => PersonScreen(name: n.name, kind: n.kind),
+                    ),
+                  ),
                   title: Text(n.name),
                   subtitle: Text(
                     n.events == 1 ? 'In 1 event' : 'In ${n.events} events',

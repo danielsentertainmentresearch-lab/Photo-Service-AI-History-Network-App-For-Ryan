@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../services/recents_privacy.dart';
 import '../state/app_state.dart';
 import 'data_screen.dart';
+import 'how_support_works_screen.dart';
 import 'name_spellings_screen.dart';
 import 'privacy_policy_screen.dart';
 
@@ -161,13 +162,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       'encrypted connection. Only the description comes back. '
                       'The server keeps nothing you wrote or photographed, '
                       'only how much AI you used today. Your free writes are '
-                      'sent the same way only to make their labels. '
+                      'sent the same way to make their labels and to notice if you '
+                      'might need support. '
                       'Uninstalling the app deletes all of its data.'
                 : 'Your photos, notes and memories are stored only on this device. '
                       'When an event is described, its photos (resized), your notes, '
                       'summaries of recent events and your saved memories are sent to '
                       'Anthropic\'s API over an encrypted connection. Your free writes '
-                      'are sent to Anthropic only to make their labels. Uninstalling '
+                      'are sent to Anthropic to make their labels and to notice if '
+                      'you might need support. Uninstalling '
                       'the app deletes all of its data.',
             style: theme.textTheme.bodySmall,
           ),
@@ -178,6 +181,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: const Text('Including erasing what the AI remembers'),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+            ),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.volunteer_activism_outlined),
+            title: const Text('How support works'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HowSupportWorksScreen()),
             ),
           ),
           ListTile(

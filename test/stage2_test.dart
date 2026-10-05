@@ -138,7 +138,12 @@ void main() {
         expect((body['output_config'] as Map)['format']['schema']['required'], [
           'annotations',
           'labels',
+          'support',
         ]);
+        // The support reading looks for meaning, and crisis is kept to
+        // suicidal thoughts or severe self-harm stated plainly.
+        expect(body['system'], contains('Read for meaning, not single words'));
+        expect(body['system'], contains('ending their life or of severely'));
 
         final check = labeler.buildVerifyRequest('I felt calm.', [
           const ProposedLabel('calm', 'positive', ['felt calm']),

@@ -1,9 +1,12 @@
 # Notes for Claude sessions on this repo
 
-- **FIRST PRIORITY of the next work session** (owner, 5 Oct 2026): build a
-  crisis intervention route before any other work, including the memory
-  file and dream state. Starting points: `docs/BUILD_STAGE_2.md`, "First in
-  the next session". Remove this line once it ships.
+- **Crisis intervention route** (owner's first priority, 5-6 Oct 2026):
+  stage A shipped (Support page, quiet support line, As usual / Quiet /
+  Honored, SUPPORT_AND_SAFETY.md). Stage B, reaching Dan, is next: see
+  `docs/BUILD_STAGE_2.md`, "Crisis intervention route, stage B". Harm
+  reduction is the ground rule: no judgement, the person in distress keeps
+  control, nothing is ever sent without their yes, and the app never
+  suggests Quiet or Honored. Keep SUPPORT_AND_SAFETY.md true to the app.
 
 - Flutter app (Android). Run `flutter analyze` and `flutter test` before
   pushing; CI builds the APK and publishes the `latest-build` pre-release.

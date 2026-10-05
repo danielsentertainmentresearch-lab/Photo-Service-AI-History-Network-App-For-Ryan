@@ -150,6 +150,8 @@ def generate(db, end=datetime(2026, 10, 3, 18, 0), days=180, seed=2026,
                         act(install, account, moment, "name_spelling_fixed")
                     if stage2.random() < 0.002:
                         act(install, account, moment, "ai_memory_erased")
+                    if stage2.random() < 0.01:
+                        act(install, account, moment, "support_page_opened")
                     if not export and events >= 15 and stage2.random() < 0.05:
                         act(install, account, moment, "insight_peek_opened")
                         if stage2.random() < 0.15:

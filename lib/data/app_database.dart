@@ -5,7 +5,7 @@ import 'package:sqflite/sqflite.dart';
 /// [factory] and [path] are injectable so tests can use an in-memory FFI
 /// database instead of the platform plugin.
 class AppDatabase {
-  static const int version = 6;
+  static const int version = 7;
 
   static Future<Database> open({DatabaseFactory? factory, String? path}) async {
     final dbFactory = factory ?? databaseFactory;
@@ -22,6 +22,7 @@ class AppDatabase {
           await _createV4(db);
           await _createV5(db);
           await _createV6(db);
+          await _createV7(db);
         },
         onUpgrade: (db, oldVersion, _) async {
           if (oldVersion < 2) await _createV2(db);
@@ -29,6 +30,7 @@ class AppDatabase {
           if (oldVersion < 4) await _createV4(db);
           if (oldVersion < 5) await _createV5(db);
           if (oldVersion < 6) await _createV6(db);
+          if (oldVersion < 7) await _createV7(db);
         },
       ),
     );
@@ -130,5 +132,25 @@ class AppDatabase {
     await db.execute(
       "ALTER TABLE events ADD COLUMN questions TEXT NOT NULL DEFAULT '[]'",
     );
+  }
+
+  /// v7: the support reading of each free write, and how the person keeps
+  /// each name (as usual, quiet or honored).
+  static Future<void> _createV7(Database db) async {
+    await db.execute(
+      "ALTER TABLE events ADD COLUMN support_level TEXT NOT NULL DEFAULT 'none'",
+    );
+    await db.execute(
+      'ALTER TABLE events ADD COLUMN support_dismissed INTEGER NOT NULL DEFAULT 0',
+    );
+    await db.execute('''
+      CREATE TABLE name_states (
+        name TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        state TEXT NOT NULL,
+        since INTEGER NOT NULL,
+        PRIMARY KEY (name, kind)
+      )
+    ''');
   }
 }

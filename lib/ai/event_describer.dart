@@ -145,9 +145,18 @@ Also return:
 
   /// Long-term memory rendered as a stable block. It sits in the system
   /// prompt behind a cache breakpoint because it changes rarely.
-  static String memoryBlock(List<MemoryItem> memories) {
+  static String memoryBlock(
+    List<MemoryItem> memories, {
+    List<String> honored = const [],
+  }) {
+    final remembered = honored.isEmpty
+        ? ''
+        : '\n\nPeople and places the user honors and keeps close in memory: '
+              '${honored.join(', ')}. When they are part of this event or '
+              'connected to it, mention them with continuity and care.';
     if (memories.isEmpty) {
-      return 'Long-term memory: (empty — the user has not saved anything yet)';
+      return 'Long-term memory: (empty — the user has not saved anything yet)'
+          '$remembered';
     }
     final buffer = StringBuffer('Long-term memory about the user:\n');
     for (final kind in memoryKinds) {
@@ -158,7 +167,7 @@ Also return:
         buffer.writeln('- ${item.content}');
       }
     }
-    return buffer.toString().trimRight();
+    return '${buffer.toString().trimRight()}$remembered';
   }
 
   static String _date(DateTime d) =>
@@ -204,6 +213,7 @@ Also return:
     required List<Uint8List> jpegs,
     required List<MemoryItem> memories,
     required List<LifeEvent> history,
+    List<String> honored = const [],
   }) {
     final content = <Map<String, dynamic>>[];
     for (var i = 0; i < jpegs.length; i++) {
@@ -232,7 +242,7 @@ Also return:
         {'type': 'text', 'text': instructions},
         {
           'type': 'text',
-          'text': memoryBlock(memories),
+          'text': memoryBlock(memories, honored: honored),
           'cache_control': {'type': 'ephemeral'},
         },
       ],
@@ -275,6 +285,7 @@ Also return:
     required List<Uint8List> jpegs,
     required List<MemoryItem> memories,
     required List<LifeEvent> history,
+    List<String> honored = const [],
   }) async {
     final response = await client.createMessage(
       buildRequest(
@@ -282,6 +293,7 @@ Also return:
         jpegs: jpegs,
         memories: memories,
         history: history,
+        honored: honored,
       ),
       betas: const [AnthropicAIClient.fallbackBeta],
     );

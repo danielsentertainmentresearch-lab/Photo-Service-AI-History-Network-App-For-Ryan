@@ -144,6 +144,7 @@ ACTIVITY_KINDS = (
     "learning_page_opened",
     "name_spelling_fixed",
     "ai_memory_erased",
+    "support_page_opened",
 )
 
 SIGNUP_METHODS = ("email", "phone", "google", "web3")
@@ -195,6 +196,7 @@ FEATURES = (
     ("learning_page_opened", "\"What the AI is learning\" opened"),
     ("name_spelling_fixed", "Name spellings fixed"),
     ("ai_memory_erased", "AI memory erased"),
+    ("support_page_opened", "Support page opened"),
     ("mind_map_opened", "Mind map opened"),
     ("mind_map_centered", "Mind map ideas centred on"),
     ("weather_lookup", "Weather lookups"),

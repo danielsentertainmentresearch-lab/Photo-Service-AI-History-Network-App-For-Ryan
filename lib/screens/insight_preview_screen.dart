@@ -45,7 +45,11 @@ class InsightPreviewScreen extends StatelessWidget {
               'Open until ${_when((tier == InsightTier.pass ? pass.passUntil : pass.videoUntil)!)}',
               style: theme.textTheme.titleSmall,
             ),
-          for (final insight in computeInsights(state.allEvents, openIds))
+          for (final insight in computeInsights(
+            state.allEvents,
+            openIds,
+            quiet: state.quietNames,
+          ))
             _InsightCard(insight: insight),
           if (lockedIds.isNotEmpty) ...[
             const SizedBox(height: 16),

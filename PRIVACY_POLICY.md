@@ -1,6 +1,6 @@
 # EventLens Privacy Policy
 
-_Last updated: 5 October 2026_
+_Last updated: 6 October 2026_
 
 EventLens ("the app") lets you record events with photos and notes and have an
 AI write a detailed account of each one. This policy explains what the app
@@ -82,7 +82,10 @@ under your agreement with Anthropic and its privacy policy:
 
 When you finish writing an event's free write, the app sends that free
 write, and the short labels already used in your library, to Anthropic so
-it can suggest a few labels and check them against the writing. Only the
+it can suggest a few labels and check them against the writing, and notice
+whether you might need support (see "How support works in EventLens"). What
+it notices is kept only on your phone, with that event: it is never sent
+anywhere, counted or exported. Only the
 labels come back. They are stored on your phone and shown in Your data and
 the analysis file; your writing is never changed. These requests also use
 your own API key.

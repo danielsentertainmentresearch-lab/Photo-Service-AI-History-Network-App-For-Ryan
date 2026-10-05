@@ -43,12 +43,13 @@ List<Insight> computeInsights(
   List<LifeEvent> events,
   List<String> ids, {
   DateTime? now,
+  Set<String> quiet = const {},
 }) => [
   for (final id in ids)
     switch (id) {
       'rhythm' => _rhythm(events),
-      'feelings_by_person' => _feelingsByPerson(events),
-      'together' => _together(events),
+      'feelings_by_person' => _feelingsByPerson(events, quiet),
+      'together' => _together(events, quiet),
       'weather_mood' => _weatherMood(events),
       'label_trend' => _labelTrend(events, now ?? DateTime.now()),
       _ => throw ArgumentError.value(id, 'id', 'unknown insight'),
@@ -102,17 +103,18 @@ Insight _rhythm(List<LifeEvent> events) {
   );
 }
 
-/// The people and places of an event, trimmed and without blanks.
-Iterable<String> _who(LifeEvent e) => {
+/// The people and places of an event, trimmed and without blanks. Names
+/// kept quiet (lowercase in [quiet]) are left out.
+Iterable<String> _who(LifeEvent e, [Set<String> quiet = const {}]) => {
   ...e.people.map((x) => x.trim()),
   ...e.places.map((x) => x.trim()),
-}.where((x) => x.isNotEmpty);
+}.where((x) => x.isNotEmpty && !quiet.contains(x.toLowerCase()));
 
-Insight _feelingsByPerson(List<LifeEvent> events) {
+Insight _feelingsByPerson(List<LifeEvent> events, Set<String> quiet) {
   const id = 'feelings_by_person';
   final pairs = <String, int>{};
   for (final e in events) {
-    for (final who in _who(e)) {
+    for (final who in _who(e, quiet)) {
       for (final label in e.confirmedLabels) {
         final key = '$who\u0000${label.trim()}';
         pairs[key] = (pairs[key] ?? 0) + 1;
@@ -136,11 +138,11 @@ Insight _feelingsByPerson(List<LifeEvent> events) {
   );
 }
 
-Insight _together(List<LifeEvent> events) {
+Insight _together(List<LifeEvent> events, Set<String> quiet) {
   const id = 'together';
   final pairs = <String, int>{};
   for (final e in events) {
-    final names = _who(e).toList()..sort();
+    final names = _who(e, quiet).toList()..sort();
     for (var i = 0; i < names.length; i++) {
       for (var j = i + 1; j < names.length; j++) {
         final key = '${names[i]}\u0000${names[j]}';

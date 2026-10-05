@@ -20,6 +20,8 @@ import '../models/event.dart';
 import '../models/memory_graph.dart';
 import '../models/memory_item.dart';
 import '../models/name_spelling.dart';
+import '../models/name_state.dart';
+import '../data/name_state_repository.dart';
 import '../services/data_files.dart';
 import '../services/places_service.dart';
 import '../services/settings_service.dart';
@@ -102,8 +104,14 @@ class AppState extends ChangeNotifier {
     this.advisorFactory = _defaultAdvisor,
     this.labelerFactory = _defaultLabeler,
     bool? useAiServer,
+    this.nameStateRepo,
   }) : places = places ?? PlacesService(),
        usesAiServer = useAiServer ?? aiServerUrl.isNotEmpty;
+
+  /// How the person keeps each name (as usual, quiet, honored). Null in
+  /// tests that don't need it: choices then last only while the app runs.
+  final NameStateRepository? nameStateRepo;
+  List<NameState> _nameStates = const [];
 
   /// True when the AI runs through the owner's server (see `AI_SERVER_URL`),
   /// so nobody needs their own Anthropic API key.
@@ -170,6 +178,7 @@ class AppState extends ChangeNotifier {
     await events.recoverInterrupted();
     _hasApiKey = ((await settings.readApiKey()) ?? '').isNotEmpty;
     _graph = await graphRepo.latest();
+    _nameStates = await nameStateRepo?.all() ?? const [];
     await _reload();
     _loaded = true;
     notifyListeners();
@@ -364,17 +373,23 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     try {
       final writing = current.experience;
-      final labels = await labelerFactory(apiKey, settings.model).label(
-        writing,
-        existing: {
-          for (final e in _events)
-            if (e.id != eventId) ...e.experienceLabels,
-        },
-      );
+      final result = await labelerFactory(apiKey, settings.model)
+          .labelWithSupport(
+            writing,
+            existing: {
+              for (final e in _events)
+                if (e.id != eventId) ...e.experienceLabels,
+            },
+          );
+      final labels = result.labels;
       final latest = await events.byId(eventId);
       if (latest != null && latest.experience.trim() == writing.trim()) {
         await events.update(
           latest.copyWith(
+            supportLevel: result.supportLevel,
+            supportDismissed: result.supportLevel == latest.supportLevel
+                ? latest.supportDismissed
+                : false,
             experienceLabels: labels,
             confirmedLabels: const [],
             rejectedLabels: const [],
@@ -503,6 +518,10 @@ class AppState extends ChangeNotifier {
         jpegs: jpegs,
         memories: _memories,
         history: _events,
+        honored: [
+          for (final n in _nameStates)
+            if (n.state == nameHonored) n.name,
+        ],
       );
       // Write onto the latest copy, keeping edits and weather saved while
       // the AI was working.
@@ -618,12 +637,14 @@ class AppState extends ChangeNotifier {
   /// Events from this calendar day in earlier years, most recent first.
   List<LifeEvent> onThisDay([DateTime? today]) {
     final day = today ?? DateTime.now();
+    final quiet = quietNames;
     return _events
         .where(
           (e) =>
               e.occurredAt.month == day.month &&
               e.occurredAt.day == day.day &&
-              e.occurredAt.year < day.year,
+              e.occurredAt.year < day.year &&
+              !_featuresAny(e, quiet),
         )
         .toList()
       ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
@@ -746,6 +767,54 @@ class AppState extends ChangeNotifier {
             .toList(),
       ),
     );
+    await _reload();
+  }
+
+  // ---- Quiet and honored names ---------------------------------------------
+
+  List<NameState> get nameStates => _nameStates;
+
+  /// Lowercase names the person keeps quiet: they don't come up on their own.
+  Set<String> get quietNames => namesIn(_nameStates, nameQuiet);
+
+  /// Lowercase names the person honors.
+  Set<String> get honoredNames => namesIn(_nameStates, nameHonored);
+
+  /// How [name] is kept, and since when (null when as usual).
+  NameState? nameStateOf(String name, String kind) {
+    for (final n in _nameStates) {
+      if (n.kind == kind && n.name.toLowerCase() == name.trim().toLowerCase()) {
+        return n;
+      }
+    }
+    return null;
+  }
+
+  /// Keeps [name] as usual, quiet or honored. Changeable any time; nothing
+  /// about the person or their events is deleted.
+  Future<void> setNameState(String name, String kind, String state) async {
+    final now = DateTime.now();
+    await nameStateRepo?.set(name.trim(), kind, state, now);
+    _nameStates = [
+      for (final n in _nameStates)
+        if (!(n.kind == kind &&
+            n.name.toLowerCase() == name.trim().toLowerCase()))
+          n,
+      if (state != nameAsUsual)
+        NameState(name: name.trim(), kind: kind, state: state, since: now),
+    ];
+    notifyListeners();
+  }
+
+  static bool _featuresAny(LifeEvent e, Set<String> names) =>
+      names.isNotEmpty &&
+      [...e.people, ...e.places].any((n) => names.contains(n.trim().toLowerCase()));
+
+  /// The person put the support line on this event away.
+  Future<void> dismissSupport(String eventId) async {
+    final current = await events.byId(eventId);
+    if (current == null) return;
+    await events.update(current.copyWith(supportDismissed: true));
     await _reload();
   }
 

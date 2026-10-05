@@ -75,7 +75,8 @@ these steps wait until then. Setup commands: `docs/AI_SERVER.md`.
 | app-ads.txt | Waiting on owner | GitHub Pages site |
 | App store | Waiting on owner | Google Play; later Samsung Galaxy Store, Huawei AppGallery |
 | Upload signing key + GitHub secrets | Waiting on owner | See RELEASE.md; keep in Bitwarden |
-| Privacy policy URL | Waiting on owner | GitHub Pages |
+| Privacy policy URL | Waiting on owner | GitHub Pages; publish SUPPORT_AND_SAFETY.md alongside it |
+| Support resources | Built; owner verifies before launch | Call or text every number and open every link in `lib/models/support_resources.dart`; add more countries as needed |
 | Support email | Waiting on owner | Proton Mail on a custom domain |
 | AI access | Built; deploy waits until beta testers (see "AI server" above) | The owner's AI server on **Supabase** (Edge Function) holds the Anthropic key; daily allowance with reward-video top-ups. Until `AI_SERVER_URL` is set, builds still use each user's own key. Set a monthly spend limit on the key in the Anthropic Console |
 | Crash reporting | Owner to choose (not picked yet) | Options: GlitchTip (open source, self-host or hosted), Sentry (open-source SDK; self-host or sentry.io), Bugsink (open source, self-host). Crash data goes to the owner dashboard |

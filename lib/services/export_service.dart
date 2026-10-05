@@ -243,7 +243,9 @@ class LibraryExporter {
           'events': [
             for (final e in ordered)
               {
-                ...e.toRow(),
+                ...(e.toRow()
+                  ..remove('support_level')
+                  ..remove('support_dismissed')),
                 'images': [for (final i in e.images) i.toRow()],
               },
           ],

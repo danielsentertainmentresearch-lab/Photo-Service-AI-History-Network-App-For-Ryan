@@ -3,6 +3,7 @@ import 'dart:math';
 import 'event.dart';
 import 'memory_graph.dart';
 import 'memory_item.dart';
+import 'name_state.dart';
 
 /// What the "What the AI is learning" page shows (owner, 5 Oct 2026): the
 /// AI's own findings, read-only, a few at a time. The selection rotates at
@@ -23,6 +24,10 @@ class LearningView {
   /// A few things the AI remembers.
   final List<String> remembers;
 
+  /// The people and places the person honors, each with how many moments
+  /// they share and one moment that rotates.
+  final List<Remembering> remembering;
+
   /// When the selection changes next.
   final DateTime nextChange;
 
@@ -33,6 +38,7 @@ class LearningView {
     required this.connections,
     required this.threads,
     required this.remembers,
+    this.remembering = const [],
     required this.nextChange,
   });
 
@@ -40,7 +46,19 @@ class LearningView {
       people + places + facts == 0 &&
       connections.isEmpty &&
       threads.isEmpty &&
-      remembers.isEmpty;
+      remembers.isEmpty &&
+      remembering.isEmpty;
+}
+
+/// Someone (or somewhere) the person honors, on the learning page.
+class Remembering {
+  final String name;
+  final int moments;
+
+  /// One shared moment ("Sunset swim, June 2026"), rotating; null when none.
+  final String? moment;
+
+  const Remembering(this.name, this.moments, this.moment);
 }
 
 /// How many of each the page shows at once.
@@ -87,8 +105,19 @@ LearningView computeLearning({
   required List<MemoryItem> memories,
   GraphSnapshot? graph,
   required DateTime now,
+  List<NameState> nameStates = const [],
 }) {
   final rotation = learningRotation(now);
+  // Quiet names don't come up on their own; nothing about them is deleted.
+  final quiet = namesIn(nameStates, nameQuiet);
+  bool features(LifeEvent e) => [
+    ...e.people,
+    ...e.places,
+  ].any((n) => quiet.contains(n.trim().toLowerCase()));
+  final quietEvents = {
+    for (final e in events)
+      if (features(e)) e.id,
+  };
   final random = Random(rotation.seed);
 
   String key(String s) => s.trim().toLowerCase();
@@ -112,13 +141,43 @@ LearningView computeLearning({
     for (final link in graph?.links ?? const <EventLink>[])
       if (titles.containsKey(link.fromEventId) &&
           titles.containsKey(link.toEventId) &&
+          !quietEvents.contains(link.fromEventId) &&
+          !quietEvents.contains(link.toEventId) &&
+          !mentionsAny(link.relation, quiet) &&
           link.relation.trim().isNotEmpty)
         '“${titles[link.fromEventId]}” and “${titles[link.toEventId]}”: '
             '${link.relation.trim()}',
   ];
   final threads = [
     for (final t in graph?.themes ?? const <StoryTheme>[])
-      if (t.name.trim().isNotEmpty && t.eventIds.isNotEmpty) t,
+      if (t.name.trim().isNotEmpty &&
+          t.eventIds.isNotEmpty &&
+          !mentionsAny('${t.name} ${t.description}', quiet))
+        t,
+  ];
+  final remembering = [
+    for (final n in nameStates.where((n) => n.state == nameHonored))
+      () {
+        final shared = [
+          for (final e in events)
+            if ([
+              ...e.people,
+              ...e.places,
+            ].any((x) => x.trim().toLowerCase() == n.name.toLowerCase()))
+              e,
+        ];
+        final moment = shared.isEmpty
+            ? null
+            : shared[random.nextInt(shared.length)];
+        return Remembering(
+          n.name,
+          shared.length,
+          moment == null
+              ? null
+              : '${titles[moment.id]}, '
+                    '${_monthYear(moment.occurredAt)}',
+        );
+      }(),
   ];
 
   return LearningView(
@@ -128,10 +187,31 @@ LearningView computeLearning({
     connections: _pick(connections, shownConnections, random),
     threads: _pick(threads, shownThreads, random),
     remembers: _pick(
-      [for (final m in memories) m.content],
+      [
+        for (final m in memories)
+          if (!mentionsAny(m.content, quiet)) m.content,
+      ],
       shownRemembers,
       random,
     ),
+    remembering: remembering,
     nextChange: rotation.next,
   );
 }
+
+const _months = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+String _monthYear(DateTime d) => '${_months[d.month - 1]} ${d.year}';

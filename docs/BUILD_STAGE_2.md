@@ -119,6 +119,19 @@ importance:
 | 16 | Post-review improvement 1 (owner's review): a sneak peek at the full export's insights before 100 events, from "Preview: full export" on Your data. 3 rewarded videos open 2 insights (Your rhythm, Feelings by person) for 12 hours, once every 48 hours. The $1 pass opens all 5 (adds Who goes together, Weather and your days, A label on the rise) for 72 hours; buying again adds 72 hours. Worked out on the phone from the person's own events; feelings use only confirmed labels. The $1 purchase is built in but not connected until Play Billing (paywall stage). Dashboard: `insight_peek_opened`, `insight_pass_bought` | (this commit) |
 | 17 | Post-review fix 4 (owner's rule, stated twice): memory is the AI's, so the Memory page no longer lets people add, edit or delete memories. It is now "What the AI is learning": read-only counts of people, places and facts it knows, connections and threads from the timeline graph, and some of what it remembers, a few at a time, rotating at three unplanned times a day so it keeps changing between visits. Interim until the app's own memory file and dream state (`docs/AI_SERVER.md` step 8) | (this commit) |
 | 18 | Post-review fix 5 (owner decision): people can't edit memory, but two safe controls replace it. **Name spellings** (Settings): fix how a person or place is spelled everywhere it appears (events, accounts, memories, timeline graph); only spelling fixes are accepted (a few letters or capitals, same number of words), and likely typos are suggested (a rare near-twin of a common name). **Erase what the AI remembers**: an all-or-nothing button inside the privacy policy, which the app now shows (Settings → Privacy policy, bundled PRIVACY_POLICY.md), directly under the promise and the list of consequences; it needs ERASE typed and leaves events, photos, accounts and free writes. Policy and Play data-safety answers updated. Dashboard: `name_spelling_fixed`, `ai_memory_erased` | (this commit) |
+| 19 | Crisis intervention route, stage A (owner's first priority; harm reduction, no judgement, the person in distress keeps control). **Support page**, one tap from home: the country's crisis line and emergency number first and big, then danger from someone else, more crisis lines, NAMI and SAMHSA, safer use (Never Use Alone, naloxone, Poison Control) and a grounding exercise (`lib/models/support_resources.dart`). **Quiet support line**: the free-write label pass also reads for meaning whether the person might need support (none / distress / crisis; crisis only for suicidal thoughts or severe self-harm stated plainly); distress or crisis shows one dismissible line on that event. Kept on the phone only, never exported or counted. **As usual / Quiet / Honored** for every person and place (person page, tap a name): Quiet stops a name coming up on its own; Honored adds Remembering, marks On this day and tells the AI to write with care; never suggested by the app. **How support works** (bundled SUPPORT_AND_SAFETY.md). Database v7. Dashboard: `support_page_opened` only | (this commit) |
+
+## Crisis intervention route, stage B (next): reaching Dan
+
+Owner decisions, 6 Oct 2026. Opt-in only (tour and Settings). Nothing is ever
+sent automatically: when a free write plainly states suicidal thoughts or
+severe self-harm, the app gently asks whether the person would like Dan to
+reach out, because the reading can be wrong and words can be metaphor. Only
+on their yes is anything sent: what they wrote (needed so Dan doesn't go in
+blind), how to reach them (call, text or email) and when they'd like
+contact, within Dan's set hours. The alert reaches Dan by push (ntfy),
+email and SMS, through the AI server. No message ever says "Dan has been
+alerted". Dan is not told who opted in.
 
 ## First in the next session: a crisis intervention route
 

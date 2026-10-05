@@ -81,7 +81,8 @@ actually does:
     request, for app functionality. Optional. Not collected.
   - Personal info → Other info (free-text notes, free writes and
     memories): same as photos. Free writes are sent to Anthropic after the
-    user writes one, only to make short labels; not collected.
+    user writes one, to make short labels and to notice whether they might
+    need support (what is noticed stays on the phone); not collected.
   - Personal info → Email address and/or Phone number: *collected* for
     account management (Firebase Authentication). Required.
   - Personal info → User IDs: *collected* for account management
