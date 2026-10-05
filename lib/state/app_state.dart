@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
@@ -515,6 +516,7 @@ class AppState extends ChangeNotifier {
           places: account.places,
           tags: account.tags,
           suggestions: _withoutKnown(account.memorySuggestions),
+          questions: account.questions,
           status: EventStatus.described,
           clearError: true,
           model: account.model,
@@ -704,6 +706,56 @@ class AppState extends ChangeNotifier {
       current.copyWith(
         suggestions: current.suggestions
             .where((x) => x.content != s.content)
+            .toList(),
+      ),
+    );
+    await _reload();
+  }
+
+  /// Answers one of the AI's who/where questions. The answer is saved as a
+  /// memory (so later events can name them too) and kept with the event's
+  /// notes, where "Rewrite with AI" picks it up.
+  Future<void> answerQuestion(
+    LifeEvent event,
+    AiQuestion q,
+    String answer,
+  ) async {
+    final text = answer.trim();
+    if (text.isEmpty) return;
+    final current = await events.byId(event.id);
+    if (current == null) return;
+    final where = current.title.trim().isEmpty
+        ? DateFormat.yMMMd().format(current.occurredAt)
+        : current.title.trim();
+    await addMemory(
+      q.kind,
+      '$text: ${q.about} in "$where"',
+      source: answerSource,
+      eventId: event.id,
+    );
+    final line = '${q.question} $text';
+    await events.update(
+      current.copyWith(
+        notes: current.notes.trim().isEmpty
+            ? line
+            : '${current.notes.trim()}\n$line',
+        questions: current.questions
+            .where((x) => x.question != q.question)
+            .toList(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+    await _reload();
+  }
+
+  /// Leaves one of the AI's questions unanswered for good.
+  Future<void> skipQuestion(LifeEvent event, AiQuestion q) async {
+    final current = await events.byId(event.id);
+    if (current == null) return;
+    await events.update(
+      current.copyWith(
+        questions: current.questions
+            .where((x) => x.question != q.question)
             .toList(),
       ),
     );

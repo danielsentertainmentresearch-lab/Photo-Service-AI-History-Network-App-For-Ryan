@@ -27,6 +27,7 @@ class EventAccount {
   final List<String> places;
   final List<String> tags;
   final List<MemorySuggestion> memorySuggestions;
+  final List<AiQuestion> questions;
   final String model;
 
   const EventAccount({
@@ -37,6 +38,7 @@ class EventAccount {
     required this.places,
     required this.tags,
     required this.memorySuggestions,
+    this.questions = const [],
     required this.model,
   });
 }
@@ -51,6 +53,9 @@ class EventDescriber {
   /// How many recent events are summarised into the context.
   static const int recentEventLimit = 15;
 
+  /// The most who/where questions the AI may ask about one event.
+  static const int maxQuestions = 3;
+
   EventDescriber({
     required this.client,
     this.model = defaultModel,
@@ -64,7 +69,7 @@ How to write the account:
 - Write in the first person, as the user ("I", "we"), in a plain, precise and objective voice.
 - This is the factual half of the event. The person keeps their own account of how it felt and what it meant, separately and in their own words, so do not describe their feelings, mood or what the event meant to them, and do not interpret their experience.
 - Be exhaustive about what the photos show: setting, light, weather, time-of-day cues, colours, objects, food, clothing, text on signs, expressions, body language, and the order in which things seem to have happened across the photos.
-- Weave in the user's notes (their working memory at the time). They are the most reliable source for who was there and what happened.
+- Weave in the user's notes and their answers to your earlier questions, if any. They are the most reliable source for who was there and what happened.
 - Use the long-term memory and earlier events for continuity: name people and places only when the notes or memory make the match clear, and point out how this event connects to earlier ones (recurring people, places, ongoing situations, firsts and anniversaries).
 - Never identify a person from their face or appearance alone. If someone is not named in the notes or memory, describe them neutrally (for example "a friend in a red jacket").
 - Keep to what the photos, the notes, the date, the place and memory confirm. Mark anything that is only likely with words like "probably", and never invent facts the user did not give and the photos do not show.
@@ -75,6 +80,7 @@ Also return:
 - summary: two or three sentences, used later as context for future events.
 - people, places, tags: short labels for search.
 - memory_suggestions: new durable facts worth remembering for future events (who someone is, a place's significance, an ongoing situation, a preference). Only include facts stated or strongly supported by the notes and not already in long-term memory. Return an empty list if there is nothing new.
+- questions: up to 3 short, friendly questions asking the user to identify people or places this event shows that the notes and memory do not identify (for example "Who is the friend in the red jacket?" or "Where was this taken?"). Ask only who or where, never about feelings or meaning. For each give kind (person or place), about (exactly how the account describes them now) and the question. Return an empty list when everyone and everywhere is identified.
 ''';
 
   static const Map<String, dynamic> outputSchema = {
@@ -107,6 +113,22 @@ Also return:
           'additionalProperties': false,
         },
       },
+      'questions': {
+        'type': 'array',
+        'items': {
+          'type': 'object',
+          'properties': {
+            'kind': {
+              'type': 'string',
+              'enum': ['person', 'place'],
+            },
+            'about': {'type': 'string'},
+            'question': {'type': 'string'},
+          },
+          'required': ['kind', 'about', 'question'],
+          'additionalProperties': false,
+        },
+      },
     },
     'required': [
       'title',
@@ -116,6 +138,7 @@ Also return:
       'places',
       'tags',
       'memory_suggestions',
+      'questions',
     ],
     'additionalProperties': false,
   };
@@ -238,6 +261,11 @@ Also return:
           .map((e) => MemorySuggestion.fromJson(e as Map<String, dynamic>))
           .where((s) => s.content.trim().isNotEmpty)
           .toList(),
+      questions: ((data['questions'] as List?) ?? const [])
+          .map((e) => AiQuestion.fromJson(e as Map<String, dynamic>))
+          .where((q) => q.question.isNotEmpty)
+          .take(maxQuestions)
+          .toList(),
       model: (response['model'] as String?) ?? '',
     );
   }
@@ -288,8 +316,6 @@ Map<String, dynamic> parseStructured(Map<String, dynamic> response) {
   try {
     return jsonDecode(text) as Map<String, dynamic>;
   } on FormatException {
-    throw const AIException(
-      'The AI response could not be read. Please retry.',
-    );
+    throw const AIException('The AI response could not be read. Please retry.');
   }
 }

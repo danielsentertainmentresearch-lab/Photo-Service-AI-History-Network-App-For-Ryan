@@ -7,6 +7,7 @@ import 'package:eventlens/data/graph_repository.dart';
 import 'package:eventlens/data/image_vault.dart';
 import 'package:eventlens/data/memory_repository.dart';
 import 'package:eventlens/models/event.dart';
+import 'package:eventlens/models/memory_item.dart';
 import 'package:eventlens/screens/event_detail_screen.dart';
 import 'package:eventlens/screens/home_screen.dart';
 import 'package:eventlens/screens/memory_screen.dart';
@@ -120,6 +121,18 @@ void main() {
           suggestions: const [
             MemorySuggestion(kind: 'person', content: 'Sam is my brother'),
           ],
+          questions: const [
+            AiQuestion(
+              kind: 'person',
+              about: 'a friend in a red jacket',
+              question: 'Who is the friend in the red jacket?',
+            ),
+            AiQuestion(
+              kind: 'place',
+              about: 'a wooden dock',
+              question: 'Where is the wooden dock?',
+            ),
+          ],
         ),
       );
       await state.events.save(
@@ -199,7 +212,7 @@ void main() {
     );
     expect(find.text('Sam'), findsOneWidget);
     expect(find.text('Fallen Leaf Lake'), findsWidgets);
-    expect(find.text('Your notes at the time'), findsOneWidget);
+    expect(find.text('Your notes and answers'), findsOneWidget);
     expect(find.text('Remember for next time?'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Save to memory'));
@@ -211,6 +224,34 @@ void main() {
     );
     expect(state.memories.single.content, 'Sam is my brother');
     expect(find.text('Remember for next time?'), findsNothing);
+  });
+
+  testWidgets('the AI asks who or where; an answer becomes a memory and a '
+      'skip removes the question', (tester) async {
+    await setUpState(tester);
+    await tester.pumpWidget(app(const EventDetailScreen(eventId: 'lake')));
+    expect(find.text('The AI asks'), findsOneWidget);
+    expect(find.text('Who is the friend in the red jacket?'), findsOneWidget);
+
+    await tester.enterText(find.widgetWithText(TextField, 'Their name'), 'Ana');
+    await tester.tap(find.byTooltip('Answer').first);
+    await settle(
+      tester,
+      () => state.eventById('lake')!.questions.length == 1,
+    );
+    final memory = state.memories.single;
+    expect(memory.kind, 'person');
+    expect(memory.source, answerSource);
+    expect(memory.content, 'Ana: a friend in a red jacket in "Sunset swim"');
+    expect(
+      state.eventById('lake')!.notes,
+      'Sam dared me in\nWho is the friend in the red jacket? Ana',
+    );
+
+    await tester.tap(find.byTooltip('Skip').first);
+    await settle(tester, () => state.eventById('lake')!.questions.isEmpty);
+    expect(find.text('The AI asks'), findsNothing);
+    expect(state.memories, hasLength(1));
   });
 
   testWidgets('a failed event shows the reason and Retry explains the key', (
@@ -234,6 +275,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Edit details'));
     await tester.pumpAndSettle();
+    // Notes aren't typed here any more: the AI asks for what it needs.
+    expect(find.widgetWithText(TextField, 'Your notes'), findsNothing);
     await tester.enterText(find.widgetWithText(TextField, 'Title'), 'Dare');
     await tester.tap(find.text('Save'));
     await settle(tester, () => state.eventById('lake')!.title == 'Dare');

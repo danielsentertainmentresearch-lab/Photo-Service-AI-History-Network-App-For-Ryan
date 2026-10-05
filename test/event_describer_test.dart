@@ -132,6 +132,40 @@ void main() {
     expect(account.people, ['Sam']);
     expect(account.memorySuggestions.single.kind, 'place');
     expect(account.model, 'claude-opus-5-5');
+    expect(account.questions, isEmpty);
+  });
+
+  test('parses up to three who/where questions', () {
+    final account = EventDescriber.parseResponse(_response({
+      'title': 't',
+      'summary': 's',
+      'description': 'd',
+      'people': [],
+      'places': [],
+      'tags': [],
+      'memory_suggestions': [],
+      'questions': [
+        for (var i = 0; i < 5; i++)
+          {
+            'kind': i.isEven ? 'person' : 'place',
+            'about': 'thing $i',
+            'question': 'Who or where is thing $i?',
+          },
+        {'kind': 'person', 'about': 'x', 'question': ' '},
+      ],
+    }));
+    expect(account.questions, hasLength(EventDescriber.maxQuestions));
+    expect(account.questions.first.kind, 'person');
+    expect(account.questions[1].kind, 'place');
+    expect(account.questions.first.about, 'thing 0');
+  });
+
+  test('the request asks for questions in the structured output', () {
+    expect(
+      (EventDescriber.outputSchema['required'] as List),
+      contains('questions'),
+    );
+    expect(EventDescriber.instructions, contains('never about feelings'));
   });
 
   test('refusal and truncation become user-facing errors', () {

@@ -20,6 +20,37 @@ class MemorySuggestion {
   Map<String, dynamic> toJson() => {'kind': kind, 'content': content};
 }
 
+/// A short question the AI asks to identify someone or somewhere it could
+/// only describe neutrally ("Who is the friend in the red jacket?").
+/// Answering is optional.
+class AiQuestion {
+  /// `person` or `place`.
+  final String kind;
+
+  /// How the account describes them now ("a friend in a red jacket").
+  final String about;
+
+  final String question;
+
+  const AiQuestion({
+    required this.kind,
+    required this.about,
+    required this.question,
+  });
+
+  factory AiQuestion.fromJson(Map<String, dynamic> json) => AiQuestion(
+    kind: json['kind'] == 'place' ? 'place' : 'person',
+    about: ((json['about'] as String?) ?? '').trim(),
+    question: ((json['question'] as String?) ?? '').trim(),
+  );
+
+  Map<String, dynamic> toJson() => {
+    'kind': kind,
+    'about': about,
+    'question': question,
+  };
+}
+
 /// Weather at the time and place of an event. Optional, looked up on
 /// request, shown with the event only: it is never sent to the AI.
 class EventWeather {
@@ -39,39 +70,38 @@ class EventWeather {
 
   /// WMO weather interpretation code as words.
   String get condition => switch (weatherCode) {
-        0 => 'Clear sky',
-        1 => 'Mainly clear',
-        2 => 'Partly cloudy',
-        3 => 'Overcast',
-        45 || 48 => 'Fog',
-        51 || 53 || 55 => 'Drizzle',
-        56 || 57 => 'Freezing drizzle',
-        61 || 63 || 65 => 'Rain',
-        66 || 67 => 'Freezing rain',
-        71 || 73 || 75 || 77 => 'Snow',
-        80 || 81 || 82 => 'Rain showers',
-        85 || 86 => 'Snow showers',
-        95 => 'Thunderstorm',
-        96 || 99 => 'Thunderstorm with hail',
-        _ => 'Unknown',
-      };
+    0 => 'Clear sky',
+    1 => 'Mainly clear',
+    2 => 'Partly cloudy',
+    3 => 'Overcast',
+    45 || 48 => 'Fog',
+    51 || 53 || 55 => 'Drizzle',
+    56 || 57 => 'Freezing drizzle',
+    61 || 63 || 65 => 'Rain',
+    66 || 67 => 'Freezing rain',
+    71 || 73 || 75 || 77 => 'Snow',
+    80 || 81 || 82 => 'Rain showers',
+    85 || 86 => 'Snow showers',
+    95 => 'Thunderstorm',
+    96 || 99 => 'Thunderstorm with hail',
+    _ => 'Unknown',
+  };
 
   factory EventWeather.fromJson(Map<String, dynamic> json) => EventWeather(
-        temperatureC: (json['temperature_c'] as num).toDouble(),
-        weatherCode: (json['weather_code'] as num).toInt(),
-        precipitationMm: (json['precipitation_mm'] as num).toDouble(),
-        windKmh: (json['wind_kmh'] as num).toDouble(),
-        fetchedAt:
-            DateTime.fromMillisecondsSinceEpoch(json['fetched_at'] as int),
-      );
+    temperatureC: (json['temperature_c'] as num).toDouble(),
+    weatherCode: (json['weather_code'] as num).toInt(),
+    precipitationMm: (json['precipitation_mm'] as num).toDouble(),
+    windKmh: (json['wind_kmh'] as num).toDouble(),
+    fetchedAt: DateTime.fromMillisecondsSinceEpoch(json['fetched_at'] as int),
+  );
 
   Map<String, dynamic> toJson() => {
-        'temperature_c': temperatureC,
-        'weather_code': weatherCode,
-        'precipitation_mm': precipitationMm,
-        'wind_kmh': windKmh,
-        'fetched_at': fetchedAt.millisecondsSinceEpoch,
-      };
+    'temperature_c': temperatureC,
+    'weather_code': weatherCode,
+    'precipitation_mm': precipitationMm,
+    'wind_kmh': windKmh,
+    'fetched_at': fetchedAt.millisecondsSinceEpoch,
+  };
 }
 
 /// One photo stored in the on-device vault.
@@ -92,18 +122,18 @@ class EventImage {
   });
 
   factory EventImage.fromRow(Map<String, Object?> row) => EventImage(
-        id: row['id'] as String,
-        eventId: row['event_id'] as String,
-        fileName: row['file_name'] as String,
-        position: row['position'] as int,
-      );
+    id: row['id'] as String,
+    eventId: row['event_id'] as String,
+    fileName: row['file_name'] as String,
+    position: row['position'] as int,
+  );
 
   Map<String, Object?> toRow() => {
-        'id': id,
-        'event_id': eventId,
-        'file_name': fileName,
-        'position': position,
-      };
+    'id': id,
+    'event_id': eventId,
+    'file_name': fileName,
+    'position': position,
+  };
 }
 
 /// A recorded event: the user's photos and in-the-moment notes (working
@@ -126,6 +156,9 @@ class LifeEvent {
   final List<String> places;
   final List<String> tags;
   final List<MemorySuggestion> suggestions;
+
+  /// The AI's open questions about who or where (see [AiQuestion]).
+  final List<AiQuestion> questions;
 
   final EventStatus status;
   final String? error;
@@ -172,6 +205,7 @@ class LifeEvent {
     this.places = const [],
     this.tags = const [],
     this.suggestions = const [],
+    this.questions = const [],
     this.status = EventStatus.draft,
     this.error,
     this.model,
@@ -205,6 +239,7 @@ class LifeEvent {
     List<String>? places,
     List<String>? tags,
     List<MemorySuggestion>? suggestions,
+    List<AiQuestion>? questions,
     EventStatus? status,
     String? error,
     bool clearError = false,
@@ -235,6 +270,7 @@ class LifeEvent {
       places: places ?? this.places,
       tags: tags ?? this.tags,
       suggestions: suggestions ?? this.suggestions,
+      questions: questions ?? this.questions,
       status: status ?? this.status,
       error: clearError ? null : (error ?? this.error),
       model: model ?? this.model,
@@ -250,18 +286,23 @@ class LifeEvent {
     );
   }
 
-  factory LifeEvent.fromRow(Map<String, Object?> row,
-      {List<EventImage> images = const []}) {
+  factory LifeEvent.fromRow(
+    Map<String, Object?> row, {
+    List<EventImage> images = const [],
+  }) {
     List<String> strings(Object? raw) => raw == null || raw == ''
         ? const []
         : (jsonDecode(raw as String) as List).cast<String>();
     final rawSuggestions = row['suggestions'] as String?;
+    final rawQuestions = row['questions'] as String?;
     return LifeEvent(
       id: row['id'] as String,
       title: (row['title'] as String?) ?? '',
       notes: (row['notes'] as String?) ?? '',
       location: (row['location'] as String?) ?? '',
-      occurredAt: DateTime.fromMillisecondsSinceEpoch(row['occurred_at'] as int),
+      occurredAt: DateTime.fromMillisecondsSinceEpoch(
+        row['occurred_at'] as int,
+      ),
       createdAt: DateTime.fromMillisecondsSinceEpoch(row['created_at'] as int),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(row['updated_at'] as int),
       summary: (row['summary'] as String?) ?? '',
@@ -272,8 +313,15 @@ class LifeEvent {
       suggestions: rawSuggestions == null || rawSuggestions.isEmpty
           ? const []
           : (jsonDecode(rawSuggestions) as List)
-              .map((e) => MemorySuggestion.fromJson(e as Map<String, dynamic>))
-              .toList(),
+                .map(
+                  (e) => MemorySuggestion.fromJson(e as Map<String, dynamic>),
+                )
+                .toList(),
+      questions: rawQuestions == null || rawQuestions.isEmpty
+          ? const []
+          : (jsonDecode(rawQuestions) as List)
+                .map((e) => AiQuestion.fromJson(e as Map<String, dynamic>))
+                .toList(),
       status: EventStatus.values.byName((row['status'] as String?) ?? 'draft'),
       error: row['error'] as String?,
       model: row['model'] as String?,
@@ -282,7 +330,8 @@ class LifeEvent {
       weather: row['weather'] == null
           ? null
           : EventWeather.fromJson(
-              jsonDecode(row['weather'] as String) as Map<String, dynamic>),
+              jsonDecode(row['weather'] as String) as Map<String, dynamic>,
+            ),
       images: images,
       experience: (row['experience'] as String?) ?? '',
       experienceLabels: strings(row['experience_labels']),
@@ -293,29 +342,30 @@ class LifeEvent {
   }
 
   Map<String, Object?> toRow() => {
-        'id': id,
-        'title': title,
-        'notes': notes,
-        'location': location,
-        'occurred_at': occurredAt.millisecondsSinceEpoch,
-        'created_at': createdAt.millisecondsSinceEpoch,
-        'updated_at': updatedAt.millisecondsSinceEpoch,
-        'summary': summary,
-        'description': description,
-        'people': jsonEncode(people),
-        'places': jsonEncode(places),
-        'tags': jsonEncode(tags),
-        'suggestions': jsonEncode(suggestions.map((s) => s.toJson()).toList()),
-        'status': status.name,
-        'error': error,
-        'model': model,
-        'latitude': latitude,
-        'longitude': longitude,
-        'weather': weather == null ? null : jsonEncode(weather!.toJson()),
-        'experience': experience,
-        'experience_labels': jsonEncode(experienceLabels),
-        'labelled_experience': labelledExperience,
-        'confirmed_labels': jsonEncode(confirmedLabels),
-        'rejected_labels': jsonEncode(rejectedLabels),
-      };
+    'id': id,
+    'title': title,
+    'notes': notes,
+    'location': location,
+    'occurred_at': occurredAt.millisecondsSinceEpoch,
+    'created_at': createdAt.millisecondsSinceEpoch,
+    'updated_at': updatedAt.millisecondsSinceEpoch,
+    'summary': summary,
+    'description': description,
+    'people': jsonEncode(people),
+    'places': jsonEncode(places),
+    'tags': jsonEncode(tags),
+    'suggestions': jsonEncode(suggestions.map((s) => s.toJson()).toList()),
+    'questions': jsonEncode(questions.map((q) => q.toJson()).toList()),
+    'status': status.name,
+    'error': error,
+    'model': model,
+    'latitude': latitude,
+    'longitude': longitude,
+    'weather': weather == null ? null : jsonEncode(weather!.toJson()),
+    'experience': experience,
+    'experience_labels': jsonEncode(experienceLabels),
+    'labelled_experience': labelledExperience,
+    'confirmed_labels': jsonEncode(confirmedLabels),
+    'rejected_labels': jsonEncode(rejectedLabels),
+  };
 }

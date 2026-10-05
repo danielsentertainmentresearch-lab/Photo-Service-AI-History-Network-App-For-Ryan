@@ -25,15 +25,19 @@ class EventDetailScreen extends StatelessWidget {
     final event = state.eventById(eventId);
     if (event == null) {
       return Scaffold(
-          appBar: AppBar(), body: const Center(child: Text('Event not found')));
+        appBar: AppBar(),
+        body: const Center(child: Text('Event not found')),
+      );
     }
     final theme = Theme.of(context);
     final busy = event.status == EventStatus.describing;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(event.title.isEmpty ? 'Event' : event.title,
-            overflow: TextOverflow.ellipsis),
+        title: Text(
+          event.title.isEmpty ? 'Event' : event.title,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) => _onMenu(context, value, event),
@@ -41,15 +45,18 @@ class EventDetailScreen extends StatelessWidget {
               const PopupMenuItem(value: 'edit', child: Text('Edit details')),
               if (event.hasAccount)
                 const PopupMenuItem(
-                    value: 'edit_text', child: Text('Edit description')),
+                  value: 'edit_text',
+                  child: Text('Edit description'),
+                ),
               if (event.hasAccount)
                 const PopupMenuItem(value: 'copy', child: Text('Copy text')),
               if (!busy)
                 PopupMenuItem(
-                    value: 'describe',
-                    child: Text(event.hasAccount
-                        ? 'Rewrite with AI'
-                        : 'Describe with AI')),
+                  value: 'describe',
+                  child: Text(
+                    event.hasAccount ? 'Rewrite with AI' : 'Describe with AI',
+                  ),
+                ),
               const PopupMenuItem(value: 'delete', child: Text('Delete')),
             ],
           ),
@@ -64,16 +71,20 @@ class EventDetailScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(DateFormat.yMMMMEEEEd().add_jm().format(event.occurredAt),
-                    style: theme.textTheme.bodyMedium),
+                Text(
+                  DateFormat.yMMMMEEEEd().add_jm().format(event.occurredAt),
+                  style: theme.textTheme.bodyMedium,
+                ),
                 if (event.location.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Row(children: [
-                      const Icon(Icons.place_outlined, size: 16),
-                      const SizedBox(width: 4),
-                      Expanded(child: Text(event.location)),
-                    ]),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.place_outlined, size: 16),
+                        const SizedBox(width: 4),
+                        Expanded(child: Text(event.location)),
+                      ],
+                    ),
                   ),
                 const SizedBox(height: 8),
                 StatusChip(event.status),
@@ -93,11 +104,12 @@ class EventDetailScreen extends StatelessWidget {
                     label: const Text('Describe with AI'),
                   ),
                 if (event.hasAccount) ...[
-                  SelectableText(event.description,
-                      style: theme.textTheme.bodyLarge?.copyWith(height: 1.5)),
+                  SelectableText(
+                    event.description,
+                    style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
+                  ),
                   const SizedBox(height: 16),
-                  _LabelRow(
-                      icon: Icons.people_outline, labels: event.people),
+                  _LabelRow(icon: Icons.people_outline, labels: event.people),
                   _LabelRow(icon: Icons.place_outlined, labels: event.places),
                   _LabelRow(icon: Icons.sell_outlined, labels: event.tags),
                   if (event.model != null && event.model!.isNotEmpty)
@@ -109,14 +121,17 @@ class EventDetailScreen extends StatelessWidget {
                       ),
                     ),
                 ],
+                if (event.questions.isNotEmpty) _QuestionsCard(event: event),
                 if (event.suggestions.isNotEmpty)
                   _SuggestionsCard(event: event),
                 const SizedBox(height: 24),
                 _FreeWriteSection(event: event),
                 if (event.notes.isNotEmpty) ...[
                   const SizedBox(height: 24),
-                  Text('Your notes at the time',
-                      style: theme.textTheme.titleSmall),
+                  Text(
+                    'Your notes and answers',
+                    style: theme.textTheme.titleSmall,
+                  ),
                   const SizedBox(height: 4),
                   SelectableText(event.notes),
                 ],
@@ -131,7 +146,10 @@ class EventDetailScreen extends StatelessWidget {
   }
 
   Future<void> _onMenu(
-      BuildContext context, String value, LifeEvent event) async {
+    BuildContext context,
+    String value,
+    LifeEvent event,
+  ) async {
     final state = context.read<AppState>();
     switch (value) {
       case 'edit':
@@ -144,22 +162,29 @@ class EventDetailScreen extends StatelessWidget {
         final text = await _editText(context, event.description);
         if (text != null) await state.updateDescription(event, text);
       case 'copy':
-        await Clipboard.setData(ClipboardData(
-            text: '${event.title}\n\n${event.description}'));
+        await Clipboard.setData(
+          ClipboardData(text: '${event.title}\n\n${event.description}'),
+        );
         if (context.mounted) {
           ScaffoldMessenger.of(context)
               .showSnackBar(const SnackBar(content: Text('Copied')));
         }
       case 'describe':
         if (event.hasAccount) {
-          final ok = await _confirm(context, 'Rewrite this account?',
-              'The current description will be replaced. Edits you made to it will be lost.');
+          final ok = await _confirm(
+            context,
+            'Rewrite this account?',
+            'The current description will be replaced. Edits you made to it will be lost.',
+          );
           if (!ok) return;
         }
         state.describeEvent(event.id);
       case 'delete':
-        final ok = await _confirm(context, 'Delete this event?',
-            'Its photos will be removed from the app. This cannot be undone.');
+        final ok = await _confirm(
+          context,
+          'Delete this event?',
+          'Its photos will be removed from the app. This cannot be undone.',
+        );
         if (!ok || !context.mounted) return;
         Navigator.of(context).pop();
         await state.deleteEvent(event);
@@ -167,7 +192,10 @@ class EventDetailScreen extends StatelessWidget {
   }
 
   static Future<bool> _confirm(
-      BuildContext context, String title, String body) async {
+    BuildContext context,
+    String title,
+    String body,
+  ) async {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -175,11 +203,13 @@ class EventDetailScreen extends StatelessWidget {
         content: Text(body),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Continue')),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Continue'),
+          ),
         ],
       ),
     );
@@ -187,10 +217,12 @@ class EventDetailScreen extends StatelessWidget {
   }
 
   static Future<String?> _editText(BuildContext context, String initial) {
-    return Navigator.of(context).push<String>(MaterialPageRoute(
-      fullscreenDialog: true,
-      builder: (_) => _TextEditorPage(initial: initial),
-    ));
+    return Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _TextEditorPage(initial: initial),
+      ),
+    );
   }
 }
 
@@ -263,10 +295,10 @@ class _FreeWriteSectionState extends State<_FreeWriteSection> {
 
   @override
   Widget build(BuildContext context) => FreeWriteBox(
-        controller: _controller,
-        focusNode: _focus,
-        onChanged: _changed,
-      );
+    controller: _controller,
+    focusNode: _focus,
+    onChanged: _changed,
+  );
 }
 
 class _Gallery extends StatefulWidget {
@@ -291,9 +323,12 @@ class _GalleryState extends State<_Gallery> {
             itemCount: widget.images.length,
             onPageChanged: (i) => setState(() => _page = i),
             itemBuilder: (context, i) => GestureDetector(
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
                   builder: (_) =>
-                      _FullScreenPhoto(fileName: widget.images[i].fileName))),
+                      _FullScreenPhoto(fileName: widget.images[i].fileName),
+                ),
+              ),
               child: VaultImage(widget.images[i].fileName),
             ),
           ),
@@ -301,8 +336,10 @@ class _GalleryState extends State<_Gallery> {
         if (widget.images.length > 1)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Text('${_page + 1} / ${widget.images.length}',
-                style: Theme.of(context).textTheme.labelMedium),
+            child: Text(
+              '${_page + 1} / ${widget.images.length}',
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
           ),
       ],
     );
@@ -319,7 +356,9 @@ class _FullScreenPhoto extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-          backgroundColor: Colors.black, foregroundColor: Colors.white),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+      ),
       body: InteractiveViewer(
         maxScale: 5,
         child: Center(child: VaultImage(fileName, fit: BoxFit.contain)),
@@ -339,14 +378,16 @@ class _DescribingCard extends StatelessWidget {
         child: Row(
           children: [
             SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 3)),
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
             SizedBox(width: 16),
             Expanded(
               child: Text(
-                  'The AI is studying your photos and memories and writing the '
-                  'account. This can take a minute or two.'),
+                'The AI is studying your photos and memories and writing the '
+                'account. This can take a minute or two.',
+              ),
             ),
           ],
         ),
@@ -396,8 +437,9 @@ class _LabelRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Icon(icon, size: 18)),
+            padding: const EdgeInsets.only(top: 6),
+            child: Icon(icon, size: 18),
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Wrap(
@@ -465,6 +507,129 @@ class _SuggestionsCard extends StatelessWidget {
   }
 }
 
+/// The AI's optional who/where questions. A quick answer is saved as a
+/// memory, so this event and later ones can name the person or place.
+class _QuestionsCard extends StatelessWidget {
+  final LifeEvent event;
+
+  const _QuestionsCard({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(top: 16),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.auto_awesome,
+                  size: 16,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 6),
+                Text('The AI asks', style: theme.textTheme.titleSmall),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Optional. A quick answer helps the AI name people and places, '
+              'here and in future events.',
+              style: theme.textTheme.bodySmall,
+            ),
+            for (final q in event.questions)
+              _QuestionTile(key: ValueKey(q.question), event: event, q: q),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuestionTile extends StatefulWidget {
+  final LifeEvent event;
+  final AiQuestion q;
+
+  const _QuestionTile({super.key, required this.event, required this.q});
+
+  @override
+  State<_QuestionTile> createState() => _QuestionTileState();
+}
+
+class _QuestionTileState extends State<_QuestionTile> {
+  final _answer = TextEditingController();
+
+  @override
+  void dispose() {
+    _answer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_answer.text.trim().isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    await context.read<AppState>().answerQuestion(
+      widget.event,
+      widget.q,
+      _answer.text,
+    );
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Saved to memory. Use "Rewrite with AI" to update the account.',
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(widget.q.question),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _answer,
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _submit(),
+                  decoration: InputDecoration(
+                    hintText: widget.q.kind == 'place'
+                        ? 'The place\'s name'
+                        : 'Their name',
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Skip',
+                icon: const Icon(Icons.close),
+                onPressed: () => context.read<AppState>().skipQuestion(
+                  widget.event,
+                  widget.q,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Answer',
+                icon: const Icon(Icons.check),
+                onPressed: _submit,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _EditDetailsSheet extends StatefulWidget {
   final LifeEvent event;
 
@@ -477,13 +642,11 @@ class _EditDetailsSheet extends StatefulWidget {
 class _EditDetailsSheetState extends State<_EditDetailsSheet> {
   late final _title = TextEditingController(text: widget.event.title);
   late final _location = TextEditingController(text: widget.event.location);
-  late final _notes = TextEditingController(text: widget.event.notes);
 
   @override
   void dispose() {
     _title.dispose();
     _location.dispose();
-    _notes.dispose();
     super.dispose();
   }
 
@@ -491,7 +654,11 @@ class _EditDetailsSheetState extends State<_EditDetailsSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          16, 16, 16, 16 + MediaQuery.viewInsetsOf(context).bottom),
+        16,
+        16,
+        16,
+        16 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -500,34 +667,29 @@ class _EditDetailsSheetState extends State<_EditDetailsSheet> {
             Text('Edit details', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
             TextField(
-                controller: _title,
-                decoration: const InputDecoration(labelText: 'Title')),
-            const SizedBox(height: 12),
-            TextField(
-                controller: _location,
-                decoration: const InputDecoration(labelText: 'Where')),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _notes,
-              minLines: 3,
-              maxLines: 8,
-              decoration: const InputDecoration(
-                  labelText: 'Your notes', border: OutlineInputBorder()),
+              controller: _title,
+              decoration: const InputDecoration(labelText: 'Title'),
             ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _location,
+              decoration: const InputDecoration(labelText: 'Where'),
+            ),
+            const SizedBox(height: 12),
             const SizedBox(height: 8),
             Text(
-              'Changing notes does not rewrite the account. Use "Rewrite with AI" afterwards if you want it updated.',
+              'The account is written by the AI. To tell it who or where, '
+              'answer its questions on the event, then use "Rewrite with AI".',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () async {
                 await context.read<AppState>().updateEventDetails(
-                      widget.event,
-                      title: _title.text,
-                      location: _location.text,
-                      notes: _notes.text,
-                    );
+                  widget.event,
+                  title: _title.text,
+                  location: _location.text,
+                );
                 if (context.mounted) Navigator.pop(context);
               },
               child: const Text('Save'),
@@ -686,9 +848,7 @@ class _WeatherSectionState extends State<_WeatherSection> {
             'until $resets (they refresh every day at 12:00 noon).',
           ),
           const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: pass.progress / weatherVideosPerDay,
-          ),
+          LinearProgressIndicator(value: pass.progress / weatherVideosPerDay),
           const SizedBox(height: 4),
           Text(
             '${pass.progress} of $weatherVideosPerDay watched today',
@@ -719,7 +879,10 @@ class _WeatherSectionState extends State<_WeatherSection> {
         if (_error != null)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
+            child: Text(
+              _error!,
+              style: TextStyle(color: theme.colorScheme.error),
+            ),
           ),
       ],
     );

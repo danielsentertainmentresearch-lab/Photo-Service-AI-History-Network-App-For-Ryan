@@ -46,21 +46,29 @@ class MemoryScreen extends StatelessWidget {
               ),
             ),
           for (final kind in memoryKinds)
-            ..._section(context, kind,
-                memories.where((m) => m.kind == kind).toList()),
+            ..._section(
+              context,
+              kind,
+              memories.where((m) => m.kind == kind).toList(),
+            ),
         ],
       ),
     );
   }
 
   List<Widget> _section(
-      BuildContext context, String kind, List<MemoryItem> items) {
+    BuildContext context,
+    String kind,
+    List<MemoryItem> items,
+  ) {
     if (items.isEmpty) return const [];
     return [
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-        child: Text(memoryKindLabel(kind),
-            style: Theme.of(context).textTheme.titleSmall),
+        child: Text(
+          memoryKindLabel(kind),
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
       ),
       for (final item in items)
         Dismissible(
@@ -75,9 +83,11 @@ class MemoryScreen extends StatelessWidget {
           onDismissed: (_) => context.read<AppState>().deleteMemory(item),
           child: ListTile(
             title: Text(item.content),
-            subtitle: item.source == 'ai'
-                ? const Text('Suggested by AI from an event')
-                : null,
+            subtitle: switch (item.source) {
+              'ai' => const Text('Suggested by AI from an event'),
+              answerSource => const Text('Your answer to the AI\'s question'),
+              _ => null,
+            },
             onTap: () => _edit(context, item),
           ),
         ),
@@ -127,13 +137,19 @@ class _MemoryEditorState extends State<_MemoryEditor> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          16, 16, 16, 16 + MediaQuery.viewInsetsOf(context).bottom),
+        16,
+        16,
+        16,
+        16 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(widget.item == null ? 'Add memory' : 'Edit memory',
-              style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            widget.item == null ? 'Add memory' : 'Edit memory',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,

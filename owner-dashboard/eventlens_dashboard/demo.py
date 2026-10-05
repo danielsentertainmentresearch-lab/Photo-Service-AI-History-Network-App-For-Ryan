@@ -134,6 +134,11 @@ def generate(db, end=datetime(2026, 10, 3, 18, 0), days=180, seed=2026,
                                     else:
                                         act(install, account, moment,
                                             "label_confirmed")
+                        if stage2.random() < 0.35:
+                            act(install, account, moment,
+                                "ai_question_answered"
+                                if stage2.random() < 0.6 + 0.3 * engagement
+                                else "ai_question_skipped")
                         if stage2.random() < 0.04:
                             act(install, account, moment,
                                 "ai_allowance_reached")

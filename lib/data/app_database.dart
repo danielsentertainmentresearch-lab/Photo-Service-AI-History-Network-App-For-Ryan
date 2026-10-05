@@ -5,7 +5,7 @@ import 'package:sqflite/sqflite.dart';
 /// [factory] and [path] are injectable so tests can use an in-memory FFI
 /// database instead of the platform plugin.
 class AppDatabase {
-  static const int version = 5;
+  static const int version = 6;
 
   static Future<Database> open({DatabaseFactory? factory, String? path}) async {
     final dbFactory = factory ?? databaseFactory;
@@ -21,12 +21,14 @@ class AppDatabase {
           await _createV3(db);
           await _createV4(db);
           await _createV5(db);
+          await _createV6(db);
         },
         onUpgrade: (db, oldVersion, _) async {
           if (oldVersion < 2) await _createV2(db);
           if (oldVersion < 3) await _createV3(db);
           if (oldVersion < 4) await _createV4(db);
           if (oldVersion < 5) await _createV5(db);
+          if (oldVersion < 6) await _createV6(db);
         },
       ),
     );
@@ -120,6 +122,13 @@ class AppDatabase {
     );
     await db.execute(
       "ALTER TABLE events ADD COLUMN rejected_labels TEXT NOT NULL DEFAULT '[]'",
+    );
+  }
+
+  /// v6: the AI's open questions about who or where.
+  static Future<void> _createV6(Database db) async {
+    await db.execute(
+      "ALTER TABLE events ADD COLUMN questions TEXT NOT NULL DEFAULT '[]'",
     );
   }
 }
