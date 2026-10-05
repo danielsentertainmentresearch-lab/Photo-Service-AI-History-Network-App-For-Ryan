@@ -12,6 +12,8 @@ import 'package:eventlens/screens/event_detail_screen.dart';
 import 'package:eventlens/screens/home_screen.dart';
 import 'package:eventlens/screens/insight_preview_screen.dart';
 import 'package:eventlens/screens/memory_screen.dart';
+import 'package:eventlens/screens/name_spellings_screen.dart';
+import 'package:eventlens/screens/privacy_policy_screen.dart';
 import 'package:eventlens/screens/new_event_screen.dart';
 import 'package:eventlens/screens/settings_screen.dart';
 import 'package:eventlens/services/auth_service.dart';
@@ -290,6 +292,96 @@ void main() {
     expect(find.text('More with the \$1 pass'), findsOneWidget);
     expect(find.text('Who goes together'), findsOneWidget);
     expect(find.textContaining('Watch a video'), findsNothing);
+  });
+
+  testWidgets('name spellings fix a typo everywhere, and only a typo', (
+    tester,
+  ) async {
+    await setUpState(tester);
+    await tester.pumpWidget(app(const NameSpellingsScreen()));
+    expect(find.text('Sam'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Fix spelling of Sam'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Jordan');
+    await tester.pump();
+    expect(
+      find.text('Only spelling fixes: a few letters or capitals'),
+      findsOneWidget,
+    );
+    await tester.enterText(find.byType(TextField), 'Samm');
+    await tester.pump();
+    await tester.tap(find.text('Save'));
+    await settle(
+      tester,
+      () => state.eventById('lake')!.people.contains('Samm'),
+    );
+    expect(state.eventById('lake')!.people, ['Samm']);
+    expect(state.eventById('lake')!.summary, 'Swimming at sunset with Samm.');
+    expect(state.eventById('lake')!.notes, 'Samm dared me in');
+  });
+
+  testWidgets('the privacy policy holds the erase button under its promise; '
+      'erasing needs ERASE typed', (tester) async {
+    await setUpState(tester);
+    await tester.runAsync(() => state.addMemory('person', 'Sam is my brother'));
+    const policy = """# Policy
+
+### Erasing what the AI remembers
+
+It cannot be undone.
+
+<!-- erase-ai-memory-button -->
+
+## Your choices
+
+- Uninstall the app.
+""";
+    await tester.pumpWidget(app(const PrivacyPolicyScreen(policy: policy)));
+    await tester.pumpAndSettle();
+    expect(find.text('Erasing what the AI remembers'), findsOneWidget);
+    expect(find.text('It cannot be undone.'), findsOneWidget);
+    // The button sits right under the section, before the next heading.
+    final button = tester.getTopLeft(find.text('Erase what the AI remembers'));
+    expect(
+      button.dy,
+      greaterThan(tester.getTopLeft(find.text('It cannot be undone.')).dy),
+    );
+    expect(
+      button.dy,
+      lessThan(tester.getTopLeft(find.text('Your choices')).dy),
+    );
+
+    await tester.tap(find.text('Erase what the AI remembers'));
+    await tester.pumpAndSettle();
+    final erase = find.widgetWithText(FilledButton, 'Erase');
+    expect(tester.widget<FilledButton>(erase).onPressed, isNull);
+    await tester.enterText(find.byType(TextField), 'erase please');
+    await tester.pump();
+    expect(tester.widget<FilledButton>(erase).onPressed, isNull);
+    await tester.enterText(find.byType(TextField), 'ERASE');
+    await tester.pump();
+    await tester.tap(erase);
+    await settle(tester, () => state.memories.isEmpty);
+    expect(state.memories, isEmpty);
+    // Events stay.
+    expect(state.eventById('lake'), isNotNull);
+    expect(find.text('The AI doesn\'t remember anything yet.'), findsOneWidget);
+  });
+
+  testWidgets('the bundled privacy policy has the erase section and button', (
+    tester,
+  ) async {
+    await setUpState(tester);
+    await tester.pumpWidget(app(const PrivacyPolicyScreen()));
+    await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 300)));
+    await tester.pumpAndSettle();
+    expect(find.text('EventLens Privacy Policy'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Erase what the AI remembers'),
+      300,
+    );
+    expect(find.text('Erasing what the AI remembers'), findsOneWidget);
   });
 
   testWidgets('a failed event shows the reason and Retry explains the key', (

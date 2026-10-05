@@ -58,6 +58,11 @@
   counts only, never content; memories stay on the phone. Its follow-up
   steps are scheduled in `docs/AI_SERVER.md`. Test it with
   `deno test logic_test.ts` from `supabase/functions/ai/`.
+- **Memory is the AI's** (owner rule): people never add, edit or delete
+  memories. They can fix name spellings only (`lib/models/name_spelling.dart`)
+  and erase all of it at once from the button inside the privacy policy
+  (`<!-- erase-ai-memory-button -->` in PRIVACY_POLICY.md, which the app
+  bundles and shows). Keep that section and marker when editing the policy.
 - `owner-dashboard/` is owner-only (Python stdlib, localhost). Run its
   tests with `python3 -m unittest discover -s tests` from that folder.
 - **Dashboard follows the app** (owner rule, stage 2): whenever a change adds

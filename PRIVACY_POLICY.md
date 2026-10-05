@@ -1,6 +1,6 @@
 # EventLens Privacy Policy
 
-_Last updated: 4 October 2026_
+_Last updated: 5 October 2026_
 
 EventLens ("the app") lets you record events with photos and notes and have an
 AI write a detailed account of each one. This policy explains what the app
@@ -42,6 +42,24 @@ phone has its own separate library, so people sharing a phone do not see
 each other's events. The developer runs no server of
 its own and never receives your photos, notes, free writes, descriptions or memories. Cloud backup of app data is disabled. Uninstalling
 the app permanently deletes everything it stored.
+
+### Erasing what the AI remembers
+
+The AI keeps its own memory of your life, on your phone only: who people
+are, the places that matter, and what it learned from your answers to its
+questions. You can erase all of it at any time with the button below (in
+the app: Settings → Privacy policy). Before you do, know what it means:
+
+- Everything the AI remembers is erased at once. Nothing can be picked
+  out, changed or kept.
+- It cannot be undone.
+- The AI no longer knows who anyone is. It describes people and places
+  neutrally again and asks you who they are, starting over.
+- "What the AI is learning" starts again from nothing.
+- It does not remove anyone from your life story: your events, photos,
+  accounts and free writes stay exactly as they are.
+
+<!-- erase-ai-memory-button -->
 
 Your Anthropic API key is stored in encrypted storage on your device and is
 sent only to Anthropic, to authenticate your requests.
@@ -104,11 +122,16 @@ no data with anyone else.
 ## Photos of other people
 
 Your photos may include other people. The app never uses face recognition. The
-AI names people only when your own notes or saved memories identify them.
+AI names people only when your own notes, your answers to its questions or
+what it remembers identify them.
 
 ## Your choices
 
-- Delete any event, description or memory in the app at any time.
+- Delete any event or description in the app at any time.
+- Erase everything the AI remembers, from the app's privacy policy
+  (Settings → Privacy policy).
+- Correct how a person's or place's name is spelled (Settings → Name
+  spellings).
 - Remove your API key in Settings at any time.
 - Export your whole library in Settings at any time.
 - Leave the weather unlooked-up; it is optional for every event.

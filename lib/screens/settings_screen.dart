@@ -8,6 +8,8 @@ import '../services/auth_service.dart';
 import '../services/recents_privacy.dart';
 import '../state/app_state.dart';
 import 'data_screen.dart';
+import 'name_spellings_screen.dart';
+import 'privacy_policy_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -168,6 +170,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       'are sent to Anthropic only to make their labels. Uninstalling '
                       'the app deletes all of its data.',
             style: theme.textTheme.bodySmall,
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.policy_outlined),
+            title: const Text('Privacy policy'),
+            subtitle: const Text('Including erasing what the AI remembers'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+            ),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.spellcheck),
+            title: const Text('Name spellings'),
+            subtitle: const Text('Fix how people and places are spelled'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NameSpellingsScreen()),
+            ),
           ),
           const SizedBox(height: 16),
           ListTile(

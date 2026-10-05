@@ -19,6 +19,7 @@ import '../data/memory_repository.dart';
 import '../models/event.dart';
 import '../models/memory_graph.dart';
 import '../models/memory_item.dart';
+import '../models/name_spelling.dart';
 import '../services/data_files.dart';
 import '../services/places_service.dart';
 import '../services/settings_service.dart';
@@ -745,6 +746,90 @@ class AppState extends ChangeNotifier {
             .toList(),
       ),
     );
+    await _reload();
+  }
+
+  // ---- Name spellings and erasing what the AI remembers ---------------------
+
+  /// Corrects the spelling of a person or place the AI knows, everywhere it
+  /// appears: events, accounts, memories and the timeline graph. Only
+  /// spelling fixes are allowed (see [isSpellingFix]); anything else throws
+  /// an [ArgumentError]. Returns how many events changed.
+  Future<int> fixNameSpelling(String from, String to) async {
+    if (!isSpellingFix(from, to)) {
+      throw ArgumentError('Only spelling fixes are allowed.');
+    }
+    final a = from.trim();
+    final b = to.trim();
+    String fix(String text) => replaceName(text, a, b);
+    List<String> fixList(List<String> names) => [
+      for (final n in names) n.trim() == a ? b : n,
+    ];
+
+    var changed = 0;
+    for (final e in await events.all()) {
+      final next = e.copyWith(
+        title: fix(e.title),
+        notes: fix(e.notes),
+        location: fix(e.location),
+        summary: fix(e.summary),
+        description: fix(e.description),
+        people: fixList(e.people),
+        places: fixList(e.places),
+      );
+      if (next.toRow().toString() != e.toRow().toString()) {
+        await events.update(next);
+        changed++;
+      }
+    }
+    for (final m in await memoryRepo.all()) {
+      final content = fix(m.content);
+      if (content != m.content) {
+        await memoryRepo.save(m.copyWith(content: content));
+      }
+    }
+    final graph = _graph;
+    if (graph != null) {
+      final next = graph.copyWith(
+        overview: fix(graph.overview),
+        chapters: [
+          for (final c in graph.chapters)
+            TimelineChapter(
+              id: c.id,
+              title: fix(c.title),
+              summary: fix(c.summary),
+              eventIds: c.eventIds,
+              bookId: c.bookId,
+            ),
+        ],
+        links: [
+          for (final l in graph.links)
+            EventLink(
+              fromEventId: l.fromEventId,
+              toEventId: l.toEventId,
+              relation: fix(l.relation),
+            ),
+        ],
+        themes: [
+          for (final t in graph.themes)
+            StoryTheme(
+              name: fix(t.name),
+              description: fix(t.description),
+              eventIds: t.eventIds,
+            ),
+        ],
+      );
+      await graphRepo.replace(next);
+      _graph = next;
+    }
+    await _reload();
+    return changed;
+  }
+
+  /// Erases everything the AI remembers, all at once. Events, their
+  /// accounts, photos and free writes stay as they are.
+  Future<void> eraseAiMemory() async {
+    await memoryRepo.deleteAll();
     await _reload();
   }
 

@@ -17,4 +17,8 @@ class MemoryRepository {
 
   Future<void> delete(String id) =>
       db.delete('memories', where: 'id = ?', whereArgs: [id]);
+
+  /// Erases every memory (the privacy policy's "Erase what the AI
+  /// remembers").
+  Future<void> deleteAll() => db.delete('memories');
 }

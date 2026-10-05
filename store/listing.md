@@ -71,7 +71,8 @@ actually does:
 - **Does your app collect or share any of the required user data types?** Yes.
 - **Is all user data encrypted in transit?** Yes (HTTPS only).
 - **Do you provide a way for users to request that their data is deleted?**
-  Yes. Users can delete events and memories in the app, delete their
+  Yes. Users can delete events, erase everything the AI remembers (in the
+  app's privacy policy), delete their
   account in Settings → Delete account, and uninstalling removes all data
   on the phone. Play also asks for a web link for account deletion
   requests: use the privacy policy's contact email.
