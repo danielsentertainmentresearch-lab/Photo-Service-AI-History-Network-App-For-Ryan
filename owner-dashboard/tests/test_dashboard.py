@@ -105,6 +105,8 @@ class MetricsTest(unittest.TestCase):
             {"type": "activity", "account_id": "a2", "kind": "ai_allowance_reached", "at": "2026-09-30T10:00:00Z"},
             {"type": "activity", "account_id": "a1", "kind": "ai_question_answered", "at": "2026-09-30T10:05:00Z"},
             {"type": "activity", "account_id": "a2", "kind": "ai_question_skipped", "at": "2026-09-30T10:06:00Z"},
+            {"type": "activity", "account_id": "a1", "kind": "insight_peek_opened", "at": "2026-09-30T11:00:00Z"},
+            {"type": "activity", "account_id": "a1", "kind": "insight_pass_bought", "at": "2026-09-30T11:05:00Z"},
         ])
         m = store.metrics(db, "7", now=datetime(2026, 9, 30, 12))
         use = {f["key"]: (f["total"], f["accounts"]) for f in m["features"]}
@@ -112,6 +114,8 @@ class MetricsTest(unittest.TestCase):
         self.assertEqual(use["ai_topup"], (1, 1))
         self.assertEqual(use["ai_question_answered"], (1, 1))
         self.assertEqual(use["ai_question_skipped"], (1, 1))
+        self.assertEqual(use["insight_peek_opened"], (1, 1))
+        self.assertEqual(use["insight_pass_bought"], (1, 1))
 
     def test_stage2_features_are_counted_without_their_content(self):
         db = small_db()

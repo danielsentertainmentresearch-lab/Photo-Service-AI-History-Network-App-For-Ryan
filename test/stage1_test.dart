@@ -21,6 +21,7 @@ import 'package:eventlens/screens/memory_screen.dart';
 import 'package:eventlens/services/auth_service.dart';
 import 'package:eventlens/services/data_files.dart';
 import 'package:eventlens/services/export_service.dart';
+import 'package:eventlens/services/insight_pass.dart';
 import 'package:eventlens/services/rewards_service.dart';
 import 'package:eventlens/services/settings_service.dart';
 import 'package:eventlens/services/web3_identity.dart';
@@ -716,6 +717,7 @@ void main() {
                 state: state,
                 unlocks: RingUnlocks(prefs, _NoVideos(), scope: uid),
                 weather: WeatherPass(prefs, _NoVideos(), scope: uid),
+                insights: InsightPass(prefs, _NoVideos(), scope: uid),
               ),
             ),
           ],

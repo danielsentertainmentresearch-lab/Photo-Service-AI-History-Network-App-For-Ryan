@@ -79,7 +79,7 @@ these steps wait until then. Setup commands: `docs/AI_SERVER.md`.
 | Support email | Waiting on owner | Proton Mail on a custom domain |
 | AI access | Built; deploy waits until beta testers (see "AI server" above) | The owner's AI server on **Supabase** (Edge Function) holds the Anthropic key; daily allowance with reward-video top-ups. Until `AI_SERVER_URL` is set, builds still use each user's own key. Set a monthly spend limit on the key in the Anthropic Console |
 | Crash reporting | Owner to choose (not picked yet) | Options: GlitchTip (open source, self-host or hosted), Sentry (open-source SDK; self-host or sentry.io), Bugsink (open source, self-host). Crash data goes to the owner dashboard |
-| Payments (paywall stage) | Later | Google Play Billing (required); RevenueCat optional |
+| Payments (paywall stage) | Later; the $1 insight pass is built in, not connected (`InsightPurchases` in `lib/services/insight_pass.dart`) | Google Play Billing (required): create a consumable $1 product for the insight pass; RevenueCat optional |
 | Place names (Nominatim) | Active (free, light use) | OpenStreetMap's public server allows max 1 request/s and no heavy use. Before launch at scale: self-host Nominatim or Photon (open source), or a paid OSM-based provider; base URL is configurable in `PlacesService` |
 | Weather (Open-Meteo) | Active (free, non-commercial) | Free tier is non-commercial only. A monetized release needs the Open-Meteo API subscription, or self-host Open-Meteo (open source, Docker) |
 | Weather daily pass | Built (3 rewarded videos, refresh 12:00 noon) | Uses the same rewarded-ad platform as rings |

@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../ai/data_platform_advisor.dart';
 import '../models/library_meters.dart';
+import 'insight_preview_screen.dart';
 import '../services/data_files.dart';
 import '../services/export_service.dart';
 import '../state/app_state.dart';
@@ -635,6 +636,14 @@ class _PreviewBanner extends StatelessWidget {
                 ],
               ),
             ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const InsightPreviewScreen()),
+            ),
+            icon: const Icon(Icons.visibility_outlined),
+            label: const Text('Sneak peek at your insights'),
+          ),
         ],
       ),
     );

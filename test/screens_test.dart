@@ -10,11 +10,13 @@ import 'package:eventlens/models/event.dart';
 import 'package:eventlens/models/memory_item.dart';
 import 'package:eventlens/screens/event_detail_screen.dart';
 import 'package:eventlens/screens/home_screen.dart';
+import 'package:eventlens/screens/insight_preview_screen.dart';
 import 'package:eventlens/screens/memory_screen.dart';
 import 'package:eventlens/screens/new_event_screen.dart';
 import 'package:eventlens/screens/settings_screen.dart';
 import 'package:eventlens/services/auth_service.dart';
 import 'package:eventlens/services/places_service.dart';
+import 'package:eventlens/services/insight_pass.dart';
 import 'package:eventlens/services/rewards_service.dart';
 import 'package:eventlens/services/settings_service.dart';
 import 'package:eventlens/state/app_state.dart';
@@ -165,6 +167,9 @@ void main() {
       ChangeNotifierProvider(
         create: (_) => WeatherPass(prefs, videos ?? _NoVideos()),
       ),
+      ChangeNotifierProvider(
+        create: (_) => InsightPass(prefs, videos ?? _NoVideos()),
+      ),
     ],
     child: MaterialApp(home: home),
   );
@@ -252,6 +257,39 @@ void main() {
     await settle(tester, () => state.eventById('lake')!.questions.isEmpty);
     expect(find.text('The AI asks'), findsNothing);
     expect(state.memories, hasLength(1));
+  });
+
+  testWidgets('sneak peek: 3 videos open 2 insights; the \$1 pass waits '
+      'for Play Billing', (tester) async {
+    await setUpState(tester);
+    await tester.pumpWidget(
+      app(const InsightPreviewScreen(), videos: _FinishedVideos()),
+    );
+    expect(find.text('What you can see'), findsOneWidget);
+    expect(find.text('Feelings by person'), findsOneWidget);
+    expect(find.textContaining('aren\'t connected in this build'),
+        findsOneWidget);
+    expect(
+      tester
+          .widget<ButtonStyleButton>(
+            find.ancestor(
+              of: find.text('Get the pass for \$1'),
+              matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
+
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.textContaining('Watch a video'));
+      await tester.pumpAndSettle();
+    }
+    expect(find.textContaining('Open until'), findsOneWidget);
+    expect(find.text('Your rhythm'), findsOneWidget);
+    expect(find.text('More with the \$1 pass'), findsOneWidget);
+    expect(find.text('Who goes together'), findsOneWidget);
+    expect(find.textContaining('Watch a video'), findsNothing);
   });
 
   testWidgets('a failed event shows the reason and Retry explains the key', (

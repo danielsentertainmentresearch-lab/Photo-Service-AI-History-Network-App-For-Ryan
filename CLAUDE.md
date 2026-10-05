@@ -47,7 +47,10 @@
   always used exactly as supplied. Brand files are in `docs/brand/`.
 - Export rules: basic CSV free for all; full export unlocks at 100 events
   (sticky); a higher paywall tier for export is added in the paywall stage.
-  The Your data meters stay free with no ads.
+  The Your data meters stay free with no ads. Before 100 events, a sneak
+  peek at the full export's insights opens with 3 rewarded videos (2
+  insights, 12 hours, once every 48 hours) or a $1 pass (all 5, 72 hours;
+  purchase not connected until Play Billing): `lib/services/insight_pass.dart`.
 - **AI server** (owner decision, 5 Oct 2026): the AI runs through the
   owner's server (`supabase/functions/ai/`, `docs/AI_SERVER.md`) when
   `AI_SERVER_URL` is set, so users need no Anthropic key. Every AI feature

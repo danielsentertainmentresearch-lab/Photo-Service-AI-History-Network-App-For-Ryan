@@ -144,6 +144,11 @@ def generate(db, end=datetime(2026, 10, 3, 18, 0), days=180, seed=2026,
                                 "ai_allowance_reached")
                             if stage2.random() < 0.5:
                                 act(install, account, moment, "ai_topup")
+                    if not export and events >= 15 and stage2.random() < 0.05:
+                        act(install, account, moment, "insight_peek_opened")
+                        if stage2.random() < 0.15:
+                            act(install, account, moment,
+                                "insight_pass_bought")
                     if not graph and described_photos >= 10:
                         graph = True
                         act(install, account, moment, "graph_unlocked")

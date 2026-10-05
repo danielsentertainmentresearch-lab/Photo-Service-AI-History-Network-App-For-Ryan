@@ -12,6 +12,7 @@ import '../data/event_repository.dart';
 import '../data/graph_repository.dart';
 import '../data/image_vault.dart';
 import '../data/memory_repository.dart';
+import '../services/insight_pass.dart';
 import '../services/rewards_service.dart';
 import '../services/settings_service.dart';
 import 'app_state.dart';
@@ -21,12 +22,14 @@ class Library {
   final AppState state;
   final RingUnlocks unlocks;
   final WeatherPass weather;
+  final InsightPass insights;
   final Database? db;
 
   Library({
     required this.state,
     required this.unlocks,
     required this.weather,
+    required this.insights,
     this.db,
   });
 
@@ -87,6 +90,7 @@ Future<Library> openLibrary({
     state: state,
     unlocks: RingUnlocks(prefs, videos, scope: key),
     weather: WeatherPass(prefs, videos, scope: key),
+    insights: InsightPass(prefs, videos, scope: key),
     db: db,
   );
 }
@@ -189,6 +193,7 @@ class _LibraryScopeState extends State<LibraryScope> {
             ChangeNotifierProvider.value(value: library.state),
             ChangeNotifierProvider.value(value: library.unlocks),
             ChangeNotifierProvider.value(value: library.weather),
+            ChangeNotifierProvider.value(value: library.insights),
           ],
           child: widget.child,
         );
