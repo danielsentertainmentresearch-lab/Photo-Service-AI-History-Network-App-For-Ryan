@@ -1,5 +1,10 @@
 # Notes for Claude sessions on this repo
 
+- **FIRST PRIORITY of the next work session** (owner, 5 Oct 2026): build a
+  crisis intervention route before any other work, including the memory
+  file and dream state. Starting points: `docs/BUILD_STAGE_2.md`, "First in
+  the next session". Remove this line once it ships.
+
 - Flutter app (Android). Run `flutter analyze` and `flutter test` before
   pushing; CI builds the APK and publishes the `latest-build` pre-release.
 - AI-owned graph content (overview, chapters, themes, connections) must

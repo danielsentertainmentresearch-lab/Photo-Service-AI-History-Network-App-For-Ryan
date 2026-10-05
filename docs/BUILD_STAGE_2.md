@@ -120,6 +120,30 @@ importance:
 | 17 | Post-review fix 4 (owner's rule, stated twice): memory is the AI's, so the Memory page no longer lets people add, edit or delete memories. It is now "What the AI is learning": read-only counts of people, places and facts it knows, connections and threads from the timeline graph, and some of what it remembers, a few at a time, rotating at three unplanned times a day so it keeps changing between visits. Interim until the app's own memory file and dream state (`docs/AI_SERVER.md` step 8) | (this commit) |
 | 18 | Post-review fix 5 (owner decision): people can't edit memory, but two safe controls replace it. **Name spellings** (Settings): fix how a person or place is spelled everywhere it appears (events, accounts, memories, timeline graph); only spelling fixes are accepted (a few letters or capitals, same number of words), and likely typos are suggested (a rare near-twin of a common name). **Erase what the AI remembers**: an all-or-nothing button inside the privacy policy, which the app now shows (Settings → Privacy policy, bundled PRIVACY_POLICY.md), directly under the promise and the list of consequences; it needs ERASE typed and leaves events, photos, accounts and free writes. Policy and Play data-safety answers updated. Dashboard: `name_spelling_fixed`, `ai_memory_erased` | (this commit) |
 
+## First in the next session: a crisis intervention route
+
+Owner, 5 Oct 2026: the app is built around emotional writing and must have
+a crisis intervention route before anything else. **This is the first item
+of the next work session**, ahead of the memory file and dream state.
+
+Points to settle with the owner before building:
+
+- **What triggers it**: signs of acute distress or risk of harm to self or
+  others in a free write, an answer or a label (for example a label pass
+  that also flags risk), and a way to reach help at any time without a
+  trigger (an always-available "Need help now?" entry).
+- **What it shows**: crisis lines for the person's country (for example 988
+  in the US, 116 123 Samaritans in the UK and Ireland, 000 / Lifeline 13 11
+  14 in Australia; a findahelpline.com link elsewhere), emergency number,
+  and a short, warm message. Never a diagnosis, never blocking the app.
+- **Privacy**: whether any signal is kept, counted or sent anywhere. The
+  dashboard would receive counts only, never content, if at all.
+- **Tone and review**: wording reviewed by the owner (and ideally someone
+  with crisis-support experience) before release; tested so it shows when
+  it should and stays quiet otherwise.
+- **Store requirements**: Google Play policies for apps handling sensitive
+  topics.
+
 ## Mechanisms, parts and features
 
 ### Mind map view (step 2)
