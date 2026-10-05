@@ -44,8 +44,9 @@ const _steps = [
   _Step(
     Icons.psychology_outlined,
     'It remembers',
-    'Saved memories about people, places and ongoing situations help the AI '
-        'connect every new event to the ones before it.',
+    'The AI keeps its own memory of the people, places and threads in your '
+        'life, connects every new event to the ones before it, and shows what '
+        'it is learning on its own page.',
   ),
   _Step(
     Icons.hub_outlined,

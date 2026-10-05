@@ -62,8 +62,11 @@ switch on once their platforms are connected).
 - Each event gets a detailed, factual first-person account (what the
   photos, notes, time and place confirm), a short summary, and
   labels for people, places and tags. You can edit, copy or rewrite it.
-- Memory screen: add, edit and delete what the AI should always know; the
-  AI suggests new memories after each event, and you choose what to keep.
+- What the AI is learning: a read-only page showing what the AI knows
+  (people, places, facts), connections and threads it found, and some of
+  what it remembers, rotating a few times a day. People don't edit memory
+  directly; the AI suggests memories after each event and asks who or
+  where when it can't tell, and the person answers or skips.
 - The AI never identifies people from faces; it names them only from your
   notes and saved memories.
 - Your own Anthropic API key (stored encrypted), Claude Opus 5.5 by default

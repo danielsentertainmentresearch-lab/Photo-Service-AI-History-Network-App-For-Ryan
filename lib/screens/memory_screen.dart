@@ -1,197 +1,194 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/memory_item.dart';
+import '../models/learning_view.dart';
+import '../models/memory_graph.dart';
 import '../state/app_state.dart';
 
-/// Long-term ("contextual") memory: durable facts the AI reads before
-/// describing any event.
-class MemoryScreen extends StatelessWidget {
+/// What the AI is learning about the person (owner, 5 Oct 2026). Memory is
+/// the AI's: people can't add, edit or delete it here. The page shows the
+/// AI's own findings a few at a time, rotating at unplanned times of day
+/// (see [learningRotation]).
+///
+/// Interim: when the app's own memory file and dream state are built
+/// (docs/AI_SERVER.md, step 8), this page shows what the dream pass learned.
+class MemoryScreen extends StatefulWidget {
   const MemoryScreen({super.key});
 
   @override
+  State<MemoryScreen> createState() => _MemoryScreenState();
+}
+
+class _MemoryScreenState extends State<MemoryScreen> {
+  Timer? _timer;
+
+  /// Rebuilds when the selection rotates while the page is open.
+  void _scheduleRotation(DateTime next) {
+    _timer?.cancel();
+    final wait = next.difference(DateTime.now());
+    _timer = Timer(
+      wait.isNegative ? Duration.zero : wait + const Duration(seconds: 1),
+      () {
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final memories = context.watch<AppState>().memories;
+    final state = context.watch<AppState>();
     final theme = Theme.of(context);
+    final view = computeLearning(
+      events: state.allEvents,
+      memories: state.memories,
+      graph: state.graphSnapshot,
+      now: DateTime.now(),
+    );
+    _scheduleRotation(view.nextChange);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Memory')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _edit(context, null),
-        icon: const Icon(Icons.add),
-        label: const Text('Add memory'),
-      ),
+      appBar: AppBar(title: const Text('What the AI is learning')),
       body: ListView(
-        padding: const EdgeInsets.only(bottom: 96),
+        padding: const EdgeInsets.all(16),
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              'Things the AI should always know when describing your events: '
-              'who people are, places that matter, ongoing situations, how you '
-              'like things described. Every saved memory is sent with each '
-              'description request.',
-              style: theme.textTheme.bodyMedium,
-            ),
+          Text(
+            'The AI keeps its own memory of your life: who is who, the places '
+            'that matter, and how your events connect. Here is some of what '
+            'it has worked out. It changes through the day.',
+            style: theme.textTheme.bodyMedium,
           ),
-          if (memories.isEmpty)
+          const SizedBox(height: 16),
+          if (view.isEmpty)
             const Padding(
               padding: EdgeInsets.all(32),
               child: Center(
                 child: Text(
-                  'No memories yet.\nTry: "Sam is my younger brother; he plays '
-                  'drums in a band called Lowtide."',
+                  'The AI starts learning as you record events.',
                   textAlign: TextAlign.center,
                 ),
               ),
+            )
+          else ...[
+            Row(
+              children: [
+                _Count(value: view.people, label: 'people'),
+                _Count(value: view.places, label: 'places'),
+                _Count(value: view.facts, label: 'other things'),
+              ],
             ),
-          for (final kind in memoryKinds)
-            ..._section(
-              context,
-              kind,
-              memories.where((m) => m.kind == kind).toList(),
-            ),
+            if (view.connections.isNotEmpty)
+              _Section(
+                icon: Icons.link,
+                title: 'Connections it has found',
+                children: [for (final c in view.connections) Text(c)],
+              ),
+            if (view.threads.isNotEmpty)
+              _Section(
+                icon: Icons.timeline,
+                title: 'Threads in your life',
+                children: [for (final t in view.threads) _Thread(theme: t)],
+              ),
+            if (view.remembers.isNotEmpty)
+              _Section(
+                icon: Icons.psychology_outlined,
+                title: 'Some of what it remembers',
+                children: [for (final r in view.remembers) Text(r)],
+              ),
+          ],
         ],
       ),
     );
   }
-
-  List<Widget> _section(
-    BuildContext context,
-    String kind,
-    List<MemoryItem> items,
-  ) {
-    if (items.isEmpty) return const [];
-    return [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-        child: Text(
-          memoryKindLabel(kind),
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
-      ),
-      for (final item in items)
-        Dismissible(
-          key: ValueKey(item.id),
-          direction: DismissDirection.endToStart,
-          background: Container(
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: 24),
-            color: Theme.of(context).colorScheme.errorContainer,
-            child: const Icon(Icons.delete_outline),
-          ),
-          onDismissed: (_) => context.read<AppState>().deleteMemory(item),
-          child: ListTile(
-            title: Text(item.content),
-            subtitle: switch (item.source) {
-              'ai' => const Text('Suggested by AI from an event'),
-              answerSource => const Text('Your answer to the AI\'s question'),
-              _ => null,
-            },
-            onTap: () => _edit(context, item),
-          ),
-        ),
-    ];
-  }
-
-  static Future<void> _edit(BuildContext context, MemoryItem? item) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _MemoryEditor(item: item),
-    );
-  }
 }
 
-class _MemoryEditor extends StatefulWidget {
-  final MemoryItem? item;
+class _Count extends StatelessWidget {
+  final int value;
+  final String label;
 
-  const _MemoryEditor({this.item});
-
-  @override
-  State<_MemoryEditor> createState() => _MemoryEditorState();
-}
-
-class _MemoryEditorState extends State<_MemoryEditor> {
-  late final _content = TextEditingController(text: widget.item?.content);
-  late String _kind = widget.item?.kind ?? 'person';
-
-  @override
-  void dispose() {
-    _content.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    final state = context.read<AppState>();
-    if (_content.text.trim().isEmpty) return;
-    if (widget.item == null) {
-      await state.addMemory(_kind, _content.text);
-    } else {
-      await state.updateMemory(widget.item!, _kind, _content.text);
-    }
-    if (mounted) Navigator.pop(context);
-  }
+  const _Count({required this.value, required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        16,
-        16,
-        16,
-        16 + MediaQuery.viewInsetsOf(context).bottom,
-      ),
+    final theme = Theme.of(context);
+    return Expanded(
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            widget.item == null ? 'Add memory' : 'Edit memory',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            children: [
-              for (final kind in memoryKinds)
-                ChoiceChip(
-                  label: Text(memoryKindLabel(kind)),
-                  selected: _kind == kind,
-                  onSelected: (_) => setState(() => _kind = kind),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _content,
-            autofocus: widget.item == null,
-            minLines: 2,
-            maxLines: 6,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              hintText: 'e.g. "Grandma\'s house is the blue cottage in Ely."',
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              if (widget.item != null)
-                TextButton.icon(
-                  onPressed: () async {
-                    await context.read<AppState>().deleteMemory(widget.item!);
-                    if (context.mounted) Navigator.pop(context);
-                  },
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Delete'),
-                ),
-              const Spacer(),
-              FilledButton(onPressed: _save, child: const Text('Save')),
-            ],
-          ),
+          Text('$value', style: theme.textTheme.headlineSmall),
+          Text(label, style: theme.textTheme.bodySmall),
         ],
       ),
+    );
+  }
+}
+
+class _Section extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final List<Widget> children;
+
+  const _Section({
+    required this.icon,
+    required this.title,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(top: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 18, color: theme.colorScheme.primary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(title, style: theme.textTheme.titleSmall),
+                ),
+              ],
+            ),
+            for (final child in children)
+              Padding(padding: const EdgeInsets.only(top: 8), child: child),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Thread extends StatelessWidget {
+  final StoryTheme theme;
+
+  const _Thread({required this.theme});
+
+  @override
+  Widget build(BuildContext context) {
+    final count = theme.eventIds.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${theme.name} · ${count == 1 ? '1 event' : '$count events'}',
+          style: Theme.of(context).textTheme.bodyLarge,
+        ),
+        if (theme.description.trim().isNotEmpty)
+          Text(
+            theme.description.trim(),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+      ],
     );
   }
 }

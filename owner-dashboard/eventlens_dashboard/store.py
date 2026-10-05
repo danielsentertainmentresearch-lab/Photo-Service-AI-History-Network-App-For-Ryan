@@ -141,6 +141,7 @@ ACTIVITY_KINDS = (
     "ai_question_skipped",
     "insight_peek_opened",
     "insight_pass_bought",
+    "learning_page_opened",
 )
 
 SIGNUP_METHODS = ("email", "phone", "google", "web3")
@@ -189,6 +190,7 @@ FEATURES = (
     ("ai_question_skipped", "AI who/where questions skipped"),
     ("insight_peek_opened", "Insight sneak peeks opened with videos"),
     ("insight_pass_bought", "$1 insight passes bought"),
+    ("learning_page_opened", "\"What the AI is learning\" opened"),
     ("mind_map_opened", "Mind map opened"),
     ("mind_map_centered", "Mind map ideas centred on"),
     ("weather_lookup", "Weather lookups"),

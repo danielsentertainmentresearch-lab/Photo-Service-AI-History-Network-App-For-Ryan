@@ -726,7 +726,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       for (final (tooltip, screen) in [
-        ('Memory', MemoryScreen),
+        ('What the AI is learning', MemoryScreen),
         ('Your data', DataScreen),
       ]) {
         await tester.tap(find.byTooltip(tooltip));

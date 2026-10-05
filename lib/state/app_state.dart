@@ -679,20 +679,6 @@ class AppState extends ChangeNotifier {
     await _reload();
   }
 
-  Future<void> updateMemory(
-    MemoryItem item,
-    String kind,
-    String content,
-  ) async {
-    await memoryRepo.save(item.copyWith(kind: kind, content: content.trim()));
-    await _reload();
-  }
-
-  Future<void> deleteMemory(MemoryItem item) async {
-    await memoryRepo.delete(item.id);
-    await _reload();
-  }
-
   /// Promotes an AI suggestion into long-term memory.
   Future<void> acceptSuggestion(LifeEvent event, MemorySuggestion s) async {
     await addMemory(s.kind, s.content, source: 'ai', eventId: event.id);

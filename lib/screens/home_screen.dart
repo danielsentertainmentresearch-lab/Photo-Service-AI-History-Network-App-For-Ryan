@@ -43,7 +43,7 @@ class HomeScreen extends StatelessWidget {
             onPressed: () => _push(context, const DataScreen()),
           ),
           IconButton(
-            tooltip: 'Memory',
+            tooltip: 'What the AI is learning',
             icon: const Icon(Icons.psychology_outlined),
             onPressed: () => _push(context, const MemoryScreen()),
           ),

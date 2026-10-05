@@ -321,21 +321,26 @@ void main() {
     expect(state.eventById('lake')!.title, 'Dare');
   });
 
-  testWidgets('memory screen adds and lists a memory', (tester) async {
+  testWidgets('the learning page is read-only and shows what the AI knows', (
+    tester,
+  ) async {
     await setUpState(tester);
     await tester.pumpWidget(app(const MemoryScreen()));
-    expect(find.textContaining('No memories yet'), findsOneWidget);
-    await tester.tap(find.text('Add memory'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Place'));
-    await tester.enterText(
-      find.byType(TextField).last,
-      'The lake is where we camped as kids',
+    expect(find.text('What the AI is learning'), findsOneWidget);
+    expect(find.text('Add memory'), findsNothing);
+    expect(find.byType(FloatingActionButton), findsNothing);
+    expect(find.byType(TextField), findsNothing);
+    // The seeded events name Sam and Fallen Leaf Lake.
+    expect(find.text('people'), findsOneWidget);
+
+    await tester.runAsync(
+      () => state.addMemory('person', 'Sam is my younger brother'),
     );
-    await tester.tap(find.text('Save'));
-    await settle(tester, () => state.memories.isNotEmpty);
-    expect(state.memories.single.kind, 'place');
-    expect(find.text('The lake is where we camped as kids'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('Some of what it remembers'), findsOneWidget);
+    expect(find.text('Sam is my younger brother'), findsOneWidget);
+    // Nothing on the page edits or deletes a memory.
+    expect(find.byType(Dismissible), findsNothing);
   });
 
   testWidgets('new event: the AI area takes no typing; the cursor starts '
