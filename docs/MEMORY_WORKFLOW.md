@@ -17,18 +17,15 @@ dream state (`docs/AI_SERVER.md` step 8), on the design decisions in the
 
 ## Getting Hermes the current code
 
-Hermes works from a read-only clone (the repository is public, so no login
-and no way to push). The 4 October Layer 0 copy is out of date.
+The owner downloads a fresh zip from GitHub at the start of each sitting
+and gives it to Hermes, who unzips it into a new folder each time (no
+login, no way to push):
 
-```bash
-git clone https://github.com/danielsentertainmentresearch-lab/Photo-Service-AI-History-Network-App-For-Ryan.git eventlens
-git -C eventlens pull                                   # before each sitting
-git -C eventlens fetch origin memory-architecture && \
-  git -C eventlens checkout memory-architecture       # work in progress
-```
+- The app as it is now: `.../archive/refs/heads/main.zip`
+- Work in progress: `.../archive/refs/heads/memory-architecture.zip`
 
-If the repository is made private, the owner downloads the zip from GitHub
-(Code, then Download ZIP) and passes it to her.
+(both under
+`https://github.com/danielsentertainmentresearch-lab/Photo-Service-AI-History-Network-App-For-Ryan`).
 
 ## Schedule (4 to 5 days)
 
