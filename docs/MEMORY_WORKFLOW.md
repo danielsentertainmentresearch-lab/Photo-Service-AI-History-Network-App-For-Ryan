@@ -15,6 +15,21 @@ dream state (`docs/AI_SERVER.md` step 8), on the design decisions in the
 - **A section finishes in one sitting** before it merges to `main`. A
   subsection ends at a ⏸ safe pause, where the owner can check usage.
 
+## Getting Hermes the current code
+
+Hermes works from a read-only clone (the repository is public, so no login
+and no way to push). The 4 October Layer 0 copy is out of date.
+
+```bash
+git clone https://github.com/danielsentertainmentresearch-lab/Photo-Service-AI-History-Network-App-For-Ryan.git eventlens
+git -C eventlens pull                                   # before each sitting
+git -C eventlens fetch origin memory-architecture && \
+  git -C eventlens checkout memory-architecture       # work in progress
+```
+
+If the repository is made private, the owner downloads the zip from GitHub
+(Code, then Download ZIP) and passes it to her.
+
 ## Schedule (4 to 5 days)
 
 | Day | Sitting | Who |
