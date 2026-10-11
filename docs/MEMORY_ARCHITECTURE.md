@@ -1,8 +1,9 @@
 # Memory architecture
 
-_Final draft, by Hermes, 11 October 2026 (Section 0.3). Claude's check and
-build notes follow her design in section 8. Waiting on Dan's approval;
-nothing is built until then._
+_Hermes's official final draft, 11 October 2026 (Section 0.3). Approved by
+Dan on 11 October 2026, with his answers and Claude's build notes in
+section 8. Where section 8 is more exact than sections 1 to 7, section 8
+governs the build._
 
 ## 1. Schema (v8)
 The memory system uses a row-based relational store. 
@@ -13,7 +14,7 @@ The memory system uses a row-based relational store.
 | **DreamState** | `id`, `foundation_statements` (list), `themes` (list), `version`, `event_ids`, `created_at` | AI (Dream Pass) |
 
 *   **AI-Written:** `content`, `sentiment`, `foundation_statements`, `themes`.
-*   **App-Filled:** `id`, `event_ids` (evidence mapping), `version` (increments), `parent_id` (links to previous version), `status`, `created_at`.
+*   **App-Filled:** `id`, `event_ids` (AI-cited evidence mapping, validated against app events), `version` (increments), `parent_id` (links to previous version), `status`, `created_at`.
 
 ## 2. Compact Rendering (Example)
 **Size Limit:** Max 2000 characters or 20 points.
@@ -40,32 +41,38 @@ The Dream Pass returns a structured JSON to update the state.
 ```
 
 ## 4. Key Mechanisms
-*   **Version Control:** Every revision creates a new row with an incremented `version` and a `parent_id` pointing to the previous state. Old rows are preserved unless `Erase` is invoked.
-*   **Row-Based Archival:** Instead of blobs, points are marked `archived`. This enables global operations (like `Erase` or spell-fixes) to run as standard database updates.
-*   **Pre-fetching:** To save credits, the app queries relevant historical points based on `event_ids` *before* the prompt is generated. Only the Dream Pass has the authority to request a "revival" of an archived point.
-*   **Sentiment Definition:** `polarity` (negative, mixed, neutral, positive) + `intensity` (low, medium, high). Includes the `source` and `event_ids` that constitute the evidence.
-*   **Privacy & Support:** Labels for "distress" or "crisis" trigger app-level support lines. These labels feed memory based on their classification. We do not filter events—we keep grief and loss to respect the Honored/continuity rule.
-*   **Erase:** A destructive button that removes all `LearnedPoint`, `DreamState`, and version history records globally. It operates on the database level, ensuring absolute erasure.
+*   **Version Control:** Every revision creates a new row with an incremented `version` and a `parent_id` pointing to the previous state. Old rows are preserved.
+*   **Row-Based Archival:** Points are marked `archived` to maintain row-level integrity for global operations like `Erase`.
+*   **Evidence Validation:** The AI cites `event_ids` during generation. The app validates these against the existing event log; if an ID is invalid, the point is rejected.
+*   **Support & Privacy:** Support readings are strictly isolated and never feed the memory system. This ensures that personal stories of loss or grief are preserved as history while preventing support-level data from being stored or learned.
+*   **Erase:** A destructive button that removes all `LearnedPoint`, `DreamState`, and version history records globally. It operates on the database level, ensuring absolute erasure, including all archived versions.
 
-## 5. Triggers & Migration
-*   **Triggers:** Runs every 5 **newly described** events or when an account reaches a milestone (e.g., account setup).
-*   **Migration:** Existing `memories` table records are assigned source `user` or `ai` and assigned to `v8` rows. `event_ids` are mapped from the event log.
-
-## 6. Quiet and Honored Names
+## 5. Quiet and Honored Names
 *   **Quiet:** Names are stored in memory but are never injected into the "Active" prompt. They remain in the DB but are skipped by the `EventDescriber` and `LearningPage`.
 *   **Honored:** Marked with an `[Honored]` tag in the active prompt. The AI is instructed to write with continuity and care, referencing past events mapped in `event_ids`.
 
-## 7. Open Questions for Dan
-1. **Who pays for the dream pass?** Do we deduct from the user's daily 20-credit allowance, or is this a server-side "free" operation that you absorb?
-2. **Rows vs. Blobs:** Claude suggested row-based archival for better database utility (spelling fixes/erase). Does this approach satisfy your compression requirements?
-3. **Sentiment Source:** Is `intensity` (low/med/high) sufficient, or should we include a specific `evidence_snippet` field from the event?
+## 6. Open Questions for Dan
+1. **Who pays for the dream pass?** Will this deduct from the user's daily 20-credit allowance, or is this a server-side "free" operation that you absorb?
+2. **Sentiment Evidence:** We have opted out of an `evidence_snippet` field to keep sentiment focused on polarity/intensity without violating privacy or cluttering records. Does this align with your design needs?
 
-## 8. Claude's check and build notes (Section 0.2, second pass)
+## 7. Build Notes (Rules & Constraints)
+*   **Support Readings:** Strictly isolated from memory feeding.
+*   **Evidence Handling:** AI cites IDs; app validates. No quotes stored.
+*   **Erase:** Destroys all versions, rows, and history.
+*   **Memory Migration:** `source` (ai/answer/user) is preserved for all migrated records.
 
-Hermes's revision answers all 14 points from the first review. Four
-needed tightening: support readings, evidence, the reach of Quiet, and
-migration. The notes below make them exact, so the build follows the
-fixed rules. Where they differ from sections 1 to 7, these notes govern.
+## 8. Dan's answers and Claude's build notes
+
+### Dan's answers (11 October 2026)
+
+1. **Who pays for a dream pass:** the person's daily 20 credits. When
+   they're used up, the pass and other AI work wait for the next reset
+   (`docs/MEMORY_WORKFLOW.md`).
+2. **Evidence snippet:** no, in line with rule 6. `event_ids` are the
+   evidence, and no quotes are stored.
+3. **Rows, not blobs**, as in section 4.
+
+### Build notes
 
 1. **Support readings stay out of memory (rule 10).** The support reading
    (`support_level`) isn't a label and never reaches the dream pass, not
@@ -108,13 +115,3 @@ fixed rules. Where they differ from sections 1 to 7, these notes govern.
    to active points and is chosen by relevance to the request. Honored
    names are marked `[Honored]`. The dream pass itself may see more,
    within one request (rule 4).
-
-### Answers to the open questions (section 7)
-
-1. **Who pays:** the person's daily 20 credits, with the hold until reset
-   (Dan, 11 October 2026).
-2. **Rows vs. blobs:** rows. There was no separate compression
-   requirement; rows make erase, spelling fixes and the export simple.
-3. **Evidence snippet:** no. `event_ids` are the evidence. A snippet could
-   pull free-write text into memory (rule 6) and would cost prompt space.
-   Recommended; for Dan to confirm.
