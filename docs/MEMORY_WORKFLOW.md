@@ -48,6 +48,19 @@ login, no way to push):
   questions. ⏸
 - **0.3** Hermes revises once if needed (single pass). ⏸
 
+### Owner decisions from the review (11 October 2026)
+
+- **A dream pass is paid from the person's daily 20 credits**, like every
+  other AI feature (Section 0.2, open question on cost). Credits are ample
+  even for heavy users. When the allowance is used up, the pass waits and
+  runs after the next reset; nothing is lost.
+- **The same hold applies to the other AI features.** Work that can't run
+  because the allowance is used up waits for the next reset instead of
+  failing.
+- **To watch after release.** If metrics show that the limit becomes a real
+  pain point, the owner may fund a group of AI-backed features from ad
+  revenue. This is decided later, from the metrics.
+
 ## Section 1: storage foundation
 
 - **1.1** Records and version history: model, database v8, repository,
