@@ -62,10 +62,9 @@ The Dream Pass returns a structured JSON to update the state.
 
 ## 8. Claude's check and build notes (Section 0.2, second pass)
 
-Hermes's revision fixes 12 of the 14 points from the first review: erase,
-versions, sentiment, pre-fetching, rows, the revise step, rendering, Quiet
-and Honored, triggers, which fields are AI-written or app-filled, and open
-questions. The notes below make the rest exact, so the build follows the
+Hermes's revision answers all 14 points from the first review. Four
+needed tightening: support readings, evidence, the reach of Quiet, and
+migration. The notes below make them exact, so the build follows the
 fixed rules. Where they differ from sections 1 to 7, these notes govern.
 
 1. **Support readings stay out of memory (rule 10).** The support reading
