@@ -46,6 +46,7 @@ class LibraryExporter {
     required List<MemoryItem> memories,
     GraphSnapshot? graph,
     DateTime? exportedAt,
+    String memoryFile = '',
   }) async {
     final archive = Archive();
     final when = exportedAt ?? DateTime.now();
@@ -135,13 +136,16 @@ class LibraryExporter {
           'weather: ${_yamlString('${w.condition}, ${w.temperatureC.round()}°C')}',
         );
       }
-      note.writeln('---\n\n# ${e.title.isEmpty ? 'Untitled event' : e.title}\n');
+      note.writeln(
+        '---\n\n# ${e.title.isEmpty ? 'Untitled event' : e.title}\n',
+      );
 
       final chapter = chapterOf[e.id];
       final chapterPath = chapter == null
           ? null
           : 'Chapters/${chapterNote[chapter.id]}';
-      final bookPath = chapter?.bookId == null || bookNote[chapter!.bookId] == null
+      final bookPath =
+          chapter?.bookId == null || bookNote[chapter!.bookId] == null
           ? null
           : 'Books/${bookNote[chapter.bookId]}';
       final links = <String>[
@@ -256,6 +260,9 @@ class LibraryExporter {
         }),
       ),
     );
+    if (memoryFile.isNotEmpty) {
+      archive.addFile(ArchiveFile.string('$_root/memory.md', memoryFile));
+    }
     archive.addFile(
       ArchiveFile.string('$_root/$basicCsvName', withBom(basicCsv(ordered))),
     );
@@ -272,12 +279,12 @@ class LibraryExporter {
       ArchiveFile.string(
         '$_root/README.txt',
         'EventLens export\n\n'
-        'Vault/ opens in Obsidian (Open folder as vault). Its graph view\n'
-        'shows events linked to their people, places, tags, chapters,\n'
-        'books and themes. data.json holds everything in one file.\n'
-        '$basicCsvName opens in any spreadsheet app.\n'
-        '$analysisCsvName loads into Python tools such as pandas in a\n'
-        'Jupyter notebook; $dictionaryName explains each column.\n',
+            'Vault/ opens in Obsidian (Open folder as vault). Its graph view\n'
+            'shows events linked to their people, places, tags, chapters,\n'
+            'books and themes. data.json holds everything in one file.\n'
+            '$basicCsvName opens in any spreadsheet app.\n'
+            '$analysisCsvName loads into Python tools such as pandas in a\n'
+            'Jupyter notebook; $dictionaryName explains each column.\n',
       ),
     );
     return archive;
@@ -300,7 +307,8 @@ class LibraryExporter {
     Directory directory, {
     DateTime? exportedAt,
   }) async {
-    final stamp = DateFormat('yyyy-MM-dd_HHmm').format(exportedAt ?? DateTime.now());
+    final stamp = DateFormat('yyyy-MM-dd_HHmm')
+        .format(exportedAt ?? DateTime.now());
     final file = File(p.join(directory.path, 'EventLens-export-$stamp.zip'));
     final output = OutputFileStream(file.path);
     try {
@@ -319,6 +327,7 @@ class LibraryExporter {
     required List<MemoryItem> memories,
     required GraphSnapshot? graph,
     required Directory directory,
+    String memoryFile = '',
   }) {
     final exporter = LibraryExporter(vault);
     return Isolate.run(() async {
@@ -326,6 +335,7 @@ class LibraryExporter {
         events: events,
         memories: memories,
         graph: graph,
+        memoryFile: memoryFile,
       );
       final file = await exporter.writeZip(archive, directory);
       return file.path;

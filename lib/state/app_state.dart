@@ -18,6 +18,7 @@ import '../data/image_vault.dart';
 import '../data/memory_repository.dart';
 import '../models/event.dart';
 import '../models/memory_graph.dart';
+import '../models/learned_point.dart';
 import '../models/memory_item.dart';
 import '../models/name_spelling.dart';
 import '../models/name_state.dart';
@@ -121,6 +122,8 @@ class AppState extends ChangeNotifier {
 
   List<LifeEvent> _events = const [];
   List<MemoryItem> _memories = const [];
+  List<LearnedPoint> _points = const [];
+  DreamState? _dream;
   bool _hasApiKey = false;
   bool _loaded = false;
   GraphSnapshot? _graph;
@@ -129,6 +132,12 @@ class AppState extends ChangeNotifier {
 
   List<LifeEvent> get allEvents => _events;
   List<MemoryItem> get memories => _memories;
+
+  /// The latest version of every learned point, whatever its status.
+  List<LearnedPoint> get learnedPoints => _points;
+
+  /// The current dream state, or null before the first dream pass.
+  DreamState? get dream => _dream;
   bool get hasApiKey => _hasApiKey;
 
   /// True when the AI features can run: through the owner's server, or with
@@ -186,7 +195,12 @@ class AppState extends ChangeNotifier {
 
   Future<void> _reload() async {
     _events = await events.all();
-    _memories = await memoryRepo.all();
+    _points = await memoryRepo.current();
+    _memories = [
+      for (final p in _points)
+        if (p.isActive) p.toMemoryItem(),
+    ];
+    _dream = await memoryRepo.dream();
     if (_events.length >= exportUnlockEvents && !settings.exportUnlocked) {
       await settings.setExportUnlocked();
     }
@@ -688,15 +702,16 @@ class AppState extends ChangeNotifier {
     String? eventId,
   }) async {
     if (content.trim().isEmpty) return;
-    await memoryRepo.save(
-      MemoryItem(
-        id: _uuid.v4(),
-        kind: kind,
-        content: content.trim(),
-        source: source,
-        eventId: eventId,
-        createdAt: DateTime.now(),
+    await memoryRepo.add(
+      kind: kind,
+      content: content.trim(),
+      source: source,
+      sentiment: const Sentiment(
+        polarity: 'neutral',
+        intensity: 'low',
+        source: pendingSentiment,
       ),
+      eventIds: [?eventId],
     );
     await _reload();
   }
@@ -808,7 +823,10 @@ class AppState extends ChangeNotifier {
 
   static bool _featuresAny(LifeEvent e, Set<String> names) =>
       names.isNotEmpty &&
-      [...e.people, ...e.places].any((n) => names.contains(n.trim().toLowerCase()));
+      [
+        ...e.people,
+        ...e.places,
+      ].any((n) => names.contains(n.trim().toLowerCase()));
 
   /// The person put the support line on this event away.
   Future<void> dismissSupport(String eventId) async {
@@ -851,12 +869,7 @@ class AppState extends ChangeNotifier {
         changed++;
       }
     }
-    for (final m in await memoryRepo.all()) {
-      final content = fix(m.content);
-      if (content != m.content) {
-        await memoryRepo.save(m.copyWith(content: content));
-      }
-    }
+    await memoryRepo.fixSpelling(fix);
     final graph = _graph;
     if (graph != null) {
       final next = graph.copyWith(

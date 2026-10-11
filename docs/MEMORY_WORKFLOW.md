@@ -70,6 +70,9 @@ login, no way to push):
   includes a readable `memory.md`; memories with source `answer` migrate
   in. ⏸
 - **End:** merge to `main` (nothing visible changes yet).
+- **Done 11 October 2026.** Database v8, learned points and dream states
+  with versions, the migration, erase, spelling fixes, and `memory.md` in
+  the full export (`test/memory_v8_test.dart`).
 
 ## Section 2: the dream pass
 

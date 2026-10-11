@@ -115,3 +115,11 @@ The Dream Pass returns a structured JSON to update the state.
    to active points and is chosen by relevance to the request. Honored
    names are marked `[Honored]`. The dream pass itself may see more,
    within one request (rule 4).
+9. **Built in Section 1 (11 October 2026).** Database v8 holds two tables,
+   `learned_points` and `dream_states` (`lib/data/memory_repository.dart`,
+   `lib/models/learned_point.dart`). Each point row also carries a
+   `point_id`, shared by all its versions, so prompts and the dream pass
+   can name a point that stays the same across revisions. Archiving and
+   retiring write new versions too, so no stored row ever changes (except
+   for a spelling fix). Points saved from answers before any dream pass
+   has run carry the sentiment source `pending`.

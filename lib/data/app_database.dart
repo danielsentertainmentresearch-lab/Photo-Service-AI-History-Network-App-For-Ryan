@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:sqflite/sqflite.dart';
 
 /// Opens (and migrates) the on-device SQLite database.
@@ -5,7 +7,7 @@ import 'package:sqflite/sqflite.dart';
 /// [factory] and [path] are injectable so tests can use an in-memory FFI
 /// database instead of the platform plugin.
 class AppDatabase {
-  static const int version = 7;
+  static const int version = 8;
 
   static Future<Database> open({DatabaseFactory? factory, String? path}) async {
     final dbFactory = factory ?? databaseFactory;
@@ -23,6 +25,7 @@ class AppDatabase {
           await _createV5(db);
           await _createV6(db);
           await _createV7(db);
+          await _createV8(db);
         },
         onUpgrade: (db, oldVersion, _) async {
           if (oldVersion < 2) await _createV2(db);
@@ -31,6 +34,7 @@ class AppDatabase {
           if (oldVersion < 5) await _createV5(db);
           if (oldVersion < 6) await _createV6(db);
           if (oldVersion < 7) await _createV7(db);
+          if (oldVersion < 8) await _createV8(db);
         },
       ),
     );
@@ -152,5 +156,72 @@ class AppDatabase {
         PRIMARY KEY (name, kind)
       )
     ''');
+  }
+
+  /// v8: the app's own memory (docs/MEMORY_ARCHITECTURE.md). Learned points
+  /// and the dream state, each kept as versions that are never overwritten.
+  /// Every row of the old memories table moves in as a first version, with
+  /// its source and event kept, and the old table is removed.
+  static Future<void> _createV8(Database db) async {
+    await db.execute('''
+      CREATE TABLE learned_points (
+        id TEXT PRIMARY KEY,
+        point_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        parent_id TEXT,
+        kind TEXT NOT NULL,
+        content TEXT NOT NULL,
+        polarity TEXT NOT NULL,
+        intensity TEXT NOT NULL,
+        sentiment_source TEXT NOT NULL,
+        source TEXT NOT NULL,
+        event_ids TEXT NOT NULL DEFAULT '[]',
+        status TEXT NOT NULL,
+        reason TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        UNIQUE (point_id, version)
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX idx_learned_points_point ON learned_points (point_id)',
+    );
+    await db.execute('''
+      CREATE TABLE dream_states (
+        id TEXT PRIMARY KEY,
+        version INTEGER NOT NULL UNIQUE,
+        parent_id TEXT,
+        foundation_statements TEXT NOT NULL DEFAULT '[]',
+        themes TEXT NOT NULL DEFAULT '[]',
+        event_ids TEXT NOT NULL DEFAULT '[]',
+        created_at INTEGER NOT NULL
+      )
+    ''');
+
+    final old = await db.query(
+      'sqlite_master',
+      where: 'type = ? AND name = ?',
+      whereArgs: ['table', 'memories'],
+    );
+    if (old.isEmpty) return;
+    for (final m in await db.query('memories')) {
+      final eventId = m['event_id'] as String?;
+      await db.insert('learned_points', {
+        'id': m['id'],
+        'point_id': m['id'],
+        'version': 1,
+        'parent_id': null,
+        'kind': m['kind'],
+        'content': m['content'],
+        'polarity': 'neutral',
+        'intensity': 'low',
+        'sentiment_source': 'migrated',
+        'source': m['source'],
+        'event_ids': jsonEncode([?eventId]),
+        'status': 'active',
+        'reason': '',
+        'created_at': m['created_at'],
+      });
+    }
+    await db.execute('DROP TABLE memories');
   }
 }

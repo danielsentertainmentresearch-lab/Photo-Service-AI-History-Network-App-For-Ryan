@@ -10,17 +10,12 @@ String memoryKindLabel(String kind) => switch (kind) {
 };
 
 /// Marks memories that came from answering the AI's who/where questions.
-///
-/// Temporary home (owner, 5 Oct 2026): until the app's own memory file and
-/// dream state are built (docs/AI_SERVER.md, step 8), answers are kept as
-/// ordinary memories under this source so they are easy to find, move or
-/// redo. When step 8 lands, migrate every memory with this source into the
-/// app's memory file as a learned identifier, with its event id as the
-/// evidence, then remove it from this list.
+/// Since database v8 they live in the app's own memory as learned points
+/// with this source, their event as evidence (docs/MEMORY_ARCHITECTURE.md).
 const answerSource = 'answer';
 
-/// A durable piece of context ("contextual memory") the AI reads before
-/// describing any event, e.g. "Sam is my younger brother; he plays drums".
+/// What the AI currently holds, as the rest of the app reads it: the latest
+/// version of an active learned point (`lib/models/learned_point.dart`).
 class MemoryItem {
   final String id;
   final String kind;

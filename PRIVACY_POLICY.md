@@ -1,6 +1,6 @@
 # EventLens Privacy Policy
 
-_Last updated: 6 October 2026_
+_Last updated: 11 October 2026_
 
 EventLens ("the app") lets you record events with photos and notes and have an
 AI write a detailed account of each one. This policy explains what the app
@@ -110,7 +110,8 @@ No account details, photos or notes are sent to either service.
 
 The Your data screen measures your library on your phone; nothing about it
 is sent anywhere. Its exports (a spreadsheet file, and once you reach 100
-events a zip with your photos, notes and data files) are created on your
+events a zip with your photos, notes, data files and a readable copy of
+what the AI remembers) are created on your
 phone, and where they go next is up to you, through your phone's share
 sheet.
 

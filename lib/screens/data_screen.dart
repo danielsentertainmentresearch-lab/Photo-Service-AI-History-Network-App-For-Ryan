@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../ai/data_platform_advisor.dart';
 import '../models/library_meters.dart';
+import '../models/memory_file.dart';
 import 'insight_preview_screen.dart';
 import '../services/data_files.dart';
 import '../services/export_service.dart';
@@ -209,7 +210,8 @@ class _LabelSheetState extends State<_LabelSheet> {
     final date = DateFormat.yMMMd();
     final events = [
       for (final e in state.allEvents)
-        if (e.experienceLabels.contains(widget.label) || _removed.contains(e.id))
+        if (e.experienceLabels.contains(widget.label) ||
+            _removed.contains(e.id))
           e,
     ]..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
 
@@ -279,8 +281,7 @@ class _LabelSheetState extends State<_LabelSheet> {
                         TextButton(
                           onPressed: !state.aiReady || state.labelling
                               ? null
-                              : () =>
-                                    state.labelExperience(e.id, again: true),
+                              : () => state.labelExperience(e.id, again: true),
                           child: Text(
                             state.labelling ? 'Labelling…' : 'Label again',
                           ),
@@ -525,6 +526,11 @@ class _ExportCardState extends State<_ExportCard> {
                 memories: state.memories,
                 graph: state.graphSnapshot,
                 directory: dir,
+                memoryFile: memoryMarkdown(
+                  state.learnedPoints,
+                  state.dream,
+                  at: DateTime.now(),
+                ),
               ),
               primary: true,
             ),
