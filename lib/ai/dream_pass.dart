@@ -96,7 +96,15 @@ class DreamRequest {
   /// `p1` -> point id (active and archived points).
   final Map<String, String> pointRefs;
 
-  const DreamRequest(this.body, this.eventRefs, this.pointRefs);
+  /// The references in [pointRefs] that name archived points.
+  final Set<String> archivedRefs;
+
+  const DreamRequest(
+    this.body,
+    this.eventRefs,
+    this.pointRefs, [
+    this.archivedRefs = const {},
+  ]);
 }
 
 /// The dream pass: reads what happened since the last pass and what the AI
@@ -308,6 +316,9 @@ Rules:
 
     final active = input.active.map(pointLine).toList();
     final archived = input.archived.map(pointLine).toList();
+    final archivedRefs = {
+      for (var i = active.length + 1; i <= pointRefs.length; i++) 'p$i',
+    };
 
     final dream = input.dream;
     final dreamText = dream == null
@@ -368,6 +379,7 @@ Rules:
       },
       eventRefs,
       pointRefs,
+      archivedRefs,
     );
   }
 

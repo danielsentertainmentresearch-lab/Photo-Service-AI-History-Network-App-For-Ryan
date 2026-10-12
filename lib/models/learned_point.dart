@@ -31,6 +31,9 @@ const migratedSentiment = 'migrated';
 /// (answers to the AI's questions).
 const pendingSentiment = 'pending';
 
+/// Sentiment source for readings made by a dream pass.
+const dreamSentiment = 'dream';
+
 /// How an event or a person felt: a data point, never tone (rule 5).
 class Sentiment {
   final String polarity;
