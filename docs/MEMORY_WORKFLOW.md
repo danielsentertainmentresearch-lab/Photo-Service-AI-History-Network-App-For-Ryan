@@ -234,8 +234,14 @@ learns" panel with changes per pass, and a monthly trend of labels marked
 not right under "Free-write labels" (it should fall as the AI learns).
 "Memories saved" is relabelled as suggestions, retired 12 Oct 2026. Demo
 data draws from its own stream, so every earlier demo number is unchanged.
-Stage log and `CLAUDE.md` updated. Waiting on: Dan's review of the new
-prompt wording, then his word to merge into `main`.
+Stage log and `CLAUDE.md` updated.
+
+**Done 12 October 2026**, on its own branch, `memory-section-3`, merged to
+`main` on Dan's word after he reviewed and approved all of its wording in
+Hermes's place. Tests: `test/memory_prompt_test.dart` (3.1),
+`test/learning_view_test.dart` and the learning page screen test (3.2),
+and the owner dashboard's `test_dashboard.py` (3.3). Section 4 starts only
+on Dan's word.
 
 ## Section 4: debugging and testing
 
