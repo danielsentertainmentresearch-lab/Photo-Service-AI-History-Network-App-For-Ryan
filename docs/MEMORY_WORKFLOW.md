@@ -97,25 +97,36 @@ until 2.6.
 | 2.5 | Coordinator: when to dream (every N events, on app open when due), one at a time, failure and retry, saving a new version; tests | ⏸ P5: whole app test suite passes | 2.6 |
 | 2.6 | Privacy policy, Play data-safety answers, SUPPORT_AND_SAFETY.md; Hermes reviews the prompt wording; merge to `main` | ⏸ P6: merged, APK builds | Section 3 |
 
-**Progress (12 Oct 2026):** 2.6 in progress: privacy policy, data-safety
-answers and SUPPORT_AND_SAFETY.md updated; Hermes approved the prompt wording
-as written (`docs/handoffs/2026-10-12-hermes-to-claude-section-2-wording.md`);
-merge to `main` on Dan's word. P5 reached: the coordinator
-(`lib/state/dream_coordinator.dart`, `test/dream_coordinator_test.dart`). A
-pass runs after every 5 newly described events, or on a milestone, at most
-once a day and one at a time, on opening the app and after an event is
-described. When the allowance is used up it waits for the next reset;
-other failures retry after an hour; unread events stay unread until a pass
-reads them. A pass is saved in one transaction. After "Erase what the AI
-remembers", the next pass reads only events described afterwards. The
-timeline graph unlocking is wired as a milestone; "account fully set up"
-is wired when accounts are connected (`dreams.milestone()`). Dashboard:
-`dream_pass_run`. P4: the server's `dream` task, 2 credits,
-up to 16000 output tokens (`supabase/functions/ai/logic.ts`). P3: memory for prompts
-(`lib/models/memory_prompt.dart`, `test/memory_prompt_test.dart`). P2: the reply checker
-(`lib/ai/dream_reply.dart`, `test/dream_reply_test.dart`). P1: the request and reply format
-(`lib/ai/dream_pass.dart`, `test/dream_pass_test.dart`). Prompts name
-events `e1, e2, ...` and points `p1, p2, ...`; the checker maps them back.
+**Done 12 October 2026**, on its own branch, `claude/quirky-wozniak-zfe9g6`
+(owner), merged to `main`:
+
+- **2.1** The request and reply format (`lib/ai/dream_pass.dart`). Prompts
+  name events `e1, e2, ...` and points `p1, p2, ...`; the checker maps them
+  back.
+- **2.2** The reply checker (`lib/ai/dream_reply.dart`): real evidence,
+  limits, no duplicates, no quotes of 6 or more words from a free write, one
+  change per point, no Quiet names in the dream state. The reasoning is
+  never kept.
+- **2.3** Memory for prompts (`lib/models/memory_prompt.dart`), used from
+  Section 3.1.
+- **2.4** The server's `dream` task: 2 credits, up to 16000 output tokens
+  (`supabase/functions/ai/logic.ts`).
+- **2.5** The coordinator (`lib/state/dream_coordinator.dart`): after every
+  5 newly described events or a milestone, at most once a day, one at a
+  time, on opening the app and after an event is described. A used-up
+  allowance waits for the next reset; other failures retry after an hour;
+  unread events stay unread until a pass reads them. A pass is saved in one
+  transaction. After "Erase what the AI remembers", the next pass reads only
+  events described afterwards. The timeline graph unlocking is wired as a
+  milestone; "account fully set up" is wired when accounts are connected
+  (`dreams.milestone()`). Dashboard: `dream_pass_run`.
+- **2.6** Privacy policy, Play data-safety answers and SUPPORT_AND_SAFETY.md
+  updated; Hermes approved the prompt wording as written
+  (`docs/handoffs/2026-10-12-hermes-to-claude-section-2-wording.md`).
+
+Tests: `test/dream_pass_test.dart`, `test/dream_reply_test.dart`,
+`test/memory_prompt_test.dart`, `test/dream_coordinator_test.dart` and the
+server's `logic_test.ts`.
 
 ### Settled with Hermes (12 October 2026)
 
