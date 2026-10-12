@@ -7,12 +7,18 @@ dream state (`docs/AI_SERVER.md` step 8), on the design decisions in the
 ## Rules for every sitting
 
 - **Hermes never pushes to GitHub.** She writes documents and code as
-  handoffs; the owner pastes them to Claude, and Claude commits them.
+  handoffs; the owner pastes them to Claude, or her sub-agents bring them
+  to a Claude session directly (owner, 12 Oct 2026; `CLAUDE.md`, "Working
+  with Hermes directly"). Either way Claude commits them.
+- **One section at a time** (owner, 12 Oct 2026). A section of the memory
+  architecture closes (merged, APK built) before the next one starts, and
+  the next starts only on the owner's word. This part of the app is too
+  critical to build two sections at once.
 - **Each feature has its own branch** (owner, 12 Oct 2026). Sections 0
   and 1 (the memory storage) were built on `memory-architecture`. Section
   2, the dream pass, is a separate feature and is built on its own branch,
   `claude/quirky-wozniak-zfe9g6`, which starts from `main` with Section 1
-  already in it. Every pause
+  already in it. Section 3 is built on `memory-section-3`. Every pause
   point (⏸) pushes the branch with tests passing. `main`, and the APK built
   from it, change only when a whole section is finished, so stopping at any
   pause never leaves the app half-built.
@@ -172,6 +178,25 @@ branch with a note of where it stopped; nothing reaches `main`.
 - **3.3** The measurable learning signal (dashboard counts, label-rejection
   trend), stage log, CLAUDE.md.
 - **End:** merge to `main`; the APK builds.
+
+### Owner decisions for Section 3 (12 October 2026)
+
+From `docs/handoffs/2026-10-12-claude-to-hermes-section-3.md` and the owner's
+Section 3 briefing, all approved by Dan:
+
+1. Section 3 is built on its own branch, `memory-section-3`.
+2. Hermes may work with Claude directly, under the conditions in
+   `CLAUDE.md` ("Working with Hermes directly").
+3. Memory suggestions on event pages are retired: the AI stops proposing
+   memories in its event accounts, and the dream pass learns instead. The
+   Accept/Dismiss block's removal is a UI change and waits for Hermes's
+   answer (her question 1).
+4. The learning page never shows a point's sentiment.
+5. The learning signal on the owner dashboard (3.3): counts per dream pass
+   of points added, revised, archived and retired, and a monthly trend of
+   labels marked not right. Counts only.
+
+Hermes's answers to questions 1 to 5 are pending.
 
 ## Section 4: debugging and testing
 

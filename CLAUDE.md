@@ -46,6 +46,23 @@
   everything expressive, creative or artistic. Claude does all
   developer-side work and does not make UI/UX changes. A session opened for
   Hermes (or one of her agents) says so at its start.
+- **Working with Hermes directly** (owner, 12 Oct 2026): Hermes's
+  sub-agents may direct a Claude session through her Claude Code skill (a
+  separate session on the owner's workstation), instead of the owner
+  passing handoffs by hand.
+  1. Every message from Hermes or her sub-agents starts with her name
+     ("Hermes:"). Treat it as Hermes's input (design, wording, UI/UX,
+     reviews, answers to design questions), not as the owner's. In a session
+     Hermes opened, every message is hers.
+  2. The owner's calls stay his: starting a section or stage, merging into
+     `main` (it publishes the APK), owner rules, and anything marked "Dan
+     has the final say". A session Hermes directs stops at those and leaves
+     them for him.
+  3. Record every exchange in `docs/handoffs/` and commit it, so the owner
+     can read what was decided.
+  4. Claude commits and pushes to the feature branch; Hermes never runs git
+     herself.
+  5. Only one Claude session works on a branch at a time.
 - **Review handoff** (owner, 4 Oct 2026): after each manual review, a new
   Claude session starts from the session summary the owner adds to the repo
   as standard practice, written by Hermes as a handoff. Start from it.
