@@ -4,7 +4,8 @@ import 'dart:typed_data';
 import 'package:eventlens/ai/anthropic_ai_client.dart';
 import 'package:eventlens/ai/event_describer.dart';
 import 'package:eventlens/models/event.dart';
-import 'package:eventlens/models/memory_item.dart';
+import 'package:eventlens/models/learned_point.dart';
+import 'package:eventlens/models/memory_prompt.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 LifeEvent _event({String id = 'e1', String notes = 'Sam and I at the lake'}) {
@@ -58,15 +59,24 @@ class _FakeAIClient implements AIClient {
 void main() {
   final describer =
       EventDescriber(client: AnthropicAIClient(apiKey: 'sk-ant-test'));
-  final memories = [
-    MemoryItem(
-      id: 'm1',
-      kind: 'person',
-      content: 'Sam is my younger brother',
-      source: 'user',
-      createdAt: DateTime(2026),
-    ),
-  ];
+  LearnedPoint point(String id, String content) => LearnedPoint(
+        id: id,
+        pointId: id,
+        version: 1,
+        kind: 'person',
+        content: content,
+        sentiment: const Sentiment(
+          polarity: 'positive',
+          intensity: 'medium',
+          source: dreamSentiment,
+        ),
+        source: 'ai',
+        eventIds: const [],
+        status: pointActive,
+        createdAt: DateTime(2026),
+      );
+  final memory =
+      MemoryContext(points: [point('m1', 'Sam is my younger brother')]);
 
   test('the free write never goes to the AI, and the account stays factual',
       () {
@@ -74,7 +84,7 @@ void main() {
     final body = describer.buildRequest(
       event: _event().copyWith(experience: private),
       jpegs: [Uint8List.fromList([1])],
-      memories: memories,
+      memory: memory,
       history: [_event(id: 'e0').copyWith(experience: private, summary: 's')],
     );
     expect(jsonEncode(body), isNot(contains(private)));
@@ -88,7 +98,7 @@ void main() {
     final body = describer.buildRequest(
       event: _event(),
       jpegs: [Uint8List.fromList([1, 2]), Uint8List.fromList([3])],
-      memories: memories,
+      memory: memory,
       history: [earlier],
     );
 
@@ -99,8 +109,13 @@ void main() {
     expect(body['output_config']['format']['type'], 'json_schema');
 
     final system = body['system'] as List;
+    // The fixed instructions carry the cache breakpoint; the memory block,
+    // chosen for each event, follows it.
+    expect(system.first['text'], EventDescriber.instructions);
+    expect(system.first['cache_control'], {'type': 'ephemeral'});
+    expect(system.last['text'], contains('MEMORY_V8'));
     expect(system.last['text'], contains('Sam is my younger brother'));
-    expect(system.last['cache_control'], {'type': 'ephemeral'});
+    expect((system.last as Map).containsKey('cache_control'), isFalse);
 
     final content = body['messages'][0]['content'] as List;
     final images = content.where((b) => b['type'] == 'image').toList();
@@ -113,7 +128,47 @@ void main() {
   });
 
   test('empty memory is stated explicitly', () {
-    expect(EventDescriber.memoryBlock(const []), contains('empty'));
+    final block = EventDescriber.memoryBlock(MemoryContext.empty);
+    expect(block, contains('[DREAM: none yet]'));
+    expect(block, contains('[ACTIVE: none]'));
+  });
+
+  test('the memory block leaves Quiet names out unless the event involves '
+      'them', () {
+    final quiet = MemoryContext(
+      points: [
+        point('ben', 'Ben coached the Sunday team'),
+        point('ana', 'Ana is a close friend'),
+      ],
+      quietNames: const {'ben'},
+    );
+    String block(LifeEvent event) {
+      final body = describer.buildRequest(
+        event: event,
+        jpegs: const [],
+        memory: quiet,
+        history: const [],
+      );
+      return (body['system'] as List).last['text'] as String;
+    }
+
+    final plain = block(_event(notes: 'A walk by the lake'));
+    expect(plain, contains('Ana is a close friend'));
+    expect(plain, isNot(contains('Ben')));
+
+    // The person brought Ben up in their notes, so his points may be used
+    // for this one event (build note 3).
+    final involved = block(_event(notes: 'Ben came along'));
+    expect(involved, contains('Ben coached the Sunday team'));
+  });
+
+  test('the AI no longer proposes memories', () {
+    final props = EventDescriber.outputSchema['properties'] as Map;
+    expect(props.containsKey('memory_suggestions'), isFalse);
+    expect(EventDescriber.outputSchema['required'],
+        isNot(contains('memory_suggestions')));
+    expect(EventDescriber.instructions, isNot(contains('memory_suggestions')));
+    expect(EventDescriber.instructions, contains('MEMORY_V8'));
   });
 
   test('parses a structured account', () {
@@ -129,8 +184,8 @@ void main() {
       ],
     }));
     expect(account.title, 'Sunset at the lake');
+    // An older reply that still carries suggestions parses; they are ignored.
     expect(account.people, ['Sam']);
-    expect(account.memorySuggestions.single.kind, 'place');
     expect(account.model, 'claude-opus-5-5');
     expect(account.questions, isEmpty);
   });
@@ -208,7 +263,7 @@ void main() {
     final account = await EventDescriber(client: backend).describe(
       event: _event(),
       jpegs: [Uint8List.fromList([1])],
-      memories: memories,
+      memory: memory,
       history: const [],
     );
     expect(account.title, 'Sunset at the lake');

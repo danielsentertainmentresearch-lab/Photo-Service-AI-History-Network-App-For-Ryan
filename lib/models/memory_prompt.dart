@@ -1,3 +1,4 @@
+import 'event.dart';
 import 'learned_point.dart';
 import 'name_state.dart';
 
@@ -124,5 +125,57 @@ class MemoryPrompt {
       else
         '[ACTIVE:\n${shown.join('\n')}\n]',
     ].join('\n');
+  }
+}
+
+/// Everything a prompt needs to read the memory: the latest points, the
+/// dream state, the names the person keeps Quiet or Honored, and each
+/// event's date (for ordering by recent evidence). Section 3.1.
+class MemoryContext {
+  final List<LearnedPoint> points;
+  final DreamState? dream;
+  final Set<String> quietNames;
+  final Set<String> honoredNames;
+  final Map<String, DateTime> eventDates;
+
+  const MemoryContext({
+    this.points = const [],
+    this.dream,
+    this.quietNames = const {},
+    this.honoredNames = const {},
+    this.eventDates = const {},
+  });
+
+  static const empty = MemoryContext();
+
+  /// The compact memory text for a request involving [requestNames].
+  String render({Iterable<String> requestNames = const []}) =>
+      MemoryPrompt.render(
+        points: points,
+        dream: dream,
+        requestNames: requestNames,
+        quietNames: quietNames,
+        honoredNames: honoredNames,
+        eventDates: eventDates,
+      );
+
+  /// The people and places a request about [event] involves: its own people,
+  /// places and place, and any name from [known] that its title, notes or
+  /// place mention. A Quiet name counts only through these, because the
+  /// person brought it up (docs/MEMORY_ARCHITECTURE.md, build note 3).
+  static List<String> namesInvolved(
+    LifeEvent event, {
+    Iterable<String> known = const [],
+  }) {
+    final text = '${event.title} ${event.notes} ${event.location}';
+    final names = <String>{
+      for (final n in [...event.people, ...event.places, event.location])
+        if (n.trim().isNotEmpty) n.trim().toLowerCase(),
+    };
+    for (final n in known) {
+      final name = n.trim().toLowerCase();
+      if (name.isNotEmpty && mentionsAny(text, {name})) names.add(name);
+    }
+    return names.toList()..sort();
   }
 }

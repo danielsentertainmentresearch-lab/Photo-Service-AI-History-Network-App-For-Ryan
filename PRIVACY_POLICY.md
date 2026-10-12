@@ -36,7 +36,7 @@ your advertising ID in your phone's settings. Google's policy:
 
 ## What stays on your device
 
-Your photos, notes, free writes, event descriptions and saved memories are stored only in
+Your photos, notes, free writes, event descriptions and what the AI remembers are stored only in
 the app's private storage on your phone. Each account signed in on the
 phone has its own separate library, so people sharing a phone do not see
 each other's events. The developer runs no server of
@@ -77,7 +77,9 @@ connection:
 - that event's photos, resized to a maximum of 1568 pixels;
 - that event's notes, title, place, date and time;
 - short summaries of your recent events;
-- the memories you have saved in the app.
+- the part of what the AI remembers that matters to that event (up to 20
+  points), and the lasting statements it keeps about your story. Names you
+  keep Quiet are left out unless that event involves them.
 
 Anthropic processes this to generate the description and returns it to your
 phone. Because the requests use your own API key, Anthropic handles them

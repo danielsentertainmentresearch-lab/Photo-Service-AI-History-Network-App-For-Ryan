@@ -9,6 +9,7 @@ import 'package:eventlens/graph/force_layout.dart';
 import 'package:eventlens/models/event.dart';
 import 'package:eventlens/models/memory_graph.dart';
 import 'package:eventlens/models/memory_item.dart';
+import 'package:eventlens/models/memory_prompt.dart';
 import 'package:eventlens/models/ring_palette.dart';
 import 'package:eventlens/services/rewards_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -57,14 +58,14 @@ void main() {
     );
     final list = GraphBuilder.eligible([...events, draft]);
     expect(list.map((e) => e.id), ['a', 'b', 'c']);
-    final text = GraphBuilder.journalText(list, const []);
+    final text = GraphBuilder.journalText(list, MemoryContext.empty);
     expect(text.indexOf('E1 |'), lessThan(text.indexOf('E2 |')));
     expect(text, contains('Event a'));
   });
 
   test('request is text-only with structured output and fallbacks', () {
     final builder = GraphBuilder(client: AnthropicAIClient(apiKey: 'k'));
-    final body = builder.buildRequest(ordered, const []);
+    final body = builder.buildRequest(ordered, MemoryContext.empty);
     expect(body['fallbacks'], 'default');
     expect(
       body['output_config']['format']['schema']['required'],

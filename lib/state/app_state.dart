@@ -21,6 +21,7 @@ import '../models/event.dart';
 import '../models/memory_graph.dart';
 import '../models/learned_point.dart';
 import '../models/memory_item.dart';
+import '../models/memory_prompt.dart';
 import '../models/name_spelling.dart';
 import '../models/name_state.dart';
 import '../data/name_state_repository.dart';
@@ -147,6 +148,16 @@ class AppState extends ChangeNotifier {
 
   /// The current dream state, or null before the first dream pass.
   DreamState? get dream => _dream;
+
+  /// What prompts read of the memory (Section 3.1): the latest points, the
+  /// dream state, the Quiet and Honored names, and each event's date.
+  MemoryContext get memoryContext => MemoryContext(
+    points: _points,
+    dream: _dream,
+    quietNames: quietNames,
+    honoredNames: honoredNames,
+    eventDates: {for (final e in _events) e.id: e.occurredAt},
+  );
   bool get hasApiKey => _hasApiKey;
 
   /// True when the AI features can run: through the owner's server, or with
@@ -541,7 +552,7 @@ class AppState extends ChangeNotifier {
       final account = await describer.describe(
         event: event,
         jpegs: jpegs,
-        memories: _memories,
+        memory: memoryContext,
         history: _events,
         honored: [
           for (final n in _nameStates)
@@ -560,7 +571,9 @@ class AppState extends ChangeNotifier {
           people: account.people,
           places: account.places,
           tags: account.tags,
-          suggestions: _withoutKnown(account.memorySuggestions),
+          // The dream pass learns now; the AI no longer proposes memories
+          // here, and any left from older versions are cleared.
+          suggestions: const [],
           questions: account.questions,
           status: EventStatus.described,
           clearError: true,
@@ -584,13 +597,6 @@ class AppState extends ChangeNotifier {
       await advanceGraph();
       await dreamIfDue();
     }
-  }
-
-  List<MemorySuggestion> _withoutKnown(List<MemorySuggestion> suggestions) {
-    final known = _memories.map((m) => m.content.toLowerCase().trim()).toSet();
-    return suggestions
-        .where((s) => !known.contains(s.content.toLowerCase().trim()))
-        .toList();
   }
 
   /// Moves the graph forward. The first time enough photos are described,
@@ -618,8 +624,8 @@ class AppState extends ChangeNotifier {
         settings.effort,
       );
       final next = current == null
-          ? await builder.build(_events, _memories)
-          : await builder.update(current, _events, _memories);
+          ? await builder.build(_events, memoryContext)
+          : await builder.update(current, _events, memoryContext);
       // The user's books and rings may have changed while the AI worked.
       final latest = _graph;
       final merged = latest == null
@@ -726,25 +732,6 @@ class AppState extends ChangeNotifier {
         source: pendingSentiment,
       ),
       eventIds: [?eventId],
-    );
-    await _reload();
-  }
-
-  /// Promotes an AI suggestion into long-term memory.
-  Future<void> acceptSuggestion(LifeEvent event, MemorySuggestion s) async {
-    await addMemory(s.kind, s.content, source: 'ai', eventId: event.id);
-    await dismissSuggestion(event, s);
-  }
-
-  Future<void> dismissSuggestion(LifeEvent event, MemorySuggestion s) async {
-    final current = await events.byId(event.id);
-    if (current == null) return;
-    await events.update(
-      current.copyWith(
-        suggestions: current.suggestions
-            .where((x) => x.content != s.content)
-            .toList(),
-      ),
     );
     await _reload();
   }

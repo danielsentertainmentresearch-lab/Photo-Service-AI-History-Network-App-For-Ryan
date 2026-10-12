@@ -205,7 +205,9 @@ void main() {
     expect(described.status, EventStatus.described);
     expect(described.title, 'Lake evening');
     expect(described.description, contains('orange'));
-    expect(described.suggestions.single.content, 'The lake is our spot');
+    // The AI no longer proposes memories for the person to save; an older
+    // reply that still carries suggestions leaves none on the event.
+    expect(described.suggestions, isEmpty);
 
     // The photo was downscaled to the AI limit before upload.
     final imageBlock = (sentBodies.single['messages'][0]['content'] as List)
@@ -213,10 +215,15 @@ void main() {
     final sent = img.decodeJpg(base64Decode(imageBlock['source']['data']))!;
     expect(sent.width, ImageVault.aiMaxEdge);
 
-    await state.acceptSuggestion(described, described.suggestions.single);
+    // What the AI learns (here saved directly, as a dream pass would)
+    // reaches the next account.
+    await state.addMemory(
+      'place',
+      'The lake is our spot',
+      source: 'ai',
+      eventId: event.id,
+    );
     expect(state.memories.single.content, 'The lake is our spot');
-    expect(state.memories.single.source, 'ai');
-    expect(state.eventById(event.id)!.suggestions, isEmpty);
 
     // A second event now carries the memory and the earlier summary.
     final second = await state.createEvent(
@@ -236,7 +243,6 @@ void main() {
       (body['messages'][0]['content'] as List).last['text'],
       contains('Sam and I watched the sunset.'),
     );
-    // Known memories are not suggested again.
     expect(state.eventById(second.id)!.suggestions, isEmpty);
   });
 

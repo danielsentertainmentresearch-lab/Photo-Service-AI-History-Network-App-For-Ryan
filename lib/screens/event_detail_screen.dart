@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 
 import '../ai/event_describer.dart';
 import '../models/event.dart';
-import '../models/memory_item.dart';
 import '../services/places_service.dart';
 import '../services/rewards_service.dart';
 import '../state/app_state.dart';
@@ -132,8 +131,6 @@ class EventDetailScreen extends StatelessWidget {
                     ),
                 ],
                 if (event.questions.isNotEmpty) _QuestionsCard(event: event),
-                if (event.suggestions.isNotEmpty)
-                  _SuggestionsCard(event: event),
                 if (event.offersSupport) _SupportLine(event: event),
                 const SizedBox(height: 24),
                 _FreeWriteSection(event: event),
@@ -524,56 +521,6 @@ class _LabelRow extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SuggestionsCard extends StatelessWidget {
-  final LifeEvent event;
-
-  const _SuggestionsCard({required this.event});
-
-  @override
-  Widget build(BuildContext context) {
-    final state = context.read<AppState>();
-    final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.only(top: 16),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Remember for next time?', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 4),
-            Text(
-              'Saved memories help the AI understand future events.',
-              style: theme.textTheme.bodySmall,
-            ),
-            for (final s in event.suggestions)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(s.content),
-                subtitle: Text(memoryKindLabel(s.kind)),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      tooltip: 'Dismiss',
-                      icon: const Icon(Icons.close),
-                      onPressed: () => state.dismissSuggestion(event, s),
-                    ),
-                    IconButton(
-                      tooltip: 'Save to memory',
-                      icon: const Icon(Icons.check),
-                      onPressed: () => state.acceptSuggestion(event, s),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }

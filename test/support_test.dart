@@ -3,6 +3,7 @@ import 'package:eventlens/ai/experience_labeler.dart';
 import 'package:eventlens/models/event.dart';
 import 'package:eventlens/models/insights.dart';
 import 'package:eventlens/models/learning_view.dart';
+import 'package:eventlens/models/memory_prompt.dart';
 import 'package:eventlens/models/name_state.dart';
 import 'package:eventlens/models/support_resources.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -143,7 +144,7 @@ void main() {
     });
 
     test('the AI is told who is honored, to write about them with care', () {
-      final block = EventDescriber.memoryBlock(const [], honored: ['Ana']);
+      final block = EventDescriber.memoryBlock(MemoryContext.empty, honored: ['Ana']);
       expect(block, contains('honors and keeps close in memory: Ana'));
     });
   });

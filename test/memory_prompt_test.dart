@@ -1,3 +1,4 @@
+import 'package:eventlens/models/event.dart';
 import 'package:eventlens/models/learned_point.dart';
 import 'package:eventlens/models/memory_prompt.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -170,6 +171,41 @@ void main() {
       final active = block.substring(block.indexOf('[ACTIVE:'));
       expect(active.length, lessThanOrEqualTo(MemoryPrompt.maxChars + 20));
       expect(_contents(block).length, lessThan(MemoryPrompt.maxPoints));
+    });
+  });
+
+  group('Memory for the event accounts and graph (3.1)', () {
+    LifeEvent event({String notes = '', List<String> people = const []}) {
+      final at = DateTime(2026, 10, 1);
+      return LifeEvent(
+        id: 'e',
+        title: 'Picnic',
+        notes: notes,
+        location: 'Lake Tahoe',
+        occurredAt: at,
+        createdAt: at,
+        updatedAt: at,
+        people: people,
+      );
+    }
+
+    test('an event involves its own names and known names it mentions', () {
+      expect(
+        MemoryContext.namesInvolved(
+          event(notes: 'Ben and Cara came', people: const ['Ana']),
+          known: const ['Ben', 'Dora', 'cara'],
+        ),
+        ['ana', 'ben', 'cara', 'lake tahoe'],
+      );
+    });
+
+    test('a request with no names keeps every Quiet name out', () {
+      final memory = MemoryContext(
+        points: [_point('b', 'Ben coaches on Sundays'), _point('a', 'Ana')],
+        quietNames: const {'ben'},
+      );
+      expect(memory.render(), isNot(contains('Ben')));
+      expect(memory.render(requestNames: const ['Ben']), contains('Ben'));
     });
   });
 }

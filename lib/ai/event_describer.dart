@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:intl/intl.dart';
 
 import '../models/event.dart';
-import '../models/memory_item.dart';
+import '../models/memory_prompt.dart';
 import 'anthropic_ai_client.dart';
 
 /// Models offered in Settings. Both accept adaptive thinking, effort,
@@ -26,7 +26,6 @@ class EventAccount {
   final List<String> people;
   final List<String> places;
   final List<String> tags;
-  final List<MemorySuggestion> memorySuggestions;
   final List<AiQuestion> questions;
   final String model;
 
@@ -37,7 +36,6 @@ class EventAccount {
     required this.people,
     required this.places,
     required this.tags,
-    required this.memorySuggestions,
     this.questions = const [],
     required this.model,
   });
@@ -71,6 +69,7 @@ How to write the account:
 - Be exhaustive about what the photos show: setting, light, weather, time-of-day cues, colours, objects, food, clothing, text on signs, expressions, body language, and the order in which things seem to have happened across the photos.
 - Weave in the user's notes and their answers to your earlier questions, if any. They are the most reliable source for who was there and what happened.
 - Use the long-term memory and earlier events for continuity: name people and places only when the notes or memory make the match clear, and point out how this event connects to earlier ones (recurring people, places, ongoing situations, firsts and anniversaries).
+- The long-term memory is what you have learned about the user over time, given as a MEMORY_V8 block. DREAM holds the lasting truths and themes of their story. Each ACTIVE point has a kind, a sentiment, its content, its source ("answer" means the user told you) and the dates of the events it was learned from. Sentiment records how the user relates to what the point is about; use it only for continuity, and never write it into the account as a feeling. Points marked [Honored] are about people or places the user keeps close with care.
 - Never identify a person from their face or appearance alone. If someone is not named in the notes or memory, describe them neutrally (for example "a friend in a red jacket").
 - Keep to what the photos, the notes, the date, the place and memory confirm. Mark anything that is only likely with words like "probably", and never invent facts the user did not give and the photos do not show.
 - The description should be several rich paragraphs in plain text. Do not use markdown headings, bullet points or bold.
@@ -79,7 +78,6 @@ Also return:
 - title: a short, specific title (under 60 characters).
 - summary: two or three sentences, used later as context for future events.
 - people, places, tags: short labels for search.
-- memory_suggestions: new durable facts worth remembering for future events (who someone is, a place's significance, an ongoing situation, a preference). Only include facts stated or strongly supported by the notes and not already in long-term memory. Return an empty list if there is nothing new.
 - questions: up to 3 short, friendly questions asking the user to identify people or places this event shows that the notes and memory do not identify (for example "Who is the friend in the red jacket?" or "Where was this taken?"). Ask only who or where, never about feelings or meaning. For each give kind (person or place), about (exactly how the account describes them now) and the question. Return an empty list when everyone and everywhere is identified.
 ''';
 
@@ -100,18 +98,6 @@ Also return:
       'tags': {
         'type': 'array',
         'items': {'type': 'string'},
-      },
-      'memory_suggestions': {
-        'type': 'array',
-        'items': {
-          'type': 'object',
-          'properties': {
-            'kind': {'type': 'string', 'enum': memoryKinds},
-            'content': {'type': 'string'},
-          },
-          'required': ['kind', 'content'],
-          'additionalProperties': false,
-        },
       },
       'questions': {
         'type': 'array',
@@ -137,16 +123,17 @@ Also return:
       'people',
       'places',
       'tags',
-      'memory_suggestions',
       'questions',
     ],
     'additionalProperties': false,
   };
 
-  /// Long-term memory rendered as a stable block. It sits in the system
-  /// prompt behind a cache breakpoint because it changes rarely.
+  /// Long-term memory as the compact MEMORY_V8 text (Section 3.1): the
+  /// dream state and the points most relevant to this request, with Quiet
+  /// names left out unless [involved] includes them.
   static String memoryBlock(
-    List<MemoryItem> memories, {
+    MemoryContext memory, {
+    Iterable<String> involved = const [],
     List<String> honored = const [],
   }) {
     final remembered = honored.isEmpty
@@ -154,20 +141,8 @@ Also return:
         : '\n\nPeople and places the user honors and keeps close in memory: '
               '${honored.join(', ')}. When they are part of this event or '
               'connected to it, mention them with continuity and care.';
-    if (memories.isEmpty) {
-      return 'Long-term memory: (empty — the user has not saved anything yet)'
-          '$remembered';
-    }
-    final buffer = StringBuffer('Long-term memory about the user:\n');
-    for (final kind in memoryKinds) {
-      final items = memories.where((m) => m.kind == kind).toList();
-      if (items.isEmpty) continue;
-      buffer.writeln('${memoryKindLabel(kind)}:');
-      for (final item in items) {
-        buffer.writeln('- ${item.content}');
-      }
-    }
-    return '${buffer.toString().trimRight()}$remembered';
+    return 'Long-term memory about the user:\n'
+        '${memory.render(requestNames: involved)}$remembered';
   }
 
   static String _date(DateTime d) =>
@@ -211,10 +186,20 @@ Also return:
   Map<String, dynamic> buildRequest({
     required LifeEvent event,
     required List<Uint8List> jpegs,
-    required List<MemoryItem> memories,
+    required MemoryContext memory,
     required List<LifeEvent> history,
     List<String> honored = const [],
   }) {
+    final involved = MemoryContext.namesInvolved(
+      event,
+      known: {
+        for (final e in history) ...e.people,
+        for (final e in history) ...e.places,
+        ...memory.quietNames,
+        ...memory.honoredNames,
+        ...honored,
+      },
+    );
     final content = <Map<String, dynamic>>[];
     for (var i = 0; i < jpegs.length; i++) {
       content.add({'type': 'text', 'text': 'Photo ${i + 1}:'});
@@ -238,12 +223,17 @@ Also return:
         'format': {'type': 'json_schema', 'schema': outputSchema},
       },
       'fallbacks': 'default',
+      // The instructions never change, so the cache breakpoint sits on
+      // them; the memory block is chosen for each event and follows.
       'system': [
-        {'type': 'text', 'text': instructions},
         {
           'type': 'text',
-          'text': memoryBlock(memories, honored: honored),
+          'text': instructions,
           'cache_control': {'type': 'ephemeral'},
+        },
+        {
+          'type': 'text',
+          'text': memoryBlock(memory, involved: involved, honored: honored),
         },
       ],
       'messages': [
@@ -267,10 +257,6 @@ Also return:
       people: strings('people'),
       places: strings('places'),
       tags: strings('tags'),
-      memorySuggestions: ((data['memory_suggestions'] as List?) ?? const [])
-          .map((e) => MemorySuggestion.fromJson(e as Map<String, dynamic>))
-          .where((s) => s.content.trim().isNotEmpty)
-          .toList(),
       questions: ((data['questions'] as List?) ?? const [])
           .map((e) => AiQuestion.fromJson(e as Map<String, dynamic>))
           .where((q) => q.question.isNotEmpty)
@@ -283,7 +269,7 @@ Also return:
   Future<EventAccount> describe({
     required LifeEvent event,
     required List<Uint8List> jpegs,
-    required List<MemoryItem> memories,
+    required MemoryContext memory,
     required List<LifeEvent> history,
     List<String> honored = const [],
   }) async {
@@ -291,7 +277,7 @@ Also return:
       buildRequest(
         event: event,
         jpegs: jpegs,
-        memories: memories,
+        memory: memory,
         history: history,
         honored: honored,
       ),

@@ -64,11 +64,11 @@ switch on once their platforms are connected).
   labels for people, places and tags. You can edit, copy or rewrite it.
 - What the AI is learning: a read-only page showing what the AI knows
   (people, places, facts), connections and threads it found, and some of
-  what it remembers, rotating a few times a day. People don't edit memory
-  directly; the AI suggests memories after each event and asks who or
+  what it remembers, rotating a few times a day. People don't edit memory;
+  the AI learns from new events in a periodic dream pass and asks who or
   where when it can't tell, and the person answers or skips.
 - The AI never identifies people from faces; it names them only from your
-  notes and saved memories.
+  notes and what it remembers.
 - Your own Anthropic API key (stored encrypted), Claude Opus 5.5 by default
   or Sonnet 5.5, and the thinking effort, in Settings.
 

@@ -213,8 +213,8 @@ void main() {
     expect(find.text('Market with Mum'), findsNothing);
   });
 
-  testWidgets('event detail shows the account, labels, notes and saves a '
-      'suggested memory', (tester) async {
+  testWidgets('event detail shows the account, labels and notes; memory '
+      'suggestions are retired', (tester) async {
     await setUpState(tester);
     await tester.pumpWidget(app(const EventDetailScreen(eventId: 'lake')));
     expect(
@@ -224,17 +224,11 @@ void main() {
     expect(find.text('Sam'), findsOneWidget);
     expect(find.text('Fallen Leaf Lake'), findsWidgets);
     expect(find.text('Your notes and answers'), findsOneWidget);
-    expect(find.text('Remember for next time?'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('Save to memory'));
-    await settle(
-      tester,
-      () =>
-          state.memories.isNotEmpty &&
-          state.eventById('lake')!.suggestions.isEmpty,
-    );
-    expect(state.memories.single.content, 'Sam is my brother');
+    // Memory is the AI's: suggestions left from older versions are never
+    // offered for a person to save (owner, 12 Oct 2026).
     expect(find.text('Remember for next time?'), findsNothing);
+    expect(find.byTooltip('Save to memory'), findsNothing);
+    expect(state.memories, isEmpty);
   });
 
   testWidgets('the AI asks who or where; an answer becomes a memory and a '

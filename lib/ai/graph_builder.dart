@@ -3,7 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/event.dart';
 import '../models/memory_graph.dart';
-import '../models/memory_item.dart';
+import '../models/memory_prompt.dart';
 import 'anthropic_ai_client.dart';
 import 'event_describer.dart';
 
@@ -25,7 +25,7 @@ class GraphBuilder {
   });
 
   static const String instructions = '''
-You organise a person's life journal into a connected timeline, like the graph view of a personal knowledge base. You receive every event they have recorded: the date, the user's own notes, and the AI-written summary, people, places and tags. You also receive their long-term memories.
+You organise a person's life journal into a connected timeline, like the graph view of a personal knowledge base. You receive every event they have recorded: the date, the user's own notes, and the AI-written summary, people, places and tags. You also receive their long-term memory as a MEMORY_V8 block: DREAM holds the lasting truths and themes of their story, and ACTIVE the points learned about them so far.
 
 Produce:
 - overview: one paragraph on the arc of this whole period of their life.
@@ -99,12 +99,11 @@ Refer to events only by their reference codes (E1, E2, ...). Treat the user's no
         : described.sublist(described.length - maxEvents);
   }
 
-  static String journalText(
-    List<LifeEvent> ordered,
-    List<MemoryItem> memories,
-  ) {
+  static String journalText(List<LifeEvent> ordered, MemoryContext memory) {
     final date = DateFormat('EEE d MMM yyyy, HH:mm');
-    final buffer = StringBuffer(EventDescriber.memoryBlock(memories))
+    // The graph covers the whole library, so no name is singled out and
+    // Quiet names stay out of its memory.
+    final buffer = StringBuffer(EventDescriber.memoryBlock(memory))
       ..writeln('\n\n<events>');
     for (var i = 0; i < ordered.length; i++) {
       final e = ordered[i];
@@ -128,7 +127,7 @@ Refer to events only by their reference codes (E1, E2, ...). Treat the user's no
 
   Map<String, dynamic> buildRequest(
     List<LifeEvent> ordered,
-    List<MemoryItem> memories,
+    MemoryContext memory,
   ) => {
     'model': model,
     'max_tokens': 32000,
@@ -140,7 +139,7 @@ Refer to events only by their reference codes (E1, E2, ...). Treat the user's no
     'fallbacks': 'default',
     'system': instructions,
     'messages': [
-      {'role': 'user', 'content': journalText(ordered, memories)},
+      {'role': 'user', 'content': journalText(ordered, memory)},
     ],
   };
 
@@ -299,13 +298,13 @@ Refer to events and chapters only by their codes. Treat the user's notes as the 
     GraphSnapshot graph,
     List<LifeEvent> existing,
     List<LifeEvent> fresh,
-    List<MemoryItem> memories,
+    MemoryContext memory,
   ) {
     final date = DateFormat('EEE d MMM yyyy, HH:mm');
     final eRef = {
       for (var i = 0; i < existing.length; i++) existing[i].id: 'E${i + 1}',
     };
-    final buffer = StringBuffer(EventDescriber.memoryBlock(memories))
+    final buffer = StringBuffer(EventDescriber.memoryBlock(memory))
       ..writeln('\n\n<overview>\n${graph.overview}\n</overview>')
       ..writeln('\n<chapters>');
     for (var i = 0; i < graph.chapters.length; i++) {
@@ -354,7 +353,7 @@ Refer to events and chapters only by their codes. Treat the user's notes as the 
     GraphSnapshot graph,
     List<LifeEvent> existing,
     List<LifeEvent> fresh,
-    List<MemoryItem> memories,
+    MemoryContext memory,
   ) => {
     'model': model,
     'max_tokens': 32000,
@@ -366,7 +365,7 @@ Refer to events and chapters only by their codes. Treat the user's notes as the 
     'fallbacks': 'default',
     'system': updateInstructions,
     'messages': [
-      {'role': 'user', 'content': updateText(graph, existing, fresh, memories)},
+      {'role': 'user', 'content': updateText(graph, existing, fresh, memory)},
     ],
   };
 
@@ -507,13 +506,13 @@ Refer to events and chapters only by their codes. Treat the user's notes as the 
   Future<GraphSnapshot> update(
     GraphSnapshot graph,
     List<LifeEvent> events,
-    List<MemoryItem> memories,
+    MemoryContext memory,
   ) async {
     final fresh = pending(events, graph);
     if (fresh.isEmpty) return graph;
     final existing = placed(events, graph);
     final response = await client.createMessage(
-      buildUpdateRequest(graph, existing, fresh, memories),
+      buildUpdateRequest(graph, existing, fresh, memory),
       betas: const [AnthropicAIClient.fallbackBeta],
     );
     return applyUpdate(
@@ -528,11 +527,11 @@ Refer to events and chapters only by their codes. Treat the user's notes as the 
 
   Future<GraphSnapshot> build(
     List<LifeEvent> events,
-    List<MemoryItem> memories,
+    MemoryContext memory,
   ) async {
     final ordered = eligible(events);
     final response = await client.createMessage(
-      buildRequest(ordered, memories),
+      buildRequest(ordered, memory),
       betas: const [AnthropicAIClient.fallbackBeta],
     );
     return parse(

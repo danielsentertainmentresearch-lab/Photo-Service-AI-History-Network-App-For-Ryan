@@ -196,7 +196,27 @@ Section 3 briefing, all approved by Dan:
    of points added, revised, archived and retired, and a monthly trend of
    labels marked not right. Counts only.
 
-Hermes's answers to questions 1 to 5 are pending.
+**Dan reviews Section 3 in Hermes's place** (12 Oct 2026): her multi-agent
+workflow ran into API limits (503 errors), so she rests, and Dan answered her
+questions as owner: 1 retire the suggestions (the Accept/Dismiss block goes);
+2 the learning page keeps what it has and adds "The story so far" and "Since
+your last visit"; 3 "since your last visit" covers changes since the person
+last opened the page, at most 5, a first visit shows the latest pass, Quiet
+names never appear; 4 plain placeholder wording until Hermes writes it in
+4.3; 5 no sentiment on the page. Dan also reviews the new prompt wording.
+
+**Progress:** 3.1 reached its pause. The event accounts and the timeline graph
+read the memory as the MEMORY_V8 text (`MemoryContext` in
+`lib/models/memory_prompt.dart`): an account gets the points most relevant to
+its event, Quiet names only when the event involves them; the graph gets no
+Quiet names. Before this, accounts received every memory, Quiet names
+included. The prompt cache now sits on the describer's fixed instructions.
+Memory suggestions are retired (the describer no longer proposes them, the
+event page no longer offers them, old ones are cleared when an event is
+described again). README, the privacy policy and the Settings privacy text
+match, and the Settings text now mentions the dream pass, which Section 2
+missed. The dashboard's "Memories saved" now counts answers only; its
+wording is settled in 3.3.
 
 ## Section 4: debugging and testing
 
