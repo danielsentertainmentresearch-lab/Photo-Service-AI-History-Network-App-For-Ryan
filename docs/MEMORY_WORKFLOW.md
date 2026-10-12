@@ -97,7 +97,10 @@ until 2.6.
 | 2.5 | Coordinator: when to dream (every N events, on app open when due), one at a time, failure and retry, saving a new version; tests | ⏸ P5: whole app test suite passes | 2.6 |
 | 2.6 | Privacy policy, Play data-safety answers, SUPPORT_AND_SAFETY.md; Hermes reviews the prompt wording; merge to `main` | ⏸ P6: merged, APK builds | Section 3 |
 
-**Progress (12 Oct 2026):** P5 reached: the coordinator
+**Progress (12 Oct 2026):** 2.6 in progress: privacy policy, data-safety
+answers and SUPPORT_AND_SAFETY.md updated; Hermes's wording review handed
+off (`docs/handoffs/2026-10-12-claude-to-hermes-section-2-wording.md`);
+merge to `main` after her reply and Dan's word. P5 reached: the coordinator
 (`lib/state/dream_coordinator.dart`, `test/dream_coordinator_test.dart`). A
 pass runs after every 5 newly described events, or on a milestone, at most
 once a day and one at a time, on opening the app and after an event is
