@@ -97,6 +97,10 @@ until 2.6.
 | 2.5 | Coordinator: when to dream (every N events, on app open when due), one at a time, failure and retry, saving a new version; tests | ⏸ P5: whole app test suite passes | 2.6 |
 | 2.6 | Privacy policy, Play data-safety answers, SUPPORT_AND_SAFETY.md; Hermes reviews the prompt wording; merge to `main` | ⏸ P6: merged, APK builds | Section 3 |
 
+**Progress (12 Oct 2026):** P1 reached: the request and reply format
+(`lib/ai/dream_pass.dart`, `test/dream_pass_test.dart`). Prompts name
+events `e1, e2, ...` and points `p1, p2, ...`; the checker maps them back.
+
 ### Settled with Hermes (12 October 2026)
 
 Proposals in `docs/handoffs/2026-10-12-claude-to-hermes-section-2.md`,
