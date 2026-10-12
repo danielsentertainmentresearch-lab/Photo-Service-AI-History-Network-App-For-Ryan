@@ -385,6 +385,11 @@ It cannot be undone.
       find.text('Erase what the AI remembers'),
       300,
     );
+    // The heading sits a little above the button.
+    await tester.scrollUntilVisible(
+      find.text('Erasing what the AI remembers'),
+      -100,
+    );
     expect(find.text('Erasing what the AI remembers'), findsOneWidget);
   });
 

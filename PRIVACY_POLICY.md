@@ -1,6 +1,6 @@
 # EventLens Privacy Policy
 
-_Last updated: 11 October 2026_
+_Last updated: 12 October 2026_
 
 EventLens ("the app") lets you record events with photos and notes and have an
 AI write a detailed account of each one. This policy explains what the app
@@ -47,7 +47,9 @@ the app permanently deletes everything it stored.
 
 The AI keeps its own memory of your life, on your phone only: who people
 are, the places that matter, and what it learned from your answers to its
-questions. You can erase all of it at any time with the button below (in
+questions. Every so often it "dreams": it sorts what it learned from your
+latest events into that memory (see "What is shared, and with whom"). Each
+change is kept as a new version on your phone. You can erase all of it at any time with the button below (in
 the app: Settings → Privacy policy). Before you do, know what it means:
 
 - Everything the AI remembers is erased at once. Nothing can be picked
@@ -56,6 +58,8 @@ the app: Settings → Privacy policy). Before you do, know what it means:
 - The AI no longer knows who anyone is. It describes people and places
   neutrally again and asks you who they are, starting over.
 - "What the AI is learning" starts again from nothing.
+- The AI doesn't relearn from the events you already have. It learns
+  again only from events described after you erase.
 - It does not remove anyone from your life story: your events, photos,
   accounts and free writes stay exactly as they are.
 
@@ -89,6 +93,22 @@ anywhere, counted or exported. Only the
 labels come back. They are stored on your phone and shown in Your data and
 the analysis file; your writing is never changed. These requests also use
 your own API key.
+
+After every 5 newly described events, at most once a day, the app sends
+Anthropic a "dream" request, so the AI can sort what it learned into its
+memory. It contains:
+
+- the AI's own accounts of those events, with their title, date, place and
+  the people and places it named;
+- the free-write labels you confirmed or turned down for those events (the
+  labels only);
+- what the AI already remembers, and which names you keep Honored or
+  Quiet, so it treats them as you chose.
+
+It never contains your free writes, notes, photos, or what the AI noticed
+about whether you might need support. The reply is checked on your phone
+and stored only there; anything that repeats your free write is dropped.
+This request also uses your own API key.
 
 The weather and location of an event are never sent to Anthropic.
 

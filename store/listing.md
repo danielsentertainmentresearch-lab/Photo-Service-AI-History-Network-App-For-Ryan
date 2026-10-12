@@ -82,7 +82,12 @@ actually does:
   - Personal info → Other info (free-text notes, free writes and
     memories): same as photos. Free writes are sent to Anthropic after the
     user writes one, to make short labels and to notice whether they might
-    need support (what is noticed stays on the phone); not collected.
+    need support (what is noticed stays on the phone); not collected. After
+    every 5 described events (at most daily), the AI's own accounts, the
+    labels the user confirmed or turned down and the AI's memory are sent
+    to Anthropic for the memory's "dream" pass (never free writes, notes,
+    photos or support readings); the result is stored only on the phone;
+    not collected.
   - Personal info → Email address and/or Phone number: *collected* for
     account management (Firebase Authentication). Required.
   - Personal info → User IDs: *collected* for account management

@@ -1,6 +1,6 @@
 # How support works in EventLens
 
-_Last updated: 6 October 2026_
+_Last updated: 12 October 2026_
 
 EventLens asks you to write about how your life felt, not only what
 happened. That means love, grief, loss and the hardest days of your life
@@ -58,7 +58,10 @@ The AI can be wrong, both ways. It may miss what you meant, or read
 metaphor, lyrics or a story as being about you. That is why the line is
 gentle and easy to dismiss, and why the Support page is always there
 anyway. What the AI noticed is kept only on your phone, with the event,
-and is never exported.
+and is never exported. It never becomes part of what the AI remembers:
+when the AI sorts what it learned into its memory, it is never shown what
+it noticed, or your free write. Hard times, grief and loss stay part of
+your story like everything else.
 
 ## Reaching Dan, a peer supporter (coming in a later update)
 
@@ -87,7 +90,9 @@ any direction:
 
 - **As usual**: nothing special.
 - **Quiet**: they don't come up on their own: not on "What the AI is
-  learning", not in sneak-peek insights, not in "On this day". Nothing is
+  learning", not in sneak-peek insights, not in "On this day", and never
+  in the lasting statements the AI keeps about your story. The AI still
+  knows who they are when you bring them up yourself. Nothing is
   deleted. Your events, photos and writing stay exactly as they are.
 - **Honored**: they are kept close. They have a place under "Remembering",
   your moments with them are gently marked in "On this day", and the AI
@@ -103,7 +108,8 @@ your own time.
 
 You can erase everything the AI remembers, all at once, from the privacy
 policy (Settings, then Privacy policy). It can't be undone, and it doesn't
-remove anyone from your events.
+remove anyone from your events. Afterwards the AI learns again only from
+events described from then on.
 
 ## Limits
 
