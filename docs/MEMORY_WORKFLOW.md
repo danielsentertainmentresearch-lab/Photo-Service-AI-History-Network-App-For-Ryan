@@ -218,6 +218,16 @@ match, and the Settings text now mentions the dream pass, which Section 2
 missed. The dashboard's "Memories saved" now counts answers only; its
 wording is settled in 3.3.
 
+3.2 reached its pause. "What the AI is learning" shows "The story so far"
+(the dream state's statements and themes) and "Since your last visit" (what
+the dream pass changed since the person last opened the page: new, updated,
+no longer current, no longer held; at most 5; a first visit shows the latest
+pass; "Nothing new since your last visit." otherwise). It reads the memory's
+version history (`learnedChanges` in `lib/models/learning_view.dart`); the
+last visit is kept on the phone. Quiet names never appear and sentiment is
+never shown. The new parts use the page's existing look and placeholder
+wording until Hermes designs them (4.3).
+
 ## Section 4: debugging and testing
 
 - **4.1** Owner tests on the phone from a checklist Claude provides.

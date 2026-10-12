@@ -12,8 +12,10 @@ import '../state/app_state.dart';
 /// AI's own findings a few at a time, rotating at unplanned times of day
 /// (see [learningRotation]).
 ///
-/// Interim: when the app's own memory file and dream state are built
-/// (docs/AI_SERVER.md, step 8), this page shows what the dream pass learned.
+/// Since Section 3.2 it also shows the real memory: the story so far (the
+/// dream state) and what the dream pass changed since the last visit. Its
+/// visuals and words are Hermes's to design (Section 4.3); until then the
+/// new parts use the page's existing look and placeholder wording.
 class MemoryScreen extends StatefulWidget {
   const MemoryScreen({super.key});
 
@@ -23,6 +25,15 @@ class MemoryScreen extends StatefulWidget {
 
 class _MemoryScreenState extends State<MemoryScreen> {
   Timer? _timer;
+
+  /// When the person last opened the page, read once as this visit begins.
+  DateTime? _lastVisit;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastVisit = context.read<AppState>().beginLearningVisit();
+  }
 
   /// Rebuilds when the selection rotates while the page is open.
   void _scheduleRotation(DateTime next) {
@@ -52,6 +63,9 @@ class _MemoryScreenState extends State<MemoryScreen> {
       graph: state.graphSnapshot,
       now: DateTime.now(),
       nameStates: state.nameStates,
+      dream: state.dream,
+      versions: state.learnedVersions,
+      lastVisit: _lastVisit,
     );
     _scheduleRotation(view.nextChange);
 
@@ -85,6 +99,30 @@ class _MemoryScreenState extends State<MemoryScreen> {
                 _Count(value: view.facts, label: 'other things'),
               ],
             ),
+            if (view.story.isNotEmpty || view.themes.isNotEmpty)
+              _Section(
+                icon: Icons.auto_stories_outlined,
+                title: 'The story so far',
+                children: [
+                  for (final s in view.story) Text(s),
+                  if (view.themes.isNotEmpty)
+                    Text(
+                      'Themes: ${view.themes.join(', ')}',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                ],
+              ),
+            if (view.hasDreamed)
+              _Section(
+                icon: Icons.update,
+                title: 'Since your last visit',
+                children: view.changes.isEmpty
+                    ? [const Text('Nothing new since your last visit.')]
+                    : [
+                        for (final c in view.changes)
+                          Text('${changeLead(c.kind)}: ${c.content}'),
+                      ],
+              ),
             if (view.remembering.isNotEmpty)
               _Section(
                 icon: Icons.spa_outlined,

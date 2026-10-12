@@ -1,7 +1,9 @@
 import 'package:eventlens/models/event.dart';
+import 'package:eventlens/models/learned_point.dart';
 import 'package:eventlens/models/learning_view.dart';
 import 'package:eventlens/models/memory_graph.dart';
 import 'package:eventlens/models/memory_item.dart';
+import 'package:eventlens/models/name_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 LifeEvent _event(String id, String title, {List<String> people = const []}) {
@@ -106,5 +108,122 @@ void main() {
       now: DateTime(2026, 10, 5),
     );
     expect(view.isEmpty, isTrue);
+  });
+
+  group('the real memory on the page (3.2)', () {
+    final t1 = DateTime(2026, 10, 10, 9);
+    final t2 = DateTime(2026, 10, 12, 9);
+    LearnedPoint row(
+      String pointId,
+      int version,
+      String content,
+      DateTime at, {
+      String reason = '',
+      String sentiment = dreamSentiment,
+    }) => LearnedPoint(
+      id: '$pointId-v$version',
+      pointId: pointId,
+      version: version,
+      kind: 'person',
+      content: content,
+      sentiment: Sentiment(
+        polarity: 'positive',
+        intensity: 'high',
+        source: sentiment,
+      ),
+      source: 'ai',
+      eventIds: const ['e1'],
+      status: pointActive,
+      reason: reason,
+      createdAt: at,
+    );
+
+    final versions = [
+      // Not made by a dream pass: a migrated point and an answer.
+      row('old', 1, 'Moved in long ago', DateTime(2026), sentiment: 'migrated'),
+      row('ans', 1, 'Lee: a man in a hat', t2, sentiment: pendingSentiment),
+      // The first pass.
+      row('ana', 1, 'Ana is a friend', t1, reason: 'seen often'),
+      row('job', 1, 'Works at the bakery', t1),
+      // The second pass.
+      row('ana', 2, 'Ana is a close friend', t2, reason: 'revised: more'),
+      row('job', 2, 'Works at the bakery', t2, reason: 'archived: left'),
+      row('old', 2, 'Moved in long ago', t2, reason: 'retired: wrong'),
+      row('cara', 1, 'Cara runs the bookshop', t2),
+      row('ben', 1, 'Ben coaches on Sundays', t2),
+    ];
+
+    test('since the last visit: newest first, one line per point', () {
+      final changes = learnedChanges(
+        versions,
+        since: t1.subtract(const Duration(days: 1)),
+      );
+      expect(changes.map((c) => '${changeLead(c.kind)}: ${c.content}'), [
+        'Updated: Ana is a close friend',
+        'No longer current: Works at the bakery',
+        'No longer held: Moved in long ago',
+        'New: Cara runs the bookshop',
+        'New: Ben coaches on Sundays',
+      ]);
+    });
+
+    test('a first visit shows the latest pass; nothing new reads as none', () {
+      expect(learnedChanges(versions).length, shownChanges);
+      expect(learnedChanges(versions).every((c) => c.at == t2), isTrue);
+      expect(learnedChanges(versions, since: t2), isEmpty);
+    });
+
+    test('Quiet names never appear', () {
+      final changes = learnedChanges(versions, since: t1, quiet: const {'ben'});
+      expect(changes.map((c) => c.content), isNot(contains(contains('Ben'))));
+    });
+
+    test(
+      'the story so far comes from the dream state, without Quiet names',
+      () {
+        final view = computeLearning(
+          events: events,
+          memories: memories,
+          now: DateTime(2026, 10, 12, 10),
+          nameStates: [
+            NameState(
+              name: 'Ben',
+              kind: 'person',
+              state: nameQuiet,
+              since: DateTime(2026),
+            ),
+          ],
+          dream: DreamState(
+            id: 'd',
+            version: 2,
+            foundationStatements: const ['Ana is close', 'Ben was a mentor'],
+            themes: const ['Friendship', 'Sundays with Ben'],
+            eventIds: const [],
+            createdAt: t2,
+          ),
+          versions: versions,
+          lastVisit: t1,
+        );
+        expect(view.story, ['Ana is close']);
+        expect(view.themes, ['Friendship']);
+        expect(view.hasDreamed, isTrue);
+        expect(
+          view.changes.map((c) => c.content),
+          isNot(contains(contains('Ben'))),
+        );
+      },
+    );
+
+    test('before any dream pass there is no story and nothing to report', () {
+      final view = computeLearning(
+        events: const [],
+        memories: const [],
+        now: DateTime(2026, 10, 12),
+        versions: [versions.first, versions[1]],
+      );
+      expect(view.story, isEmpty);
+      expect(view.hasDreamed, isFalse);
+      expect(view.isEmpty, isTrue);
+    });
   });
 }

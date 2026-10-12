@@ -6,7 +6,9 @@ import 'package:eventlens/data/event_repository.dart';
 import 'package:eventlens/data/graph_repository.dart';
 import 'package:eventlens/data/image_vault.dart';
 import 'package:eventlens/data/memory_repository.dart';
+import 'package:eventlens/ai/dream_reply.dart';
 import 'package:eventlens/models/event.dart';
+import 'package:eventlens/models/learned_point.dart';
 import 'package:eventlens/models/memory_item.dart';
 import 'package:eventlens/screens/event_detail_screen.dart';
 import 'package:eventlens/screens/home_screen.dart';
@@ -527,6 +529,66 @@ It cannot be undone.
     expect(find.text('Sam is my younger brother'), findsOneWidget);
     // Nothing on the page edits or deletes a memory.
     expect(find.byType(Dismissible), findsNothing);
+  });
+
+  testWidgets('the learning page shows the story so far and what changed '
+      'since the last visit, never feelings or Quiet names', (tester) async {
+    await setUpState(tester);
+    const felt = Sentiment(
+      polarity: 'positive',
+      intensity: 'high',
+      source: dreamSentiment,
+    );
+    await tester.runAsync(() async {
+      await state.memoryRepo.applyDream(
+        const DreamChanges(
+          adds: [
+            PointAdd(
+              kind: 'place',
+              content: 'Fallen Leaf Lake is a favourite spot',
+              sentiment: felt,
+              eventIds: ['lake'],
+              reason: 'returns often',
+            ),
+            PointAdd(
+              kind: 'person',
+              content: 'Ben coaches on Sundays',
+              sentiment: felt,
+              eventIds: ['lake'],
+              reason: 'named in notes',
+            ),
+          ],
+          dream: DreamUpdate(
+            foundationStatements: [
+              'Summers at the lake matter',
+              'Ben was a mentor',
+            ],
+            themes: ['Time by the water'],
+            eventIds: ['lake'],
+          ),
+        ),
+      );
+      await state.load();
+      await state.setNameState('Ben', 'person', nameQuiet);
+    });
+    await tester.pumpWidget(app(const MemoryScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('The story so far'), findsOneWidget);
+    expect(find.text('Summers at the lake matter'), findsOneWidget);
+    expect(find.text('Themes: Time by the water'), findsOneWidget);
+    expect(find.text('Since your last visit'), findsOneWidget);
+    expect(
+      find.text('New: Fallen Leaf Lake is a favourite spot'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Ben'), findsNothing);
+    expect(find.textContaining('positive'), findsNothing);
+
+    // The next visit, with nothing new in between, says so.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(app(const MemoryScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('Nothing new since your last visit.'), findsOneWidget);
   });
 
   testWidgets('new event: the AI area takes no typing; the cursor starts '

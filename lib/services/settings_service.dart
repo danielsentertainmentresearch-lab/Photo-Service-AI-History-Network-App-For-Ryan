@@ -27,6 +27,7 @@ class SettingsService {
   String get _dreamWaitKey => 'dream_wait_until$_scope';
   String get _dreamRetryKey => 'dream_retry_after$_scope';
   String get _dreamMilestoneKey => 'dream_milestone$_scope';
+  String get _learningVisitKey => 'learning_last_visit$_scope';
   static const _onboardedKey = 'onboarded';
 
   Future<String?> readApiKey() => _secure.read(key: _apiKeyKey);
@@ -111,6 +112,13 @@ class SettingsService {
   Future<void> setDreamMilestone(bool due) => due
       ? _prefs.setBool(_dreamMilestoneKey, true)
       : _prefs.remove(_dreamMilestoneKey);
+
+  /// When the person last opened "What the AI is learning", so the page
+  /// can show what changed since (Section 3.2).
+  DateTime? get learningLastVisit => _time(_learningVisitKey);
+
+  Future<void> setLearningLastVisit(DateTime at) =>
+      _setTime(_learningVisitKey, at);
 
   bool get onboarded => _prefs.getBool(_onboardedKey) ?? false;
 

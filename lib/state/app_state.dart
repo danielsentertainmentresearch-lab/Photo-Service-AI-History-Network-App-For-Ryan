@@ -146,6 +146,11 @@ class AppState extends ChangeNotifier {
   /// The latest version of every learned point, whatever its status.
   List<LearnedPoint> get learnedPoints => _points;
 
+  /// Every stored version of every point: what the learning page reads to
+  /// show what the dream pass changed.
+  List<LearnedPoint> get learnedVersions => _versions;
+  List<LearnedPoint> _versions = const [];
+
   /// The current dream state, or null before the first dream pass.
   DreamState? get dream => _dream;
 
@@ -218,6 +223,7 @@ class AppState extends ChangeNotifier {
   Future<void> _reload() async {
     _events = await events.all();
     _points = await memoryRepo.current();
+    _versions = await memoryRepo.allVersions();
     _memories = [
       for (final p in _points)
         if (p.isActive) p.toMemoryItem(),
@@ -917,6 +923,15 @@ class AppState extends ChangeNotifier {
     // learns only from events described after this.
     await dreams.markAllRead(_events);
     await _reload();
+  }
+
+  /// Starts a visit to "What the AI is learning": returns when the person
+  /// last opened it (null on a first visit) and records this visit, so the
+  /// page shows what changed since last time.
+  DateTime? beginLearningVisit([DateTime? now]) {
+    final last = settings.learningLastVisit;
+    settings.setLearningLastVisit(now ?? DateTime.now());
+    return last;
   }
 
   // ---- Dream pass -------------------------------------------------------------

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'event.dart';
+import 'learned_point.dart';
 import 'memory_graph.dart';
 import 'memory_item.dart';
 import 'name_state.dart';
@@ -31,6 +32,19 @@ class LearningView {
   /// When the selection changes next.
   final DateTime nextChange;
 
+  /// The dream state's foundation statements and themes: the story so far
+  /// (Section 3.2). Empty before the first dream pass.
+  final List<String> story;
+  final List<String> themes;
+
+  /// What the dream pass changed since the person's last visit, newest
+  /// first, at most [shownChanges].
+  final List<LearnedChange> changes;
+
+  /// True once any dream pass has changed the memory, so "since your last
+  /// visit" has something to report on.
+  final bool hasDreamed;
+
   const LearningView({
     required this.people,
     required this.places,
@@ -40,6 +54,10 @@ class LearningView {
     required this.remembers,
     this.remembering = const [],
     required this.nextChange,
+    this.story = const [],
+    this.themes = const [],
+    this.changes = const [],
+    this.hasDreamed = false,
   });
 
   bool get isEmpty =>
@@ -47,7 +65,87 @@ class LearningView {
       connections.isEmpty &&
       threads.isEmpty &&
       remembers.isEmpty &&
-      remembering.isEmpty;
+      remembering.isEmpty &&
+      story.isEmpty &&
+      themes.isEmpty &&
+      !hasDreamed;
+}
+
+/// A point the dream pass learned for the first time.
+const changeNew = 'new';
+
+/// A point the dream pass revised, or brought back from the archive.
+const changeUpdated = 'updated';
+
+/// A point archived: true, but no longer current.
+const changeNoLongerCurrent = 'no longer current';
+
+/// A point retired: no longer held true.
+const changeNoLongerHeld = 'no longer held';
+
+/// One change the dream pass made, in the AI's own words. Sentiment is
+/// never part of it (owner, 12 Oct 2026).
+class LearnedChange {
+  final String kind;
+  final String content;
+  final DateTime at;
+
+  const LearnedChange(this.kind, this.content, this.at);
+}
+
+/// How many changes "since your last visit" shows.
+const shownChanges = 5;
+
+/// The lead-in for a change line. Placeholder wording until Hermes writes
+/// the page's words (docs/MEMORY_WORKFLOW.md, Section 4.3).
+String changeLead(String kind) => switch (kind) {
+  changeNew => 'New',
+  changeUpdated => 'Updated',
+  changeNoLongerCurrent => 'No longer current',
+  _ => 'No longer held',
+};
+
+/// What kind of dream-pass change [p] records, or null when the dream pass
+/// didn't make it (a migrated point, or an answer to the AI's question).
+String? _changeKind(LearnedPoint p) {
+  if (p.version == 1) {
+    return p.sentiment.source == dreamSentiment ? changeNew : null;
+  }
+  if (p.reason.startsWith('revised:') || p.reason.startsWith('revived:')) {
+    return changeUpdated;
+  }
+  if (p.reason.startsWith('archived:')) return changeNoLongerCurrent;
+  if (p.reason.startsWith('retired:')) return changeNoLongerHeld;
+  return null;
+}
+
+/// What the dream pass changed after [since], newest first, one line per
+/// point (its latest change), at most [shownChanges]. With no [since] (a
+/// first visit) it shows the latest pass. Points naming a Quiet name are
+/// left out.
+List<LearnedChange> learnedChanges(
+  List<LearnedPoint> versions, {
+  DateTime? since,
+  Set<String> quiet = const {},
+}) {
+  final dreamed = [
+    for (final p in versions)
+      if (_changeKind(p) != null) p,
+  ];
+  if (dreamed.isEmpty) return const [];
+  final latest = dreamed
+      .map((p) => p.createdAt)
+      .reduce((a, b) => a.isAfter(b) ? a : b);
+  final picked = [
+    for (final p in dreamed)
+      if (since == null ? p.createdAt == latest : p.createdAt.isAfter(since)) p,
+  ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  final seen = <String>{};
+  return [
+    for (final p in picked)
+      if (seen.add(p.pointId) && !mentionsAny(p.content, quiet))
+        LearnedChange(_changeKind(p)!, p.content, p.createdAt),
+  ].take(shownChanges).toList();
 }
 
 /// Someone (or somewhere) the person honors, on the learning page.
@@ -106,6 +204,9 @@ LearningView computeLearning({
   GraphSnapshot? graph,
   required DateTime now,
   List<NameState> nameStates = const [],
+  DreamState? dream,
+  List<LearnedPoint> versions = const [],
+  DateTime? lastVisit,
 }) {
   final rotation = learningRotation(now);
   // Quiet names don't come up on their own; nothing about them is deleted.
@@ -196,6 +297,16 @@ LearningView computeLearning({
     ),
     remembering: remembering,
     nextChange: rotation.next,
+    story: [
+      for (final s in dream?.foundationStatements ?? const <String>[])
+        if (s.trim().isNotEmpty && !mentionsAny(s, quiet)) s.trim(),
+    ],
+    themes: [
+      for (final t in dream?.themes ?? const <String>[])
+        if (t.trim().isNotEmpty && !mentionsAny(t, quiet)) t.trim(),
+    ],
+    changes: learnedChanges(versions, since: lastVisit, quiet: quiet),
+    hasDreamed: versions.any((p) => _changeKind(p) != null),
   );
 }
 
