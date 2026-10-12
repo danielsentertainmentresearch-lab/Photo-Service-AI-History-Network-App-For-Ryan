@@ -152,6 +152,46 @@ class MetricsTest(unittest.TestCase):
                     "mind_map_opened", "mind_map_centered", "dream_pass_run"):
             self.assertGreater(demo_use[key], 0, key)
 
+    def test_dream_passes_report_what_the_ai_learned(self):
+        db = small_db()
+        m = store.metrics(db, "7", now=datetime(2026, 9, 30, 12))
+        self.assertEqual(m["learning"]["passes"], 0)
+        self.assertIsNone(m["learning"]["changes_per_pass"])
+        store.ingest(db, [
+            {"type": "activity", "account_id": "a1", "kind": "dream_pass_run", "at": "2026-09-30T09:00:00Z"},
+            {"type": "activity", "account_id": "a1", "kind": "dream_points_added", "at": "2026-09-30T09:00:00Z", "value": 3},
+            {"type": "activity", "account_id": "a1", "kind": "dream_points_revised", "at": "2026-09-30T09:00:00Z", "value": 2},
+            {"type": "activity", "account_id": "a2", "kind": "dream_pass_run", "at": "2026-09-30T10:00:00Z"},
+            {"type": "activity", "account_id": "a2", "kind": "dream_points_archived", "at": "2026-09-30T10:00:00Z", "value": 1},
+            {"type": "activity", "account_id": "a2", "kind": "dream_points_retired", "at": "2026-09-30T10:00:00Z", "value": 1},
+        ])
+        learning = store.metrics(db, "7", now=datetime(2026, 9, 30, 12))["learning"]
+        self.assertEqual((learning["passes"], learning["added"], learning["revised"],
+                          learning["archived"], learning["retired"]), (2, 3, 2, 1, 1))
+        self.assertEqual(learning["changes_per_pass"], 3.5)
+
+        demo_db = store.connect(":memory:")
+        demo.generate(demo_db)
+        demo_learning = store.metrics(demo_db, "all")["learning"]
+        self.assertGreater(demo_learning["passes"], 0)
+        self.assertGreater(demo_learning["added"], 0)
+
+    def test_label_trend_by_month(self):
+        db = small_db()
+        store.ingest(db, [
+            {"type": "activity", "account_id": "a1", "kind": "label_confirmed", "at": "2026-08-10T09:00:00Z", "value": 3},
+            {"type": "activity", "account_id": "a1", "kind": "label_rejected", "at": "2026-08-11T09:00:00Z"},
+            {"type": "activity", "account_id": "a1", "kind": "label_confirmed", "at": "2026-09-10T09:00:00Z", "value": 4},
+            {"type": "activity", "account_id": "a1", "kind": "label_confirmed", "at": "2026-01-10T09:00:00Z", "value": 9},
+        ])
+        trend = store.metrics(db, "7", now=datetime(2026, 9, 30, 12))["labels"]["monthly"]
+        self.assertEqual([t["month"] for t in trend],
+                         ["2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09"])
+        by_month = {t["month"]: t for t in trend}
+        self.assertEqual((by_month["2026-08"]["reviewed"], by_month["2026-08"]["rate"]), (4, 0.25))
+        self.assertEqual((by_month["2026-09"]["reviewed"], by_month["2026-09"]["rate"]), (4, 0.0))
+        self.assertIsNone(by_month["2026-04"]["rate"])
+
     def test_label_reviews_give_a_rejection_rate(self):
         db = small_db()
         m = store.metrics(db, "7", now=datetime(2026, 9, 30, 12))

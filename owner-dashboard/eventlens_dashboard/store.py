@@ -146,6 +146,10 @@ ACTIVITY_KINDS = (
     "ai_memory_erased",
     "support_page_opened",
     "dream_pass_run",
+    "dream_points_added",
+    "dream_points_revised",
+    "dream_points_archived",
+    "dream_points_retired",
 )
 
 SIGNUP_METHODS = ("email", "phone", "google", "web3")
@@ -182,7 +186,7 @@ FEATURES = (
     ("event_created", "Events recorded"),
     ("event_described", "AI accounts written"),
     ("photo_added", "Photos added"),
-    ("memory_saved", "Memories saved"),
+    ("memory_saved", "Memories saved from AI suggestions (retired 12 Oct 2026)"),
     ("free_write_saved", "Free writes saved"),
     ("free_write_labelled", "Free writes labelled"),
     ("label_confirmed", "Labels confirmed"),
@@ -196,6 +200,10 @@ FEATURES = (
     ("insight_pass_bought", "$1 insight passes bought"),
     ("learning_page_opened", "\"What the AI is learning\" opened"),
     ("dream_pass_run", "Dream passes run (the AI sorting what it learned)"),
+    ("dream_points_added", "Points the dream pass learned"),
+    ("dream_points_revised", "Points the dream pass updated"),
+    ("dream_points_archived", "Points set as no longer current"),
+    ("dream_points_retired", "Points no longer held"),
     ("name_spelling_fixed", "Name spellings fixed"),
     ("ai_memory_erased", "AI memory erased"),
     ("support_page_opened", "Support page opened"),
@@ -424,6 +432,33 @@ def as_of(db):
     return datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0)
 
 
+LABEL_TREND_MONTHS = 6
+
+
+def _label_months(db, now):
+    """Labels marked not right, of those reviewed, for each of the last
+    [LABEL_TREND_MONTHS] calendar months up to [now]: the learning signal's
+    trend (it should fall as the AI learns)."""
+    months = []
+    year, month = now.year, now.month
+    for _ in range(LABEL_TREND_MONTHS):
+        months.append("%04d-%02d" % (year, month))
+        year, month = (year, month - 1) if month > 1 else (year - 1, 12)
+    months.reverse()
+    counts = {(r["m"], r["kind"]): int(r["n"] or 0) for r in db.execute(
+        "SELECT substr(at, 1, 7) AS m, kind, SUM(value) AS n FROM activity"
+        " WHERE kind IN ('label_confirmed', 'label_rejected')"
+        " AND substr(at, 1, 7) >= ? GROUP BY m, kind", (months[0],))}
+    out = []
+    for m in months:
+        confirmed = counts.get((m, "label_confirmed"), 0)
+        rejected = counts.get((m, "label_rejected"), 0)
+        reviewed = confirmed + rejected
+        out.append({"month": m, "reviewed": reviewed, "rejected": rejected,
+                    "rate": round(rejected / reviewed, 4) if reviewed else None})
+    return out
+
+
 def metrics(db, window="30", now=None):
     """Everything the dashboard shows, for the last [window] days."""
     if window not in WINDOWS:
@@ -622,6 +657,22 @@ def metrics(db, window="30", now=None):
                            if reviewed else None),
         "watch": LABEL_REJECTION_WATCH,
         "alert": LABEL_REJECTION_ALERT,
+        "monthly": _label_months(db, now),
+    }
+
+    # What the AI learns: the dream pass's changes to its memory. Counts
+    # only; what it learned stays on the phones.
+    passes = use["dream_pass_run"]
+    changes = sum(use[k] for k in ("dream_points_added", "dream_points_revised",
+                                   "dream_points_archived",
+                                   "dream_points_retired"))
+    learning = {
+        "passes": passes,
+        "added": use["dream_points_added"],
+        "revised": use["dream_points_revised"],
+        "archived": use["dream_points_archived"],
+        "retired": use["dream_points_retired"],
+        "changes_per_pass": round(changes / passes, 2) if passes else None,
     }
 
     # Crashes.
@@ -690,6 +741,7 @@ def metrics(db, window="30", now=None):
         "depth": depth,
         "features": features,
         "labels": labels,
+        "learning": learning,
         "crashes": {"by_version": by_version, "top": top_crashes},
         "lifetime": lifetime,
     }

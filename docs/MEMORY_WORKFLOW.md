@@ -228,6 +228,15 @@ last visit is kept on the phone. Quiet names never appear and sentiment is
 never shown. The new parts use the page's existing look and placeholder
 wording until Hermes designs them (4.3).
 
+3.3: the learning signal is on the owner dashboard: counts per dream pass
+(`dream_points_added`, `_revised`, `_archived`, `_retired`), a "What the AI
+learns" panel with changes per pass, and a monthly trend of labels marked
+not right under "Free-write labels" (it should fall as the AI learns).
+"Memories saved" is relabelled as suggestions, retired 12 Oct 2026. Demo
+data draws from its own stream, so every earlier demo number is unchanged.
+Stage log and `CLAUDE.md` updated. Waiting on: Dan's review of the new
+prompt wording, then his word to merge into `main`.
+
 ## Section 4: debugging and testing
 
 - **4.1** Owner tests on the phone from a checklist Claude provides.

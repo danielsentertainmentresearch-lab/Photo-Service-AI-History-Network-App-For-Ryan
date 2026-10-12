@@ -88,6 +88,18 @@
   and erase all of it at once from the button inside the privacy policy
   (`<!-- erase-ai-memory-button -->` in PRIVACY_POLICY.md, which the app
   bundles and shows). Keep that section and marker when editing the policy.
+- **The memory architecture** (Sections 1 to 3, Oct 2026;
+  `docs/MEMORY_WORKFLOW.md`): the memory is versioned learned points and
+  dream states (`lib/data/memory_repository.dart`); no stored row changes
+  except a spelling fix. The AI learns only through the dream pass
+  (`lib/ai/dream_pass.dart`, checked by `lib/ai/dream_reply.dart`, run by
+  `lib/state/dream_coordinator.dart`): after every 5 described events or a
+  milestone, at most once a day. Memory suggestions are retired. Prompts
+  read the memory only through `MemoryContext`
+  (`lib/models/memory_prompt.dart`). Free writes and support readings never
+  reach the memory; Quiet names enter a prompt only when the request
+  involves them and never a dream statement; sentiment is never shown to
+  people.
 - `owner-dashboard/` is owner-only (Python stdlib, localhost). Run its
   tests with `python3 -m unittest discover -s tests` from that folder.
 - **Dashboard follows the app** (owner rule, stage 2): whenever a change adds

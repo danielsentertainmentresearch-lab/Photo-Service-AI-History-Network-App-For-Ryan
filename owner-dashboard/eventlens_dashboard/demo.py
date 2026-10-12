@@ -41,6 +41,8 @@ def generate(db, end=datetime(2026, 10, 3, 18, 0), days=180, seed=2026,
     # Stage 2 features draw from their own stream, so adding them left
     # every earlier demo number unchanged.
     stage2 = random.Random(seed + 2)
+    # What each dream pass changed draws from a stream of its own too.
+    dreams = random.Random(seed + 3)
     store.clear(db)
     start = end - timedelta(days=days)
 
@@ -125,6 +127,15 @@ def generate(db, end=datetime(2026, 10, 3, 18, 0), days=180, seed=2026,
                                 since_dream = 0
                                 act(install, account, moment,
                                     "dream_pass_run")
+                                for kind, most in (
+                                        ("dream_points_added", 4),
+                                        ("dream_points_revised", 3),
+                                        ("dream_points_archived", 1),
+                                        ("dream_points_retired", 1)):
+                                    count = dreams.randint(0, most)
+                                    if count:
+                                        act(install, account, moment, kind,
+                                            count)
                         if rng.random() < 0.18:
                             act(install, account, moment, "memory_saved")
                         if stage2.random() < 0.3 + 0.4 * engagement:

@@ -296,6 +296,14 @@ td.comment { white-space: normal; min-width: 240px; max-width: 520px; }
       <div class="panel-head"><h2>Free-write labels</h2><button class="hide-btn" type="button">Hide</button></div>
       <p class="def">How people judge the labels the AI makes from their free writes. A rising share marked not right means the labelling instructions need changing.</p>
       <div class="table-box"><table id="labels"></table></div>
+      <p class="def" style="margin-top:12px">Marked not right, by month. As the AI learns from what people confirm and turn down, this should fall.</p>
+      <div class="table-box"><table id="label-trend"></table></div>
+    </section>
+
+    <section class="panel half" data-panel="learning" data-title="What the AI learns">
+      <div class="panel-head"><h2>What the AI learns</h2><button class="hide-btn" type="button">Hide</button></div>
+      <p class="def">What dream passes changed in the AI's memory, in the window. Counts only; what it learned stays on people's phones.</p>
+      <div class="table-box"><table id="learning"></table></div>
     </section>
 
     <section class="panel half" data-panel="crashes" data-title="Stability">
@@ -575,6 +583,25 @@ td.comment { white-space: normal; min-width: 240px; max-width: 520px; }
         rate == null ? "No reviews yet" : status(rate, l.watch, l.alert, false)]].map(function (r) {
         return "<tr><td>" + r[0] + "</td><td class=n>" + r[1] + "</td><td>" + r[2] + "</td></tr>";
       }).join("");
+    $("label-trend").innerHTML = "<tr><th>Month</th><th class=n>Reviewed</th><th class=n>Marked not right</th></tr>" +
+      (l.monthly || []).map(function (r) {
+        return "<tr><td>" + esc(r.month) + "</td><td class=n>" + n(r.reviewed) + "</td><td class=n>" +
+          (r.rate == null ? "—" : pct(r.rate)) + "</td></tr>";
+      }).join("");
+  }
+
+  function renderLearning(m) {
+    var g = m.learning;
+    if (!g) return;
+    $("learning").innerHTML = "<tr><th>Measure</th><th class=n>Value</th></tr>" +
+      [["Dream passes run", n(g.passes)],
+       ["Points learned", n(g.added)],
+       ["Points updated", n(g.revised)],
+       ["Set as no longer current", n(g.archived)],
+       ["No longer held", n(g.retired)],
+       ["Changes per pass", g.changes_per_pass == null ? "—" : g.changes_per_pass.toFixed(2)]].map(function (r) {
+        return "<tr><td>" + r[0] + "</td><td class=n>" + r[1] + "</td></tr>";
+      }).join("");
   }
 
   function renderCrashes(m) {
@@ -620,7 +647,7 @@ td.comment { white-space: normal; min-width: 240px; max-width: 520px; }
     $("source-pill").hidden = m.source !== "demo";
     if (m.source === "demo") $("source-pill").title = "Example data generated for review. Not real users.";
     renderKpis(m); renderTesting(m); renderReach(m); renderSignup(m); renderActivity(m); renderRetention(m);
-    renderDepth(m); renderFeatures(m); renderLabels(m); renderCrashes(m); renderLifetime(m);
+    renderDepth(m); renderFeatures(m); renderLabels(m); renderLearning(m); renderCrashes(m); renderLifetime(m);
     if (window.EventLensFind) window.EventLensFind.refresh();
   }
 
