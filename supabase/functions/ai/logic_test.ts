@@ -140,3 +140,23 @@ function rawToDer(raw: Uint8Array): Uint8Array {
   const body = [...int(raw.slice(0, 32)), ...int(raw.slice(32))];
   return Uint8Array.from([0x30, body.length, ...body]);
 }
+
+Deno.test("a dream pass costs 2 credits and is capped at 16000 tokens", () => {
+  assertEquals(TASKS.dream, { cost: 2, maxTokens: 16000 });
+  assertEquals(config.models.dream, "claude-opus-5-5");
+  const c = configFrom((n) =>
+    n === "AI_MODEL_DREAM" ? "claude-sonnet-5-5" : undefined
+  );
+  assertEquals(c.models.dream, "claude-sonnet-5-5");
+  const shaped = shapeRequest("dream", {
+    max_tokens: 64000,
+    output_config: { effort: "medium", format: { type: "json_schema" } },
+    system: "dream instructions",
+    messages: [{ role: "user", content: "<new_events>none</new_events>" }],
+  }, config);
+  assertEquals(shaped.max_tokens, 16000);
+  assertEquals(shaped.output_config, {
+    effort: "medium",
+    format: { type: "json_schema" },
+  });
+});

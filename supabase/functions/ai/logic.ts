@@ -2,7 +2,7 @@
 // model it runs on, and how a request from the app is reshaped before it
 // reaches Anthropic. No I/O here, so it can be tested on its own.
 
-export type Task = "describe" | "graph" | "label" | "advise";
+export type Task = "describe" | "graph" | "label" | "advise" | "dream";
 
 export interface TaskRule {
   /** Allowance credits one request uses. */
@@ -18,6 +18,10 @@ export const TASKS: Record<Task, TaskRule> = {
   graph: { cost: 3, maxTokens: 32000 },
   label: { cost: 1, maxTokens: 4096 },
   advise: { cost: 1, maxTokens: 4000 },
+  // A dream pass reads up to 20 events' accounts and the memory, as text
+  // only (docs/MEMORY_WORKFLOW.md, Section 2). Paid from the same daily
+  // credits (owner, 11 Oct 2026).
+  dream: { cost: 2, maxTokens: 16000 },
 };
 
 export const FALLBACK_BETA = "server-side-fallback-2026-07-01";

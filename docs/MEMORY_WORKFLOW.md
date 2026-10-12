@@ -97,7 +97,8 @@ until 2.6.
 | 2.5 | Coordinator: when to dream (every N events, on app open when due), one at a time, failure and retry, saving a new version; tests | ⏸ P5: whole app test suite passes | 2.6 |
 | 2.6 | Privacy policy, Play data-safety answers, SUPPORT_AND_SAFETY.md; Hermes reviews the prompt wording; merge to `main` | ⏸ P6: merged, APK builds | Section 3 |
 
-**Progress (12 Oct 2026):** P3 reached: memory for prompts
+**Progress (12 Oct 2026):** P4 reached: the server's `dream` task, 2 credits,
+up to 16000 output tokens (`supabase/functions/ai/logic.ts`). P3: memory for prompts
 (`lib/models/memory_prompt.dart`, `test/memory_prompt_test.dart`). P2: the reply checker
 (`lib/ai/dream_reply.dart`, `test/dream_reply_test.dart`). P1: the request and reply format
 (`lib/ai/dream_pass.dart`, `test/dream_pass_test.dart`). Prompts name

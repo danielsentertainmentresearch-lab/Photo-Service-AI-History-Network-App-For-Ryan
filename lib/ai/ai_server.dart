@@ -26,6 +26,7 @@ abstract final class AiTask {
   static const graph = 'graph';
   static const label = 'label';
   static const advise = 'advise';
+  static const dream = 'dream';
 }
 
 /// Today's AI allowance for the signed-in account, as the server reports it.

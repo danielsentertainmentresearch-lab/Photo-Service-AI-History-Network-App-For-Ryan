@@ -31,6 +31,7 @@ Phone (EventLens)  --sign-in token + request-->  AI server (Supabase)  -->  Anth
   | Build or extend the timeline graph | 3 |
   | Label a free write | 1 |
   | Data platforms advice | 1 |
+  | Dream pass (the AI sorts what it learned into memory) | 2 |
 
   A failed AI request gives its credits back. When the allowance runs out
   the app shows a clear message and the event waits as pending; nothing is
@@ -91,7 +92,7 @@ Set with `supabase secrets set NAME=value`:
 |---|---|---|
 | `AI_DAILY_CREDITS` | 20 | Free credits per account per day |
 | `AI_MODEL` | `claude-opus-5-5` | Model for every task |
-| `AI_MODEL_DESCRIBE`, `AI_MODEL_GRAPH`, `AI_MODEL_LABEL`, `AI_MODEL_ADVISE` | `AI_MODEL` | A different model for one task (for example `claude-sonnet-5-5` for labels) |
+| `AI_MODEL_DESCRIBE`, `AI_MODEL_GRAPH`, `AI_MODEL_LABEL`, `AI_MODEL_ADVISE`, `AI_MODEL_DREAM` | `AI_MODEL` | A different model for one task (for example `claude-sonnet-5-5` for labels) |
 | `AI_MAX_EFFORT` | `high` | Highest effort any request may use |
 | `AI_AD_CREDITS` | 4 | Credits one reward video adds |
 | `ADS_ENABLED` | `false` | Accept reward-video top-ups (turn on once AdMob is connected) |
