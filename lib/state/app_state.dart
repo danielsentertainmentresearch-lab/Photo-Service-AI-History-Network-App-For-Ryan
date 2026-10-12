@@ -10,6 +10,7 @@ import '../ai/ai_server.dart';
 import '../ai/anthropic_ai_client.dart';
 import '../ai/experience_labeler.dart';
 import '../ai/data_platform_advisor.dart';
+import '../ai/dream_pass.dart';
 import '../ai/event_describer.dart';
 import '../ai/graph_builder.dart';
 import '../data/event_repository.dart';
@@ -26,6 +27,7 @@ import '../data/name_state_repository.dart';
 import '../services/data_files.dart';
 import '../services/places_service.dart';
 import '../services/settings_service.dart';
+import 'dream_coordinator.dart';
 
 typedef DescriberFactory = EventDescriber Function(
   String apiKey,
@@ -79,6 +81,11 @@ typedef LabelerFactory = ExperienceLabeler Function(
 ExperienceLabeler _defaultLabeler(String apiKey, String model) =>
     ExperienceLabeler(client: aiClientFor(apiKey, AiTask.label), model: model);
 
+typedef DreamPassFactory = DreamPass Function(String apiKey, String model);
+
+DreamPass _defaultDreamPass(String apiKey, String model) =>
+    DreamPass(client: aiClientFor(apiKey, AiTask.dream), model: model);
+
 /// Single source of truth for the UI.
 class AppState extends ChangeNotifier {
   final EventRepository events;
@@ -91,6 +98,7 @@ class AppState extends ChangeNotifier {
   final PlacesService places;
   final PlatformAdvisorFactory advisorFactory;
   final LabelerFactory labelerFactory;
+  final DreamPassFactory dreamPassFactory;
   final Uuid _uuid = const Uuid();
 
   AppState({
@@ -104,6 +112,7 @@ class AppState extends ChangeNotifier {
     PlacesService? places,
     this.advisorFactory = _defaultAdvisor,
     this.labelerFactory = _defaultLabeler,
+    this.dreamPassFactory = _defaultDreamPass,
     bool? useAiServer,
     this.nameStateRepo,
   }) : places = places ?? PlacesService(),
@@ -191,6 +200,8 @@ class AppState extends ChangeNotifier {
     await _reload();
     _loaded = true;
     notifyListeners();
+    // A pass that came due while the app was closed runs on opening.
+    dreamIfDue();
   }
 
   Future<void> _reload() async {
@@ -571,6 +582,7 @@ class AppState extends ChangeNotifier {
     await _reload();
     if (eventById(eventId)?.status == EventStatus.described) {
       await advanceGraph();
+      await dreamIfDue();
     }
   }
 
@@ -620,6 +632,8 @@ class AppState extends ChangeNotifier {
       final clean = merged.sanitized(_events.map((e) => e.id).toSet());
       await graphRepo.replace(clean);
       _graph = clean;
+      // The timeline graph unlocking is a milestone for the dream pass.
+      if (current == null) await dreams.milestone();
     } catch (e) {
       _graphError = e is AIException
           ? e.toString()
@@ -912,7 +926,35 @@ class AppState extends ChangeNotifier {
   /// accounts, photos and free writes stay as they are.
   Future<void> eraseAiMemory() async {
     await memoryRepo.deleteAll();
+    // Erased memory isn't rebuilt from the same events: the next dream pass
+    // learns only from events described after this.
+    await dreams.markAllRead(_events);
     await _reload();
+  }
+
+  // ---- Dream pass -------------------------------------------------------------
+
+  /// Decides when the AI dreams and saves what it learned.
+  late final DreamCoordinator dreams = DreamCoordinator(
+    memory: memoryRepo,
+    book: settings,
+    makePass: () async {
+      final credential = await _aiCredential();
+      if (credential == null || credential.isEmpty) return null;
+      return dreamPassFactory(credential, settings.model);
+    },
+  );
+
+  /// Runs a dream pass when one is due (every 5 newly described events or
+  /// a milestone, at most once a day) and reloads what the AI holds.
+  Future<DreamOutcome> dreamIfDue() async {
+    final outcome = await dreams.runIfDue(
+      events: _events,
+      quiet: quietNames,
+      honored: honoredNames,
+    );
+    if (outcome == DreamOutcome.ran) await _reload();
+    return outcome;
   }
 
   // ---- Settings -------------------------------------------------------------

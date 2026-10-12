@@ -22,6 +22,11 @@ class SettingsService {
   String get _exportUnlockedKey => 'export_unlocked$_scope';
   String get _hiddenMetersKey => 'hidden_meters$_scope';
   String get _platformAdviceKey => 'data_platform_advice$_scope';
+  String get _dreamedKey => 'dream_read_events$_scope';
+  String get _dreamDayKey => 'dream_last_day$_scope';
+  String get _dreamWaitKey => 'dream_wait_until$_scope';
+  String get _dreamRetryKey => 'dream_retry_after$_scope';
+  String get _dreamMilestoneKey => 'dream_milestone$_scope';
   static const _onboardedKey = 'onboarded';
 
   Future<String?> readApiKey() => _secure.read(key: _apiKeyKey);
@@ -64,6 +69,48 @@ class SettingsService {
   Future<void> setPlatformAdvice(String? json) => json == null
       ? _prefs.remove(_platformAdviceKey)
       : _prefs.setString(_platformAdviceKey, json);
+
+  // ---- Dream pass bookkeeping (lib/state/dream_coordinator.dart) ----------
+
+  /// Events a dream pass has already read.
+  Set<String> get dreamedEvents =>
+      (_prefs.getStringList(_dreamedKey) ?? const []).toSet();
+
+  Future<void> setDreamedEvents(Set<String> ids) =>
+      _prefs.setStringList(_dreamedKey, ids.toList()..sort());
+
+  /// The local day (YYYY-MM-DD) of the last finished pass.
+  String? get lastDreamDay => _prefs.getString(_dreamDayKey);
+
+  Future<void> setLastDreamDay(String day) =>
+      _prefs.setString(_dreamDayKey, day);
+
+  DateTime? _time(String key) => switch (_prefs.getInt(key)) {
+    final ms? => DateTime.fromMillisecondsSinceEpoch(ms),
+    null => null,
+  };
+
+  Future<void> _setTime(String key, DateTime? at) => at == null
+      ? _prefs.remove(key)
+      : _prefs.setInt(key, at.millisecondsSinceEpoch);
+
+  /// A pass due while the allowance is used up waits until this time.
+  DateTime? get dreamWaitUntil => _time(_dreamWaitKey);
+
+  Future<void> setDreamWaitUntil(DateTime? at) => _setTime(_dreamWaitKey, at);
+
+  /// After a failed pass, the next try waits until this time.
+  DateTime? get dreamRetryAfter => _time(_dreamRetryKey);
+
+  Future<void> setDreamRetryAfter(DateTime? at) => _setTime(_dreamRetryKey, at);
+
+  /// A milestone (the timeline graph unlocking, an account fully set up)
+  /// asked for a pass that hasn't run yet.
+  bool get dreamMilestone => _prefs.getBool(_dreamMilestoneKey) ?? false;
+
+  Future<void> setDreamMilestone(bool due) => due
+      ? _prefs.setBool(_dreamMilestoneKey, true)
+      : _prefs.remove(_dreamMilestoneKey);
 
   bool get onboarded => _prefs.getBool(_onboardedKey) ?? false;
 

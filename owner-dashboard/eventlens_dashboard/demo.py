@@ -84,6 +84,9 @@ def generate(db, end=datetime(2026, 10, 3, 18, 0), days=180, seed=2026,
             engagement = rng.betavariate(1.3, 3.5)
             lifetime_days = rng.expovariate(1 / (12 + 160 * engagement))
             events = photos = described_photos = videos = rings = 0
+            # Dream passes need no random draws, so every other number
+            # stays the same: one pass after every 5 described events.
+            since_dream = 0
             graph = export = False
             moment = at
             session_no = 0
@@ -117,6 +120,11 @@ def generate(db, end=datetime(2026, 10, 3, 18, 0), days=180, seed=2026,
                         if rng.random() < 0.86:
                             described_photos += pics
                             act(install, account, moment, "event_described")
+                            since_dream += 1
+                            if since_dream == 5:
+                                since_dream = 0
+                                act(install, account, moment,
+                                    "dream_pass_run")
                         if rng.random() < 0.18:
                             act(install, account, moment, "memory_saved")
                         if stage2.random() < 0.3 + 0.4 * engagement:

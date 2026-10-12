@@ -111,6 +111,7 @@ class MetricsTest(unittest.TestCase):
             {"type": "activity", "account_id": "a2", "kind": "name_spelling_fixed", "at": "2026-09-30T11:12:00Z"},
             {"type": "activity", "account_id": "a1", "kind": "ai_memory_erased", "at": "2026-09-30T11:14:00Z"},
             {"type": "activity", "account_id": "a2", "kind": "support_page_opened", "at": "2026-09-30T11:16:00Z"},
+            {"type": "activity", "account_id": "a1", "kind": "dream_pass_run", "at": "2026-09-30T11:18:00Z"},
         ])
         m = store.metrics(db, "7", now=datetime(2026, 9, 30, 12))
         use = {f["key"]: (f["total"], f["accounts"]) for f in m["features"]}
@@ -124,6 +125,7 @@ class MetricsTest(unittest.TestCase):
         self.assertEqual(use["name_spelling_fixed"], (1, 1))
         self.assertEqual(use["ai_memory_erased"], (1, 1))
         self.assertEqual(use["support_page_opened"], (1, 1))
+        self.assertEqual(use["dream_pass_run"], (1, 1))
 
     def test_stage2_features_are_counted_without_their_content(self):
         db = small_db()
@@ -147,7 +149,7 @@ class MetricsTest(unittest.TestCase):
         demo.generate(demo_db)
         demo_use = {f["key"]: f["total"] for f in store.metrics(demo_db, "all")["features"]}
         for key in ("free_write_saved", "free_write_labelled",
-                    "mind_map_opened", "mind_map_centered"):
+                    "mind_map_opened", "mind_map_centered", "dream_pass_run"):
             self.assertGreater(demo_use[key], 0, key)
 
     def test_label_reviews_give_a_rejection_rate(self):

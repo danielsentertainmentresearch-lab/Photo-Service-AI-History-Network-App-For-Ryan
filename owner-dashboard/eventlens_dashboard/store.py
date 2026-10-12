@@ -145,6 +145,7 @@ ACTIVITY_KINDS = (
     "name_spelling_fixed",
     "ai_memory_erased",
     "support_page_opened",
+    "dream_pass_run",
 )
 
 SIGNUP_METHODS = ("email", "phone", "google", "web3")
@@ -194,6 +195,7 @@ FEATURES = (
     ("insight_peek_opened", "Insight sneak peeks opened with videos"),
     ("insight_pass_bought", "$1 insight passes bought"),
     ("learning_page_opened", "\"What the AI is learning\" opened"),
+    ("dream_pass_run", "Dream passes run (the AI sorting what it learned)"),
     ("name_spelling_fixed", "Name spellings fixed"),
     ("ai_memory_erased", "AI memory erased"),
     ("support_page_opened", "Support page opened"),

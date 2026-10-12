@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
+import '../ai/dream_reply.dart';
 import '../models/learned_point.dart';
 import '../models/memory_item.dart';
 
@@ -159,6 +160,115 @@ class MemoryRepository {
     await txn.insert('dream_states', next.toRow());
     return next;
   });
+
+  /// Saves one checked dream pass in a single transaction, so a pass is
+  /// stored whole or not at all. Every change is a new version; a revision
+  /// keeps the point's earlier evidence and adds the new.
+  Future<void> applyDream(DreamChanges changes, {DateTime? now}) =>
+      db.transaction((txn) async {
+        final at = now ?? DateTime.now();
+        Future<LearnedPoint?> last(String pointId) async {
+          final rows = await txn.query(
+            'learned_points',
+            where: 'point_id = ?',
+            whereArgs: [pointId],
+            orderBy: 'version DESC',
+            limit: 1,
+          );
+          return rows.isEmpty ? null : LearnedPoint.fromRow(rows.single);
+        }
+
+        Future<void> next(
+          LearnedPoint before, {
+          required String reason,
+          required List<String> eventIds,
+          String? content,
+          Sentiment? sentiment,
+          String? status,
+        }) => txn.insert(
+          'learned_points',
+          LearnedPoint(
+            id: _uuid.v4(),
+            pointId: before.pointId,
+            version: before.version + 1,
+            parentId: before.id,
+            kind: before.kind,
+            content: content ?? before.content,
+            sentiment: sentiment ?? before.sentiment,
+            source: before.source,
+            eventIds: {...before.eventIds, ...eventIds}.toList(),
+            status: status ?? before.status,
+            reason: reason,
+            createdAt: at,
+          ).toRow(),
+        );
+
+        for (final a in changes.adds) {
+          final id = _uuid.v4();
+          await txn.insert(
+            'learned_points',
+            LearnedPoint(
+              id: id,
+              pointId: id,
+              version: 1,
+              kind: a.kind,
+              content: a.content,
+              sentiment: a.sentiment,
+              source: 'ai',
+              eventIds: a.eventIds,
+              status: pointActive,
+              reason: a.reason,
+              createdAt: at,
+            ).toRow(),
+          );
+        }
+        for (final r in changes.revisions) {
+          final before = await last(r.pointId);
+          // Retired points never come back.
+          if (before == null || before.status == pointRetired) continue;
+          await next(
+            before,
+            reason: '${r.revives ? 'revived' : 'revised'}: ${r.reason}',
+            eventIds: r.eventIds,
+            content: r.content,
+            sentiment: r.sentiment,
+            status: pointActive,
+          );
+        }
+        for (final s in changes.statusChanges) {
+          final before = await last(s.pointId);
+          if (before == null || !before.isActive) continue;
+          await next(
+            before,
+            reason: '${s.status}: ${s.reason}',
+            eventIds: s.eventIds,
+            status: s.status,
+          );
+        }
+        final dream = changes.dream;
+        if (dream != null) {
+          final rows = await txn.query(
+            'dream_states',
+            orderBy: 'version DESC',
+            limit: 1,
+          );
+          final previous = rows.isEmpty
+              ? null
+              : DreamState.fromRow(rows.single);
+          await txn.insert(
+            'dream_states',
+            DreamState(
+              id: _uuid.v4(),
+              version: (previous?.version ?? 0) + 1,
+              parentId: previous?.id,
+              foundationStatements: dream.foundationStatements,
+              themes: dream.themes,
+              eventIds: dream.eventIds,
+              createdAt: at,
+            ).toRow(),
+          );
+        }
+      });
 
   /// Applies a name spelling fix to every version of every point and of the
   /// dream state. Returns how many rows changed.
