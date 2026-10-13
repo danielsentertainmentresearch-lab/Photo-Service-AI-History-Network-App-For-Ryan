@@ -245,10 +245,22 @@ on Dan's word.
 
 ## Section 4: debugging and testing
 
-- **4.1** Owner tests on the phone from a checklist Claude provides.
+- **4.1** Owner tests on the phone from a checklist Claude provides (the
+  "Section 4 Phone Checklist", 13 Oct 2026), on build #57 installed fresh,
+  with his own Anthropic API key. The AI server and real accounts stay off
+  until beta testers, as planned (owner, 13 Oct 2026).
 - **4.2** Owner, Hermes and Claude fix what comes up.
 - **4.3** Hermes designs the learning page visuals and the "AI is working"
-  indicators.
+  indicators. **Moved to Hermes's UX/UI phase** (owner, 13 Oct 2026), so
+  Section 4 can close without it.
+
+The phone had a build from 4 to 5 October until now (newer test builds
+never replaced it; they aren't signed with a fixed key yet), so the
+checklist also covers the post-review fixes and crisis route stage A.
+
+Later testing rounds, after this section: the full beta and functionality
+test once the launch integrations are live, and the full dev mainframe test
+at the end (README, "Testing plan").
 
 ## Separate track
 

@@ -308,6 +308,23 @@ with `app-release.apk` and `app-release.aab`.
 Without signing secrets these builds are signed with a debug key, which is
 fine for testing but not accepted by Play. See [RELEASE.md](RELEASE.md).
 
+## Testing plan
+
+Owner decision, 13 October 2026. Three rounds, in this order:
+
+1. **Phone testing during the build** (now: memory architecture Section 4,
+   `docs/MEMORY_WORKFLOW.md`). The owner tests on the phone from a checklist
+   Claude provides, with his own Anthropic API key. The AI server and real
+   accounts stay off until beta testers, as planned in
+   [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md).
+2. **Full beta test plus functionality test.** Once the launch integrations
+   are live (accounts, the AI server, rewarded ads), every feature is tested
+   again through them, the way testers will use the app.
+3. **Full dev mainframe test**, at the end, once everything is solidified.
+   Claude (Opus at maximum effort) tests a local copy of the whole codebase
+   on the owner's computer through the Cowork feature, then hands its
+   findings to Hermes for her more contextual and involved version.
+
 ## Roadmap
 
 - **Stage 2** (in progress, started 4 October 2026): the AI maps events as a neural network, primarily a mind map
